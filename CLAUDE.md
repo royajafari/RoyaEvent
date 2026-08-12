@@ -41,9 +41,20 @@ RoyaEvent/
     services/           # otp_service, auth_service, event_service, image_service
   backend/tests/unit|integration/   # pytest، fakeredis، بدون نیاز به Redis واقعی
   frontend/src/
-    app/                # (auth)/login/page.tsx، page.tsx (خانه)
-    components/ui/      # shadcn primitives
-    lib/api-client.ts    # fetch wrapper، credentials:include
+    app/
+      (auth)/login/page.tsx        # ورود OTP (client)
+      (organizer)/events/create/   # فرم ایجاد رویداد (client)
+      (organizer)/events/mine/     # لیست رویدادهای من (client)
+      events/page.tsx              # لیستینگ عمومی (SSR/dynamic)
+      events/[slug]/page.tsx       # جزئیات رویداد عمومی (SSR/dynamic + JSON-LD)
+      page.tsx                     # خانه
+    components/EventCard.tsx       # کارت رویداد (Server Component)
+    components/ui/                 # shadcn primitives (+ textarea, select)
+    lib/
+      api-client.ts    # fetch wrapper سمت کلاینت، credentials:include، پشتیبانی FormData
+      events-api.ts     # انواع TS + توابع کلاینت events/categories (نیاز به accessToken)
+      events-server.ts  # فراخوانی سمت سرور برای RSC (cache:"no-store"، بدون کوکی)
+      date.ts            # formatJalali* — Intl بومی fa-IR-u-ca-persian، بدون کتابخانه‌ی جانبی
     store/auth-store.ts  # Zustand، access token فقط در حافظه
     fonts/kalameh.ts
   infra/docker-compose.yml   # redis, mongo, minio, loki, prometheus, grafana
@@ -58,17 +69,19 @@ RoyaEvent/
 
 - **فاز ۰ (Scaffolding)** ✅ کامل و commit‌شده.
 - **فاز ۱ (Auth/OTP)** ✅ کامل، تست‌شده، commit‌شده، push‌شده.
-- **فاز ۲ (Event CRUD + دسته‌بندی/تگ/جلسه + آپلود بنر امن)** ✅ **بک‌اند کامل، تست‌شده، لینت تمیز — هنوز commit/push نشده.** فرانت‌اند فاز ۲ هنوز شروع نشده. جزئیات زیر.
+- **فاز ۲ (Event CRUD + دسته‌بندی/تگ/جلسه + آپلود بنر امن)** ✅ **کامل (بک‌اند + فرانت‌اند)، تست‌شده، لینت تمیز، تأیید بصری end-to-end با سرور واقعی. کامیت بک‌اند/CLAUDE.md push شده؛ کامیت فرانت هنوز نه (پایین صفحه ببین).**
 - فازهای ۳ تا ۱۱: هنوز شروع نشده (تیکتینگ، جستجو، ادمین، اعلان‌ها، امتیازدهی، آنالیتیکس، مانیتورینگ، تست/RTL نهایی، دیپلوی).
 
-**بک‌اند در مجموع الان ۱۰۱ تست دارد (unit + integration)، همه پاس، `ruff check .` تمیز.**
+**بک‌اند در مجموع الان ۱۰۱ تست دارد (unit + integration)، همه پاس، `ruff check .` تمیز.** فرانت `npm run build` و `npm run lint` هر دو تمیز.
 
-### فاز ۲ — بک‌اند کامل و wired؛ فرانت‌اند باقی مانده
+**تأیید بصری واقعی فاز ۲ (نه فقط build/test):** بک‌اند و فرانت هر دو به‌صورت real dev server بالا آورده شدن (`uvicorn` روی ۸۰۰۰، `next dev` روی ۳۰۰۰)، دسته‌بندی‌ها seed شدن، از طریق OTP واقعی لاگین شد، یک رویداد واقعی از طریق API ساخته و publish شد، و HTML خروجی SSR صفحات `/events` و `/events/[slug]` با `curl` بررسی شد — عنوان فارسی، تاریخ شمسی (`۱۰ شهریور ۱۴۰۵`)، دسته‌بندی، JSON-LD همه درست رندر شدن. (Playwright برای اسکرین‌شات واقعی مرورگر هنوز در دسترس نیست — نگاه کن به دام #۴.)
 
-**بک‌اند (کامل، تست‌شده، uncommitted):**
+### فاز ۲ — کامل (بک‌اند + فرانت‌اند)
+
+**بک‌اند:**
 - مدل‌ها: `Category` (دوسطحی، self-FK)، `Tag`، `Instructor`، `Event`، `EventSession`، جدول‌های M:N `event_tags`/`event_instructors`
 - Alembic migration `567deeea1757` روی پایه‌ی `07c06a1dc198` — `alembic upgrade head` تست شده، جدول‌ها verify شدند (`categories, tags, events, instructors, event_instructors, event_sessions, event_tags` + جدول‌های فاز ۱)
-- `app/db/seed_categories.py` — ۱۰ دسته‌ی والد × ۳-۵ زیردسته (اجرا: `python -m app.db.seed_categories`) — **هنوز در محیط dev واقعی اجرا نشده**، فقط در تست از طریق فیکسچر `leaf_category` استفاده می‌شه
+- `app/db/seed_categories.py` — ۱۰ دسته‌ی والد × ۳-۵ زیردسته (اجرا: `python -m app.db.seed_categories`) — **در محیط dev واقعی اجرا و ۴۶ ردیف verify شد.** یک باگ Windows-only پیدا و رفع شد: کنسول ویندوز پیش‌فرض `cp1252` است و `print()` متن فارسی رو با `UnicodeEncodeError` crash می‌کرد (بعد از این‌که commit شده بود روی DB — یعنی داده درست ذخیره می‌شد، فقط پیام پایانی fail می‌کرد)؛ فیکس با `sys.stdout.reconfigure(encoding="utf-8")` قبل از `print`.
 - `app/services/image_service.py` — `validate_and_reencode_image()`: magic-byte check با Pillow، رد SVG، محدودیت ۵MB/۴۰۰۰px، همیشه خروجی JPEG تازه (حتی PNG/WebP ورودی) با flatten روی پس‌زمینه‌ی سفید — طبق بخش ۱۶ پلن. ۹ تست (شامل تست این‌که payload الحاقی به انتهای فایل در خروجی نیست)
 - `app/core/storage.py` — کلاینت MinIO + `ensure_bucket_ready()` (public-read) + `upload_banner_image()` — **در تست mock می‌شه** (`monkeypatch.setattr(events_module, "upload_banner_image", ...)`)، نیازی به MinIO واقعی برای تست نیست
 - `app/core/slug.py` — `slugify_ascii()` + `generate_numeric_code()` (کد رویداد ۶رقمی)
@@ -82,11 +95,19 @@ RoyaEvent/
 
 **تست‌ها:** `tests/unit/test_slug.py`, `test_image_service.py`, `test_event_service.py` + `tests/integration/test_events_api.py` (پوشش: auth، مالکیت/۴۰۳، DRAFT leak، publish idempotency، لیست عمومی در برابر `/mine`، رویداد خصوصی + توکن، آپلود بنر معتبر/نامعتبر/غیرمجاز، related events، دسته‌بندی‌ها). فیکسچرهای جدید در `conftest.py`: `organizer`, `auth_headers`, `leaf_category`, و یک `autouse` فیکسچر `_reset_rate_limiter` که `limiter.reset()` رو قبل/بعد هر تست صدا می‌زنه (وگرنه چون Limiter حافظه‌ی in-process داره، تست‌های پشت‌سرهم روی endpointهای rate-limit‌شده به هم نشت می‌کنن).
 
-**هنوز نیاز به تکمیل:**
-1. فرانت‌اند فاز ۲ اصلاً شروع نشده: نه فرم ایجاد رویداد برگزارکننده، نه صفحه‌ی عمومی جزئیات رویداد (`/events/[slug]`, باید SSR باشه طبق تصمیم کاربر برای SEO)، نه لیستینگ پایه.
-2. `docs/architecture.md` بخش ۱۴ (نقشه‌ی راه) باید بعد از تکمیل کل فاز ۲ (شامل فرانت) به‌روزرسانی بشه (مثل الگوی فاز ۰/۱).
-3. **نکته‌ی جزئی (غیرضروری، اختیاری):** حداکثر حجم بنر (۵ مگابایت) در دو جا جدا hardcode شده — `MAX_BANNER_UPLOAD_BYTES` در `events.py` و `MAX_UPLOAD_BYTES` در `image_service.py`. الان مقدارشون یکیه و مشکلی نمی‌سازه، ولی اگه یکی رو تغییر دادی حتماً اون یکی رو هم عوض کن؛ بهتره یه‌جا (مثلاً `core/config.py`) متمرکز بشه.
-4. هنوز هیچ commit جدیدی برای فاز ۲ زده نشده — همه‌ی موارد بالا روی دیسک uncommitted هستن.
+**فرانت‌اند (کامل، build+lint تمیز، uncommitted):**
+- `lib/date.ts` — تاریخ شمسی با `Intl.DateTimeFormat("fa-IR-u-ca-persian", ...)` بومی (بدون dayjs/jalaliday؛ Node این محیط ICU کامل داره، تست شد). این جایگزین چیزیه که در `docs/architecture.md` («dayjs + پلاگین جلالی») نوشته شده بود — سبک‌تره و کار می‌کنه، ولی سند رسماً به‌روز نشده (اگه لازم شد یادت باشه).
+- `lib/events-api.ts` (کلاینت) و `lib/events-server.ts` (Server Components، `cache:"no-store"`) — جدا نگه داشته شدن چون سرور نیازی به کوکی/accessToken نداره.
+- `components/EventCard.tsx` — کارت رویداد با blur/badge «این وبینار برگزار شده است» برای جلسه‌ی گذشته، badge «ویژه»، رتبه.
+- `app/events/page.tsx` و `app/events/[slug]/page.tsx` — **حتماً dynamic (SSR per-request)، نه ISR/SSG.** اول با `next:{revalidate:60}` نوشته شده بود که باعث می‌شد `npm run build` سعی کنه در build-time به بک‌اند وصل بشه و چون بک‌اند بالا نبود، build کامل fail می‌کرد. با `cache:"no-store"` در `events-server.ts` حل شد (Next خودکار این route ها رو به `ƒ Dynamic` تشخیص می‌ده). **اگه یه فایل fetch جدید سمت سرور نوشتی، همین الگو رو رعایت کن، وگرنه build دوباره می‌شکنه.**
+- `app/(organizer)/events/create/page.tsx` — فرم ایجاد رویداد (client، چندبخشی: اطلاعات پایه، دسته‌بندی با گروه‌بندی والد/زیردسته، جلسه‌های دینامیک، بعد از ایجاد → آپلود بنر اختیاری → انتشار).
+- `app/(organizer)/events/mine/page.tsx` — لیست رویدادهای من با دکمه‌ی انتشار سریع برای پیش‌نویس‌ها.
+- shadcn `Select` (بر پایه‌ی Base UI) امضای متفاوتی از Radix داره: `onValueChange: (value: string | null, details) => void` — همیشه `v && setState(v)` یا `v ?? fallback` بنویس، نه مستقیم `setState` (وگرنه TypeScript error می‌ده).
+
+**نکات جزئی/اختیاری باقی‌مانده (بدون فوریت):**
+- حداکثر حجم بنر (۵ مگابایت) در دو جا جدا hardcode شده — `MAX_BANNER_UPLOAD_BYTES` در `events.py` و `MAX_UPLOAD_BYTES` در `image_service.py`. یکسان‌اند، ولی بهتره یه‌جا (مثلاً `core/config.py`) متمرکز بشه.
+- سند `docs/architecture.md` بخش ۱۲ هنوز «dayjs + پلاگین جلالی» رو به‌عنوان تصمیم ذکر می‌کنه؛ پیاده‌سازی واقعی از `Intl` بومی استفاده کرد (بالاتر توضیح داده شد) — عملکرد یکسانه، فقط مستندسازی sync نیست.
+- کامیت فرانت فاز ۲ هنوز زده نشده (بک‌اند و CLAUDE.md قبلاً commit/push شدن).
 
 ## قراردادهای API
 
@@ -139,10 +160,12 @@ npm run dev   # http://localhost:3000
 10. **موقع نصب pip در پس‌زمینه، خروجی رو مستقیم به `tail` پایپ نکن.** یک بار `pip install ... | tail -20` گزارش "exit code 0" داد چون `tail` موفق بود، نه `pip` (که واقعاً به‌خاطر timeout شبکه شکست خورده بود و پکیج اصلاً نصب نشده بود) — بعداً `from app.main import app` fail کرد چون `python-multipart` غایب بود. همیشه بعد از نصب پس‌زمینه‌ای، با `pip show <package>` مستقل تأیید کن، نه فقط به کد خروجی task notification اعتماد کن.
 11. **Limiter عمومی slowapi حافظه‌ی in-process داره** (نه Redis-backed) — در تست‌ها اگه بین تست‌ها ریست نشه، یک endpoint با سقف پایین (مثلاً ۱۰-۲۰/دقیقه) بعد از چند تست پشت‌سرهم واقعاً ۴۲۹ برمی‌گردونه و تست‌های بعدی رو به‌طور نامرتبط fail می‌کنه. فیکسچر `autouse` در `conftest.py` (`_reset_rate_limiter`) این رو حل می‌کنه — اگه فیکسچر رو حذف/تغییر دادی حواست باشه.
 12. **همیشه بعد از نوشتن endpointهای عمومی/بدون احراز هویت، از خودت بپرس «آیا وضعیت DRAFT/CANCELLED هم از این مسیر قابل دیدنه؟»** — این دقیقاً همون باگی بود که در فاز ۲ حین نوشتن تست integration کشف و رفع شد (نگاه کن به بخش «وضعیت فعلی» بالا).
+13. **بدون `logging.basicConfig(...)`، لاگرهای خودمون (`ConsoleSmsProvider` و بقیه) در اجرای واقعی سرور اصلاً چاپ نمی‌شن** — چون root logger پیش‌فرض Python سطح `WARNING` داره و `.info(...)` صدا زده نمی‌شه، برخلاف تست‌ها که pytest caplog جدا رفتار می‌کنه. این باعث شد اولین تلاش برای گرفتن OTP از لاگ سرور واقعی (برای تست دستی) هیچی نشون نده. فیکس: `logging.basicConfig(level=logging.INFO, ...)` در بالای `app/main.py`. اگه لاگ چیزی رو نمی‌بینی، این رو اول چک کن.
+14. **در Git Bash روی ویندوز، پاس‌دادن متن فارسی مستقیم داخل آرگومان `curl -d '...'` یا حتی داخل یک دستور `grep` می‌تونه بایت‌های چندبایتی UTF-8 رو به `?` خراب کنه** (مشاهده شد: یک رویداد تستی با `title` واقعاً به‌صورت `??????...` در دیتابیس ذخیره شد — این یک باگ اپلیکیشن نبود، چون همون لحظه ۱۰۱ تست pytest که رشته‌های فارسی رو in-process از فایل‌های `.py` می‌خونن بدون مشکل پاس می‌شدن). **راه‌حل امن برای تست دستی API با داده‌ی فارسی:** payload رو با ابزار Write در یک فایل UTF-8 بنویس، بعد `curl --data-binary @file.json` بزن — هرگز متن فارسی رو مستقیم در آرگومان shell تایپ نکن. برای grep/جست‌وجوی متن فارسی در خروجی هم به همین دلیل نتیجه‌ی نگرفتن لزوماً یعنی «پیدا نشد» نیست؛ با فایل/ابزار Read مطمئن‌تر چک کن.
 
 ## تصمیمات کلیدی کاربر (خلاصه‌ی فشرده — کامل در architecture.md)
 
-- تقویم: نمایش شمسی در UI، ذخیره‌ی UTC/میلادی در DB (هنوز پیاده نشده در فرانت، فاز بعدی)
+- تقویم: نمایش شمسی در UI، ذخیره‌ی UTC/میلادی در DB — **پیاده شد** (`lib/date.ts`, فاز ۲) با `Intl` بومی، نه dayjs
 - Vector search: ChromaDB (نه Qdrant)
 - فرانت: Next.js با SSR برای صفحات عمومی رویداد (نه SPA خالص) — به‌خاطر SEO
 - سفارش تک‌نفره (بدون خرید گروهی)

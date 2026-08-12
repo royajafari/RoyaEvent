@@ -255,7 +255,7 @@ RoyaEvent/
 
 - **فاز ۰ — Scaffolding و مستندات.** ✅ — ساختار backend/frontend، docker-compose، تحلیل رقبا، مستندات.
 - **فاز ۱ — Auth/OTP + کاربران.** ✅ — جداول `users`/`otp_challenge`/`refresh_tokens` (Alembic)، `OTPService` (تولید/هش/rate-limit/انقضا/قفل)، provider abstraction (Console/IPPanel/Kavenegar/Brevo/Resend)، `AuthService` (JWT access+refresh چرخشی با تشخیص سرقت)، endpoint‌های `/auth/otp/*`, `/auth/refresh`, `/auth/logout`, `/auth/me`، صفحه‌ی ورود OTP در فرانت، ۵۵ تست (unit+integration) پاس.
-- **فاز ۲ — CRUD رویداد + دسته‌بندی/تگ/جلسه + آپلود بنر امن روی MinIO.**
+- **فاز ۲ — CRUD رویداد + دسته‌بندی/تگ/جلسه + آپلود بنر امن روی MinIO.** ✅ — مدل‌های `Category`(دوسطحی)/`Tag`/`Instructor`/`Event`/`EventSession` + Alembic + seed ۱۰ دسته‌ی والد؛ `validate_and_reencode_image()` (بخش ۱۶، magic-byte + رد SVG + re-encode اجباری)؛ `event_service` (event_code/slug یکتا، انتشار، لغو)؛ events router کامل (شامل رفع نشتی امنیتی DRAFT از endpointهای عمومی)؛ میان‌افزار rate-limit عمومی slowapi؛ فرم چندبخشی ایجاد رویداد + آپلود بنر + انتشار در فرانت؛ صفحه‌ی عمومی جزئیات رویداد SSR با JSON-LD schema.org/Event و تاریخ شمسی بومی (Intl fa-IR-u-ca-persian)؛ لیستینگ عمومی + «رویدادهای من»؛ ۱۰۱ تست (unit+integration) پاس، تأیید بصری end-to-end با سرور واقعی.
 - **فاز ۳ — بلیط/سفارش/تخفیف/علاقه‌مندی/دنبال‌کردن.**
 - **فاز ۴ — جستجو + صفحه‌ی اصلی.**
 - **فاز ۵ — پنل ادمین.**
