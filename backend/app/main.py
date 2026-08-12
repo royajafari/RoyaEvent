@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -13,6 +14,10 @@ from app.core.rate_limit_middleware import limiter
 from app.db.session import Base, engine
 
 settings = get_settings()
+
+# بدون این، لاگرهای خودمون (مثل ConsoleSmsProvider که OTP توسعه رو نشون
+# می‌ده) به‌خاطر سطح پیش‌فرض WARNING روی root logger، اصلاً چاپ نمی‌شن.
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 
 
 @asynccontextmanager

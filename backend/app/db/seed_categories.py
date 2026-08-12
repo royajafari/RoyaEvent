@@ -126,6 +126,12 @@ def seed_categories(db: Session) -> None:
 
 
 if __name__ == "__main__":
+    import sys
+
+    # کنسول ویندوز پیش‌فرض cp1252 است و چاپ متن فارسی رو crash می‌کنه
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
     session = SessionLocal()
     try:
         seed_categories(session)
