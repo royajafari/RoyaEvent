@@ -1,0 +1,35 @@
+# --- عمومی ---
+.env
+.env.local
+.DS_Store
+*.log
+.claude/
+
+# --- Backend (Python) ---
+backend/.venv/
+backend/**/__pycache__/
+*.pyc
+backend/*.db
+backend/*.db-journal
+backend/*.db-wal
+backend/*.db-shm
+backend/roya_event.db*
+backend/chroma_data/
+backend/.pytest_cache/
+backend/.ruff_cache/
+backend/htmlcov/
+backend/.coverage
+
+# --- Frontend (Next.js) ---
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
+
+# --- Infra ---
+infra/**/data/
+
+# --- فونت‌های تجاری (کلمه) — لایسنس مالکیتی fontiran.com، خارج از ریپو نگه داشته می‌شه ---
+/font/
