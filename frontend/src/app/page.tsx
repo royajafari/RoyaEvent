@@ -1,5 +1,7 @@
+import Link from "next/link";
+
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,6 +14,11 @@ export default function Home() {
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 px-4 py-16 dark:bg-black">
       <div className="flex w-full max-w-2xl flex-col items-center gap-6 text-center">
+        <div className="flex w-full justify-end">
+          <Link href="/login" className={buttonVariants({ variant: "outline", size: "sm" })}>
+            ورود
+          </Link>
+        </div>
         <Badge variant="secondary">نسخه‌ی در حال توسعه</Badge>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
           رویا ایونت
