@@ -1,12 +1,11 @@
-import sys
 from logging.config import fileConfig
-from pathlib import Path
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-
+# alembic.ini دارد prepend_sys_path = . (پوشه‌ی backend/) پس نیازی به
+# دستکاری دستی sys.path نیست.
+from app import models as _models  # noqa: F401  ثبت همه‌ی مدل‌ها روی Base.metadata
 from app.core.config import get_settings
 from app.db.session import Base
 
@@ -22,11 +21,6 @@ if config.config_file_name is not None:
 config.set_main_option("sqlalchemy.url", f"sqlite:///{get_settings().sqlite_path}")
 
 target_metadata = Base.metadata
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
 
 
 def run_migrations_offline() -> None:
@@ -67,9 +61,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

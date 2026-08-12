@@ -11,6 +11,7 @@ from app.api.deps import (
     get_sms_provider,
 )
 from app.core.config import get_settings
+from app.core.rate_limit_middleware import limiter
 from app.core.validators import InvalidEmail, InvalidPhoneNumber
 from app.models.otp_challenge import OTPPurpose
 from app.models.user import User
@@ -56,6 +57,7 @@ def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
 
 
 @router.post("/otp/request", response_model=OTPRequestOut)
+@limiter.exempt  # محدودیت اختصاصی OTP خودش را دارد؛ دوبار محدود نمی‌شود
 def request_otp(
     body: OTPRequestIn,
     request: Request,
@@ -88,7 +90,9 @@ def request_otp(
 
 
 @router.post("/otp/resend", response_model=OTPRequestOut)
+@limiter.exempt
 def resend_otp(
+    request: Request,
     body: OTPResendIn,
     db: Session = Depends(get_db),
     redis_client: Redis = Depends(get_redis),
@@ -114,6 +118,7 @@ def resend_otp(
 
 
 @router.post("/otp/verify", response_model=OTPVerifyOut)
+@limiter.exempt
 def verify_otp(
     body: OTPVerifyIn,
     request: Request,

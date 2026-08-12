@@ -6,10 +6,22 @@ from sqlalchemy.orm import sessionmaker
 
 import app.models  # noqa: F401  ثبت مدل‌ها روی Base.metadata
 from app.api.deps import get_db, get_email_provider, get_redis, get_sms_provider
+from app.core.rate_limit_middleware import limiter
 from app.db.session import Base
 from app.main import app as fastapi_app
+from app.models.category import Category
+from app.models.user import User
 from app.providers.email.console import ConsoleEmailProvider
 from app.providers.sms.console import ConsoleSmsProvider
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    """limiter عمومی (slowapi) در حافظه‌ی همان پردازه است؛ بدون ریست، تست‌های
+    پیاپی که یک endpoint محدودشده را چند بار صدا می‌زنند به هم نشت می‌کنند."""
+    limiter.reset()
+    yield
+    limiter.reset()
 
 
 @pytest.fixture()
@@ -69,3 +81,30 @@ def client(db_session, fake_redis, sms_provider, email_provider):
     yield test_client
 
     fastapi_app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def organizer(db_session):
+    user = User(phone="09121234567", full_name="برگزارکننده‌ی تست")
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture()
+def auth_headers(auth_service, organizer):
+    tokens = auth_service.issue_token_pair(organizer)
+    return {"Authorization": f"Bearer {tokens.access_token}"}
+
+
+@pytest.fixture()
+def leaf_category(db_session):
+    parent = Category(name="فناوری اطلاعات", slug="technology", parent_id=None)
+    db_session.add(parent)
+    db_session.flush()
+    child = Category(name="هوش مصنوعی", slug="ai", parent_id=parent.id)
+    db_session.add(child)
+    db_session.commit()
+    db_session.refresh(child)
+    return child
