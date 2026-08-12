@@ -1,0 +1,73 @@
+/* RoyaEventLoader — full-screen splash: R falls, E rises, they stick, then
+   separate as "oya" and "vent" fade into place, completing RoyaEvent.
+   Values (widths/offsets) are precomputed for an 800-weight system sans at 72px;
+   tweak FONT_SIZE in the .tsx file and re-derive if you change the font. */
+
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #161826;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-weight: 800;
+  direction: ltr;
+}
+
+.word {
+  position: relative;
+  width: 1px;
+  height: 88px;
+}
+
+.letter {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  line-height: 1;
+  white-space: nowrap;
+  transform: translate(-50%, -52%);
+}
+
+/* R: falls from above to the stuck point, bounces, then slides to its final slot */
+.letterR {
+  animation: rMove 2.15s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes rMove {
+  0%   { transform: translate(calc(-50% - 106px), calc(-52% - 340px)) scale(1); }
+  42%  { transform: translate(calc(-50% - 106px), -52%) scale(1); }
+  48%  { transform: translate(calc(-50% - 106px), -52%) scale(0.88); }
+  54%  { transform: translate(calc(-50% - 106px), -52%) scale(1); }
+  100% { transform: translate(calc(-50% - 164px), -52%) scale(1); }
+}
+
+/* E: rises from below to the stuck point, bounces, then slides to its final slot */
+.letterE {
+  animation: eMove 2.15s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes eMove {
+  0%   { transform: translate(calc(-50% - 50px), calc(-52% + 340px)) scale(1); }
+  42%  { transform: translate(calc(-50% - 50px), -52%) scale(1); }
+  48%  { transform: translate(calc(-50% - 50px), -52%) scale(0.88); }
+  54%  { transform: translate(calc(-50% - 50px), -52%) scale(1); }
+  100% { transform: translate(calc(-50% + 11px), -52%) scale(1); }
+}
+
+/* the letters that fade in between/after R and E */
+.fadeLetter {
+  opacity: 0;
+  animation: fadeUp 0.45s ease-out forwards;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translate(-50%, calc(-52% + 16px)); }
+  to   { opacity: 1; transform: translate(-50%, -52%); }
+}
+
+/* whole stage fades out once the app tells it content is ready */
+.stage.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease-out;
+}
