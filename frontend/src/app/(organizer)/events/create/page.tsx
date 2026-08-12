@@ -1,0 +1,326 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { ApiError } from "@/lib/api-client";
+import type { CategoryOut, EventDetail, EventSessionInput } from "@/lib/events-api";
+import { eventsApi } from "@/lib/events-api";
+import { useAuthStore } from "@/store/auth-store";
+
+type SessionRow = { starts_at: string; duration_minutes: number };
+
+function groupCategories(categories: CategoryOut[]) {
+  const parents = categories.filter((c) => c.parent_id === null);
+  return parents.map((parent) => ({
+    parent,
+    children: categories.filter((c) => c.parent_id === parent.id),
+  }));
+}
+
+export default function CreateEventPage() {
+  const router = useRouter();
+  const accessToken = useAuthStore((s) => s.accessToken);
+
+  const [categories, setCategories] = useState<CategoryOut[]>([]);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [categoryId, setCategoryId] = useState<string>("");
+  const [format, setFormat] = useState<"online" | "in_person" | "hybrid">("online");
+  const [venueAddress, setVenueAddress] = useState("");
+  const [onlinePlatform, setOnlinePlatform] = useState("");
+  const [visibility, setVisibility] = useState<"public" | "private">("public");
+  const [tagNames, setTagNames] = useState("");
+  const [sessions, setSessions] = useState<SessionRow[]>([{ starts_at: "", duration_minutes: 60 }]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [createdEvent, setCreatedEvent] = useState<EventDetail | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    eventsApi.listCategories().then(setCategories).catch(() => setError("خطا در دریافت دسته‌بندی‌ها"));
+  }, []);
+
+  function updateSession(index: number, patch: Partial<SessionRow>) {
+    setSessions((prev) => prev.map((s, i) => (i === index ? { ...s, ...patch } : s)));
+  }
+
+  function addSession() {
+    setSessions((prev) => [...prev, { starts_at: "", duration_minutes: 60 }]);
+  }
+
+  function removeSession(index: number) {
+    setSessions((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!accessToken) {
+      setError("برای ایجاد رویداد باید وارد شوید");
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      const sessionInputs: EventSessionInput[] = sessions
+        .filter((s) => s.starts_at)
+        .map((s) => ({
+          starts_at: new Date(s.starts_at).toISOString(),
+          duration_minutes: s.duration_minutes,
+        }));
+
+      const event = await eventsApi.create(
+        {
+          title,
+          description,
+          category_id: Number(categoryId),
+          format,
+          venue_address: format !== "online" ? venueAddress : undefined,
+          online_platform_name: format !== "in_person" ? onlinePlatform : undefined,
+          visibility,
+          tag_names: tagNames
+            .split(/[,#]/)
+            .map((t) => t.trim())
+            .filter(Boolean),
+          sessions: sessionInputs,
+        },
+        accessToken,
+      );
+      setCreatedEvent(event);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "خطا در ایجاد رویداد");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleBannerUpload(file: File) {
+    if (!accessToken || !createdEvent) return;
+    setError(null);
+    try {
+      const updated = await eventsApi.uploadBanner(createdEvent.id, file, accessToken);
+      setCreatedEvent(updated);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "خطا در آپلود بنر");
+    }
+  }
+
+  async function handlePublish() {
+    if (!accessToken || !createdEvent) return;
+    setError(null);
+    try {
+      const published = await eventsApi.publish(createdEvent.id, accessToken);
+      router.push(`/events/${published.slug}`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "خطا در انتشار رویداد");
+    }
+  }
+
+  if (createdEvent) {
+    return (
+      <div className="mx-auto flex max-w-xl flex-col gap-6 px-4 py-10">
+        <Card className="text-right">
+          <CardHeader>
+            <CardTitle>رویداد ایجاد شد 🎉</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <p>
+              کد رویداد: <Badge variant="secondary">{createdEvent.event_code}</Badge>
+            </p>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="banner">بنر رویداد (اختیاری)</Label>
+              <input
+                ref={fileInputRef}
+                id="banner"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(e) => e.target.files?.[0] && handleBannerUpload(e.target.files[0])}
+              />
+              {createdEvent.banner_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={createdEvent.banner_url}
+                  alt="بنر رویداد"
+                  className="aspect-video w-full rounded-md object-cover"
+                />
+              )}
+            </div>
+            {error && <p className="text-destructive text-sm">{error}</p>}
+            <Button onClick={handlePublish}>انتشار رویداد</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-10">
+      <h1 className="text-2xl font-bold">ایجاد رویداد جدید</h1>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5 text-right">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="title">عنوان رویداد</Label>
+          <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="description">توضیحات</Label>
+          <Textarea
+            id="description"
+            rows={5}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label>دسته‌بندی</Label>
+          <Select value={categoryId} onValueChange={(v) => setCategoryId(v ?? "")}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="یک زیردسته انتخاب کنید" />
+            </SelectTrigger>
+            <SelectContent>
+              {groupCategories(categories).map(({ parent, children }) => (
+                <SelectGroup key={parent.id}>
+                  <SelectLabel>{parent.name}</SelectLabel>
+                  {children.map((child) => (
+                    <SelectItem key={child.id} value={String(child.id)}>
+                      {child.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label>نوع برگزاری</Label>
+          <Select value={format} onValueChange={(v) => v && setFormat(v as typeof format)}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="online">آنلاین</SelectItem>
+              <SelectItem value="in_person">حضوری</SelectItem>
+              <SelectItem value="hybrid">ترکیبی</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {format !== "online" && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="venue">آدرس محل برگزاری</Label>
+            <Input
+              id="venue"
+              value={venueAddress}
+              onChange={(e) => setVenueAddress(e.target.value)}
+              required
+            />
+          </div>
+        )}
+
+        {format !== "in_person" && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="platform">پلتفرم آنلاین (مثلاً SkyRoom)</Label>
+            <Input
+              id="platform"
+              value={onlinePlatform}
+              onChange={(e) => setOnlinePlatform(e.target.value)}
+            />
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2">
+          <Label>نوع دسترسی</Label>
+          <Select value={visibility} onValueChange={(v) => v && setVisibility(v as typeof visibility)}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="public">عمومی</SelectItem>
+              <SelectItem value="private">خصوصی (فقط با لینک دعوت)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="tags">برچسب‌ها (با کاما یا # جدا کنید)</Label>
+          <Input
+            id="tags"
+            dir="rtl"
+            placeholder="هوش‌مصنوعی, کسب‌وکار"
+            value={tagNames}
+            onChange={(e) => setTagNames(e.target.value)}
+          />
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <Label>جلسه‌ها</Label>
+          {sessions.map((session, index) => (
+            <div key={index} className="flex flex-wrap items-end gap-2 rounded-md border p-3">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor={`session-start-${index}`}>تاریخ و ساعت شروع</Label>
+                <Input
+                  id={`session-start-${index}`}
+                  type="datetime-local"
+                  value={session.starts_at}
+                  onChange={(e) => updateSession(index, { starts_at: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor={`session-duration-${index}`}>مدت (دقیقه)</Label>
+                <Input
+                  id={`session-duration-${index}`}
+                  type="number"
+                  min={1}
+                  className="w-24"
+                  value={session.duration_minutes}
+                  onChange={(e) =>
+                    updateSession(index, { duration_minutes: Number(e.target.value) })
+                  }
+                  required
+                />
+              </div>
+              {sessions.length > 1 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeSession(index)}
+                >
+                  حذف جلسه
+                </Button>
+              )}
+            </div>
+          ))}
+          <Button type="button" variant="outline" size="sm" onClick={addSession}>
+            + افزودن جلسه
+          </Button>
+        </div>
+
+        {error && <p className="text-destructive text-sm">{error}</p>}
+
+        <Button type="submit" disabled={loading || !categoryId}>
+          ایجاد رویداد
+        </Button>
+      </form>
+    </div>
+  );
+}

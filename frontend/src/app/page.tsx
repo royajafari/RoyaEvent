@@ -14,7 +14,16 @@ export default function Home() {
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 px-4 py-16 dark:bg-black">
       <div className="flex w-full max-w-2xl flex-col items-center gap-6 text-center">
-        <div className="flex w-full justify-end">
+        <div className="flex w-full flex-wrap items-center justify-end gap-2">
+          <Link href="/events" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+            رویدادها
+          </Link>
+          <Link href="/events/mine" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+            رویدادهای من
+          </Link>
+          <Link href="/events/create" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+            ایجاد رویداد
+          </Link>
           <Link href="/login" className={buttonVariants({ variant: "outline", size: "sm" })}>
             ورود
           </Link>

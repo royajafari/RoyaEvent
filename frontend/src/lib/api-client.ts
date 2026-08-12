@@ -1,4 +1,4 @@
-const API_BASE_URL =
+export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
 
 export class ApiError extends Error {
@@ -9,17 +9,19 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(
+export async function request<T>(
   path: string,
   options: RequestInit & { accessToken?: string | null } = {},
 ): Promise<T> {
   const { accessToken, headers, ...rest } = options;
+  const isFormData = typeof FormData !== "undefined" && rest.body instanceof FormData;
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...rest,
     credentials: "include", // برای ارسال/دریافت کوکی httpOnly رفرش‌توکن
     headers: {
-      "Content-Type": "application/json",
+      // برای FormData نباید Content-Type دستی ست بشه؛ خود مرورگر boundary لازم رو اضافه می‌کنه
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...headers,
     },
