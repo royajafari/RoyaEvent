@@ -1,0 +1,12 @@
+[tool.ruff]
+line-length = 110
+extend-exclude = ["app/db/migrations/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "RUF"]
+# RUF001-003: کدبیس عمداً فارسی است (کامنت/docstring/رشته‌های کاربر)؛
+# هشدار «کاراکتر یونیکد مبهم» روی حروف فارسی نویز است، نه باگ واقعی.
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

@@ -33,3 +33,8 @@ infra/**/data/
 
 # --- فونت‌های تجاری (کلمه) — لایسنس مالکیتی fontiran.com، خارج از ریپو نگه داشته می‌شه ---
 /font/
+
+# --- artifact جانبی ابزار محیط (نه بخشی از پروژه) ---
+/node_modules/
+/package.json
+/package-lock.json

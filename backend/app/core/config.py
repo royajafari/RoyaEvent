@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     app_name: str = "RoyaEvent API"
     environment: str = "development"
     api_v1_prefix: str = "/api/v1"
+    cors_allowed_origins: list[str] = ["http://localhost:3000"]
 
     # دیتابیس
     sqlite_path: str = "./roya_event.db"
@@ -32,6 +33,7 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 30
 
     # OTP — طبق event_otp_email_sms_plan_fa.md، بخش ۲۰
+    otp_hash_secret: str = "CHANGE_ME_OTP_SECRET"
     otp_length: int = 6
     otp_expiration_seconds: int = 300
     otp_max_attempts: int = 5
@@ -44,7 +46,9 @@ class Settings(BaseSettings):
     # Provider ها
     sms_provider: str = "ippanel"
     ippanel_api_key: str = ""
+    ippanel_sender_number: str = ""
     kavenegar_api_key: str = ""
+    kavenegar_sender: str = ""
 
     email_provider: str = "brevo"
     brevo_api_key: str = ""
