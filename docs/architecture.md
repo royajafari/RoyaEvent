@@ -229,6 +229,7 @@
 - **فونت:** Kalameh (محلی، `next/font/local`، `frontend/src/fonts/kalameh.ts`) — همه‌ی وزن‌ها (Thin تا Black).
 - **State:** TanStack Query برای state سرور + Zustand برای state خالص کلاینت.
 - **RTL/فارسی:** `dir="rtl"` + `lang="fa"` روی ریشه، کلاس‌های منطقی Tailwind (`ps-*`/`pe-*`). تاریخ: `dayjs` + پلاگین جلالی برای نمایش، ذخیره/انتقال UTC/میلادی.
+- **ریسپانسیو بودن (الزامی، طبق درخواست کاربر):** تمام صفحات و کامپوننت‌ها باید mobile-first و کاملاً ریسپانسیو باشن (موبایل/تبلت/دسکتاپ). از breakpointهای استاندارد Tailwind (`sm/md/lg/xl`) و کلاس‌های flex/grid ریسپانسیو استفاده می‌شه؛ هیچ عرض/ارتفاع ثابتی که در موبایل بشکنه مجاز نیست. هر صفحه‌ی جدید باید حداقل در دو breakpoint (موبایل و دسکتاپ) بررسی بصری بشه.
 - **الگوی مقاومت در برابر قطع اتصال:** `useNetworkStatus` ترکیب رویدادهای `online`/`offline` مرورگر + پینگ دوره‌ای سبک `/api/v1/health`؛ اگر آفلاین در حالی که لاگین → پس از اتصال مجدد refresh خاموش توکن، شکست → ریدایرکت به ورود OTP؛ اگر آفلاین بدون لاگین → اسکلت تمام‌صفحه تا اتصال واقعی برقرار بشه.
 
 ---
@@ -252,8 +253,8 @@ RoyaEvent/
 
 هر فاز با چند commit کوچک و مرتب روی GitHub ثبت می‌شه.
 
-- **فاز ۰ — Scaffolding و مستندات.** ✅ (این commit) — ساختار backend/frontend، docker-compose، تحلیل رقبا، مستندات.
-- **فاز ۱ — Auth/OTP + کاربران.**
+- **فاز ۰ — Scaffolding و مستندات.** ✅ — ساختار backend/frontend، docker-compose، تحلیل رقبا، مستندات.
+- **فاز ۱ — Auth/OTP + کاربران.** ✅ — جداول `users`/`otp_challenge`/`refresh_tokens` (Alembic)، `OTPService` (تولید/هش/rate-limit/انقضا/قفل)، provider abstraction (Console/IPPanel/Kavenegar/Brevo/Resend)، `AuthService` (JWT access+refresh چرخشی با تشخیص سرقت)، endpoint‌های `/auth/otp/*`, `/auth/refresh`, `/auth/logout`, `/auth/me`، صفحه‌ی ورود OTP در فرانت، ۵۵ تست (unit+integration) پاس.
 - **فاز ۲ — CRUD رویداد + دسته‌بندی/تگ/جلسه + آپلود بنر امن روی MinIO.**
 - **فاز ۳ — بلیط/سفارش/تخفیف/علاقه‌مندی/دنبال‌کردن.**
 - **فاز ۴ — جستجو + صفحه‌ی اصلی.**
