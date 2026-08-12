@@ -1,9 +1,10 @@
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
+from app.core.permissions import require_event_owner
 from app.core.rate_limit_middleware import limiter
 from app.core.storage import upload_banner_image
 from app.models.category import Category
@@ -18,43 +19,15 @@ from app.schemas.event import (
     EventUpdateIn,
 )
 from app.services import event_service
-from app.services.event_service import EventServiceError
+from app.services.event_service import EventServiceError, event_query, to_list_item_out
 from app.services.image_service import InvalidImageError, validate_and_reencode_image
 
 router = APIRouter(prefix="/events", tags=["events"])
 
 MAX_BANNER_UPLOAD_BYTES = 5 * 1024 * 1024
 
-
-def _event_query(db: Session):
-    return db.query(Event).options(
-        selectinload(Event.sessions), selectinload(Event.tags), selectinload(Event.category)
-    )
-
-
-def _to_list_item(event: Event) -> EventListItemOut:
-    ordered_sessions = sorted(event.sessions, key=lambda s: s.starts_at)
-    next_session = ordered_sessions[0] if ordered_sessions else None
-    return EventListItemOut(
-        id=event.id,
-        title=event.title,
-        slug=event.slug,
-        event_code=event.event_code,
-        banner_url=event.banner_url,
-        category=CategoryOut.model_validate(event.category) if event.category else None,
-        format=event.format.value,
-        status=event.status.value,
-        is_featured=event.is_featured,
-        rating_avg=event.rating_avg,
-        rating_count=event.rating_count,
-        view_count=event.view_count,
-        next_session_at=next_session.starts_at if next_session else None,
-    )
-
-
-def _require_owner(event: Event, user: User) -> None:
-    if event.organizer_id != user.id and user.role.value != "admin":
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "شما مالک این رویداد نیستید")
+_event_query = event_query
+_to_list_item = to_list_item_out
 
 
 @router.get("/categories", response_model=list[CategoryOut])
@@ -100,7 +73,7 @@ def get_event_by_id_for_owner(
     event = _event_query(db).filter_by(id=event_id).first()
     if event is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "رویداد یافت نشد")
-    _require_owner(event, current_user)
+    require_event_owner(event, current_user)
     return event
 
 
@@ -188,7 +161,7 @@ def update_event(
     event = db.get(Event, event_id)
     if event is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "رویداد یافت نشد")
-    _require_owner(event, current_user)
+    require_event_owner(event, current_user)
 
     try:
         event = event_service.update_event(db, event, body)
@@ -209,7 +182,7 @@ def replace_event_sessions(
     event = db.get(Event, event_id)
     if event is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "رویداد یافت نشد")
-    _require_owner(event, current_user)
+    require_event_owner(event, current_user)
 
     try:
         event = event_service.replace_sessions(db, event, sessions)
@@ -225,7 +198,7 @@ def publish_event(
     event = db.get(Event, event_id)
     if event is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "رویداد یافت نشد")
-    _require_owner(event, current_user)
+    require_event_owner(event, current_user)
 
     try:
         event = event_service.publish_event(db, event)
@@ -241,7 +214,7 @@ def cancel_event(
     event = db.get(Event, event_id)
     if event is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "رویداد یافت نشد")
-    _require_owner(event, current_user)
+    require_event_owner(event, current_user)
     return event_service.cancel_event(db, event)
 
 
@@ -257,7 +230,7 @@ async def upload_event_banner(
     event = db.get(Event, event_id)
     if event is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "رویداد یافت نشد")
-    _require_owner(event, current_user)
+    require_event_owner(event, current_user)
 
     raw = await file.read(MAX_BANNER_UPLOAD_BYTES + 1)
     if len(raw) > MAX_BANNER_UPLOAD_BYTES:

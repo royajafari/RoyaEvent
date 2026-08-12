@@ -20,3 +20,9 @@ def slugify_ascii(text: str, fallback_prefix: str = "item") -> str:
 def generate_numeric_code(length: int = 6) -> str:
     """کد رویداد عددی (مثل eseminar.tv) — از secrets برای امنیت کافی استفاده می‌شه."""
     return "".join(secrets.choice(string.digits) for _ in range(length))
+
+
+def generate_alnum_code(length: int = 10) -> str:
+    """کد بلیط حرفی‌عددی یکتا (ticket_code)."""
+    alphabet = string.ascii_uppercase + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(length))

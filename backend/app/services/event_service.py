@@ -1,17 +1,43 @@
 from __future__ import annotations
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.slug import generate_numeric_code, slugify_ascii
 from app.models.base import utcnow
 from app.models.category import Category
 from app.models.event import Event, EventSession, EventStatus
 from app.models.tag import Tag
-from app.schemas.event import EventCreateIn, EventSessionIn, EventUpdateIn
+from app.schemas.event import CategoryOut, EventCreateIn, EventListItemOut, EventSessionIn, EventUpdateIn
 
 
 class EventServiceError(ValueError):
     pass
+
+
+def event_query(db: Session):
+    return db.query(Event).options(
+        selectinload(Event.sessions), selectinload(Event.tags), selectinload(Event.category)
+    )
+
+
+def to_list_item_out(event: Event) -> EventListItemOut:
+    ordered_sessions = sorted(event.sessions, key=lambda s: s.starts_at)
+    next_session = ordered_sessions[0] if ordered_sessions else None
+    return EventListItemOut(
+        id=event.id,
+        title=event.title,
+        slug=event.slug,
+        event_code=event.event_code,
+        banner_url=event.banner_url,
+        category=CategoryOut.model_validate(event.category) if event.category else None,
+        format=event.format.value,
+        status=event.status.value,
+        is_featured=event.is_featured,
+        rating_avg=event.rating_avg,
+        rating_count=event.rating_count,
+        view_count=event.view_count,
+        next_session_at=next_session.starts_at if next_session else None,
+    )
 
 
 def _generate_unique_event_code(db: Session) -> str:

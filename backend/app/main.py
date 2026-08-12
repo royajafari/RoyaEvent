@@ -9,6 +9,10 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.v1.routers.auth import router as auth_router
 from app.api.v1.routers.events import router as events_router
+from app.api.v1.routers.orders import router as orders_router
+from app.api.v1.routers.organizer import router as organizer_router
+from app.api.v1.routers.social import router as social_router
+from app.api.v1.routers.tickets import router as tickets_router
 from app.core.config import get_settings
 from app.core.rate_limit_middleware import limiter
 from app.db.session import Base, engine
@@ -46,6 +50,10 @@ app.add_middleware(
 
 app.include_router(auth_router, prefix=settings.api_v1_prefix)
 app.include_router(events_router, prefix=settings.api_v1_prefix)
+app.include_router(tickets_router, prefix=settings.api_v1_prefix)
+app.include_router(orders_router, prefix=settings.api_v1_prefix)
+app.include_router(social_router, prefix=settings.api_v1_prefix)
+app.include_router(organizer_router, prefix=settings.api_v1_prefix)
 
 
 @app.get("/health")

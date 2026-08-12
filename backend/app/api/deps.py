@@ -50,3 +50,9 @@ def get_current_user(
         return AuthService(db).get_user_from_access_token(credentials.credentials)
     except AuthError as exc:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, str(exc)) from exc
+
+
+def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role.value != "admin":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "این عملیات فقط برای ادمین مجاز است")
+    return current_user

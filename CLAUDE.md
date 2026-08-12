@@ -24,22 +24,26 @@
 | Email | Brevo (اصلی) / Resend (جایگزین) |
 | مانیتورینگ | Loki + Prometheus + Grafana (فاز ۹، فقط docker-compose آماده‌ست) |
 | فونت | Kalameh (محلی، `frontend/src/fonts/kalameh/*.woff2`، فایل تجاری — نکته‌ی لایسنس پایین صفحه) |
+| رنگ برند | سبز `#2E9E4F` (primary)، قرمز `#DA1A32` (destructive)، navy تیره `#161826` (پس‌زمینه‌ی dark mode) — دقیقاً از `logo/royaevent-logo.svg`، تبدیل‌شده به oklch در `globals.css` (`--brand-green/red/dark`) |
 
 ## ساختار پوشه‌ها
 
 ```
 RoyaEvent/
   backend/app/
-    api/v1/routers/   # auth.py, events.py
-    api/deps.py        # get_db, get_current_user, get_redis, get_sms/email_provider, get_client_ip
+    api/v1/routers/   # auth.py, events.py, tickets.py, orders.py, social.py, organizer.py
+    api/deps.py        # get_db, get_current_user, get_current_admin_user, get_redis, get_sms/email_provider, get_client_ip
     core/               # config, security (JWT+OTP hash), rate_limit (OTP), rate_limit_middleware (عمومی/slowapi)
-                        # redis_client, storage (MinIO), slug, validators
+                        # redis_client, storage (MinIO), slug, validators, calendar (لینک گوگل‌کلندر)، permissions (require_event_owner)
     db/                 # session.py (engine/Base/get_db)، migrations/ (Alembic)، seed_categories.py
-    models/             # User, OTPChallenge, RefreshToken, Category, Tag, Instructor, Event, EventSession
+    models/             # User, OTPChallenge, RefreshToken, Category, Tag, Instructor, Event, EventSession,
+                        # TicketType, DiscountCode, PlatformDiscountCode, Order, OrderItem, Payment, Registration,
+                        # Favorite, OrganizerFollow, InstructorFollow
     providers/sms|email/ # base + console(dev) + ippanel/kavenegar/brevo/resend
-    schemas/            # auth.py, event.py (Pydantic)
-    services/           # otp_service, auth_service, event_service, image_service
-  backend/tests/unit|integration/   # pytest، fakeredis، بدون نیاز به Redis واقعی
+    schemas/            # auth.py, event.py, ticket.py, order.py, social.py, organizer.py (Pydantic)
+    services/           # otp_service, auth_service, event_service (+event_query/to_list_item_out عمومی),
+                        # image_service, ticket_service, discount_service, order_service, social_service
+  backend/tests/unit|integration/   # pytest، fakeredis، بدون نیاز به Redis واقعی — فاز ۳ هنوز تست نداره
   frontend/src/
     app/
       (auth)/login/page.tsx        # ورود OTP (client)
@@ -49,6 +53,9 @@ RoyaEvent/
       events/[slug]/page.tsx       # جزئیات رویداد عمومی (SSR/dynamic + JSON-LD)
       page.tsx                     # خانه
     components/EventCard.tsx       # کارت رویداد (Server Component)
+    components/RoyaEventLogo.tsx   # لوگوی متنی برند (سبز/سفید/قرمز)
+    components/RoyaEventLoader.tsx # اسپلش‌اسکرین، وصل به app/loading.tsx (Suspense خودکار نکست‌جس)
+    components/SiteHeader.tsx      # هدر مشترک (لوگو+ناوبری)، در layout ریشه
     components/ui/                 # shadcn primitives (+ textarea, select)
     lib/
       api-client.ts    # fetch wrapper سمت کلاینت، credentials:include، پشتیبانی FormData
@@ -69,12 +76,35 @@ RoyaEvent/
 
 - **فاز ۰ (Scaffolding)** ✅ کامل و commit‌شده.
 - **فاز ۱ (Auth/OTP)** ✅ کامل، تست‌شده، commit‌شده، push‌شده.
-- **فاز ۲ (Event CRUD + دسته‌بندی/تگ/جلسه + آپلود بنر امن)** ✅ **کامل (بک‌اند + فرانت‌اند)، تست‌شده، لینت تمیز، تأیید بصری end-to-end با سرور واقعی. کامیت بک‌اند/CLAUDE.md push شده؛ کامیت فرانت هنوز نه (پایین صفحه ببین).**
-- فازهای ۳ تا ۱۱: هنوز شروع نشده (تیکتینگ، جستجو، ادمین، اعلان‌ها، امتیازدهی، آنالیتیکس، مانیتورینگ، تست/RTL نهایی، دیپلوی).
+- **فاز ۲ (Event CRUD + دسته‌بندی/تگ/جلسه + آپلود بنر امن)** ✅ **کامل (بک‌اند + فرانت‌اند)، تست‌شده، لینت تمیز، تأیید بصری end-to-end. همه commit/push شده (بک‌اند، فرانت، لوگو/اسپلش‌اسکرین، تم رنگی برند).**
+- **فاز ۳ (بلیط/سفارش/تخفیف/علاقه‌مندی/دنبال‌کردن)** 🚧 **بک‌اند: مدل‌ها + migration + schemas + services + همه‌ی routerها نوشته و در main.py wire شدن (۳۶ route کل، verify شده با openapi schema). هنوز uncommitted، هنوز تست نداره، فرانت شروع نشده.** جزئیات کامل زیر. **این‌جا متوقف شد — ادامه از این نقطه.**
+- فازهای ۴ تا ۱۱: هنوز شروع نشده (جستجو، ادمین، اعلان‌ها، امتیازدهی، آنالیتیکس، مانیتورینگ، تست/RTL نهایی، دیپلوی).
 
-**بک‌اند در مجموع الان ۱۰۱ تست دارد (unit + integration)، همه پاس، `ruff check .` تمیز.** فرانت `npm run build` و `npm run lint` هر دو تمیز.
+**بک‌اند در مجموع الان ۱۰۱ تست دارد (unit + integration، فاز ۳ صفر تست اضافه کرده هنوز)، همه پاس، `ruff check .` تمیز، migration تا آخر (`956ea659d2be`) verify شده.** فرانت `npm run build` و `npm run lint` هر دو تمیز.
 
-**تأیید بصری واقعی فاز ۲ (نه فقط build/test):** بک‌اند و فرانت هر دو به‌صورت real dev server بالا آورده شدن (`uvicorn` روی ۸۰۰۰، `next dev` روی ۳۰۰۰)، دسته‌بندی‌ها seed شدن، از طریق OTP واقعی لاگین شد، یک رویداد واقعی از طریق API ساخته و publish شد، و HTML خروجی SSR صفحات `/events` و `/events/[slug]` با `curl` بررسی شد — عنوان فارسی، تاریخ شمسی (`۱۰ شهریور ۱۴۰۵`)، دسته‌بندی، JSON-LD همه درست رندر شدن. (Playwright برای اسکرین‌شات واقعی مرورگر هنوز در دسترس نیست — نگاه کن به دام #۴.)
+**تأیید بصری واقعی فاز ۲ (نه فقط build/test):** بک‌اند و فرانت هر دو به‌صورت real dev server بالا آورده شدن، دسته‌بندی‌ها seed شدن، از طریق OTP واقعی لاگین شد، یک رویداد واقعی از طریق API ساخته و publish شد، و HTML خروجی SSR صفحات `/events` و `/events/[slug]` با `curl` بررسی شد — عنوان فارسی، تاریخ شمسی، دسته‌بندی، JSON-LD همه درست رندر شدن. (Playwright برای اسکرین‌شات واقعی مرورگر هنوز در دسترس نیست — نگاه کن به دام #۴.) **فاز ۳ هنوز این‌جور تأیید نشده — اول باید فاز ۳ تست/build بشه.**
+
+### فاز ۳ — بک‌اند wired اما تست‌نشده (نقطه‌ی ادامه‌ی کار)
+
+**نوشته‌شده (uncommitted):**
+- مدل‌ها: `TicketType` (با `is_early_bird`)، `DiscountCode` (سطح رویداد)، `PlatformDiscountCode` (سطح سایت/ادمین)، `Order`/`OrderItem`/`Payment`/`Registration`، `Favorite`، `OrganizerFollow`/`InstructorFollow` — `app/models/ticket.py`, `order.py`, `favorite.py`
+- Migration `956ea659d2be` روی پایه‌ی `567deeea1757` — اجرا و verify شد (فقط create، بدون drop)
+- `app/services/ticket_service.py` — `is_early_bird_active(event)`: طبق نیازمندی ۳۴ («اگر کمتر از یک‌سوم بازه‌ی شروع فروش تا اولین جلسه گذشته باشد»)؛ مرجع «شروع رویداد» = زودترین جلسه (ساده‌سازی برای رویداد چندجلسه‌ای)
+- `app/services/discount_service.py` — `find_valid_discount()` اول سطح رویداد بعد سطح سایت رو چک می‌کنه؛ `compute_discount_amount()` percent/fixed
+- `app/services/order_service.py` — `create_order()` (اعتبارسنجی ticket/session/ظرفیت/early-bird/تخفیف، PENDING می‌سازه)، `complete_order()` (finalize، Registration با ticket_code یکتا می‌سازه، quantity_sold رو +۱ می‌کنه، uses_count تخفیف رو +۱)، `cancel_registration()` (ظرفیت رو برمی‌گردونه)
+- `app/services/social_service.py` — toggle ساده برای favorite/organizer-follow/instructor-follow
+- `app/core/calendar.py` — `google_calendar_link()`: تابع محض تولید URL، بدون OAuth (طبق تصمیم کاربر)
+- `app/core/permissions.py` — `require_event_owner()` منتقل شد این‌جا (قبلاً تکراری در events.py بود)؛ `app/services/event_service.py` هم `event_query()`/`to_list_item_out()` عمومی شدن (قبلاً private در events.py) تا `social.py` هم بتونه ازشون استفاده کنه برای `/me/favorites`
+- Routerها: `tickets.py` (ticket-types CRUD + discount-codes رویداد/ادمین + validate)، `orders.py` (create/complete/get/me-tickets/cancel/calendar-link)، `social.py` (favorites + follows)، `organizer.py` (attendees list/remove/export CSV)
+- همه در `main.py` wire شدن؛ مجموعاً ۳۶ route (بررسی‌شده با `app.openapi()['paths']`)
+
+**هنوز نیاز به تکمیل (فردا از این‌جا ادامه بده):**
+1. **هیچ تستی برای فاز ۳ نوشته نشده** — نه unit (ticket_service/discount_service/order_service/social_service) نه integration (tickets/orders/social/organizer API). این اولین کاریه که باید فردا انجام بشه، قبل از commit.
+2. بعد از نوشتن تست‌ها: `pytest` کامل + `ruff check .` (احتمالاً نیاز به فیکسچرهای جدید در conftest.py مثل `ticket_type`/`published_event` مشابه الگوی `leaf_category`).
+3. فرانت فاز ۳ اصلاً شروع نشده: صفحه‌ی چک‌اوت/انتخاب بلیط، دکمه‌ی علاقه‌مندی/دنبال‌کردن روی کارت/صفحه‌ی رویداد، فوتر چسبان «انتخاب بلیط» (نیازمندی ۳۷)، داشبورد شرکت‌کنندگان برگزارکننده، صفحه‌ی «بلیط‌های من».
+4. بعد از تکمیل، تأیید بصری end-to-end واقعی مثل فاز ۲ (seed + OTP + ساخت ticket_type + خرید واقعی + بررسی HTML) قبل از commit نهایی.
+5. `docs/architecture.md` بخش ۱۴ باید بعد از تکمیل فاز ۳ به‌روزرسانی بشه.
+6. **این commit فعلی (اگه همین الان زده بشه) یک checkpoint نیمه‌کاره‌ست، نه «فاز ۳ کامل»** — پیام commit باید صادقانه این رو نشون بده (مثل فاز ۱/۲ که فقط بعد از تست‌شدن کامل commit شدن).
 
 ### فاز ۲ — کامل (بک‌اند + فرانت‌اند)
 
