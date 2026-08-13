@@ -47,3 +47,7 @@ class UserOut(BaseModel):
 class AccessTokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class ProfileUpdateIn(BaseModel):
+    full_name: str = Field(min_length=2, max_length=255)

@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.core.calendar import google_calendar_link
+from app.core.permissions import require_complete_profile
 from app.core.rate_limit_middleware import limiter
 from app.models.event import Event, EventSession
 from app.models.order import Order, Registration
@@ -30,6 +31,7 @@ def create_order_endpoint(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    require_complete_profile(current_user)
     try:
         return create_order(db, current_user.id, body)
     except OrderServiceError as exc:

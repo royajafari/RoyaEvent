@@ -22,6 +22,33 @@ def test_create_order_success(client, published_event, free_ticket_type, buyer_a
     assert resp.json()["status"] == "pending"
 
 
+def test_create_order_requires_complete_profile(client, published_event, free_ticket_type, db_session):
+    from app.models.user import User
+    from app.services.auth_service import AuthService
+
+    incomplete_user = User(phone="09309999998")
+    db_session.add(incomplete_user)
+    db_session.commit()
+    db_session.refresh(incomplete_user)
+    tokens = AuthService(db_session).issue_token_pair(incomplete_user)
+    headers = {"Authorization": f"Bearer {tokens.access_token}"}
+
+    resp = client.post(
+        "/api/v1/orders",
+        json=_order_payload(free_ticket_type, published_event.sessions[0]),
+        headers=headers,
+    )
+    assert resp.status_code == 422
+
+    client.patch("/api/v1/auth/me", json={"full_name": "خریدار تازه"}, headers=headers)
+    resp = client.post(
+        "/api/v1/orders",
+        json=_order_payload(free_ticket_type, published_event.sessions[0]),
+        headers=headers,
+    )
+    assert resp.status_code == 201
+
+
 def test_create_order_invalid_ticket_type_returns_422(client, published_event, buyer_auth_headers):
     resp = client.post(
         "/api/v1/orders",

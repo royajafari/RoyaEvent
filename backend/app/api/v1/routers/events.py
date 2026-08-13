@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, stat
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
-from app.core.permissions import require_event_owner
+from app.core.permissions import require_complete_profile, require_event_owner
 from app.core.rate_limit_middleware import limiter
 from app.core.storage import upload_banner_image, upload_promo_video
 from app.models.category import Category
@@ -138,6 +138,7 @@ def create_event(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    require_complete_profile(current_user)
     try:
         event = event_service.create_event(db, current_user.id, body)
     except EventServiceError as exc:

@@ -49,6 +49,25 @@ def test_create_event_success(client, leaf_category, auth_headers):
     assert len(body["sessions"]) == 1
 
 
+def test_create_event_requires_complete_profile(client, leaf_category, db_session):
+    from app.models.user import User
+    from app.services.auth_service import AuthService
+
+    incomplete_user = User(phone="09309999999")
+    db_session.add(incomplete_user)
+    db_session.commit()
+    db_session.refresh(incomplete_user)
+    tokens = AuthService(db_session).issue_token_pair(incomplete_user)
+    headers = {"Authorization": f"Bearer {tokens.access_token}"}
+
+    resp = client.post("/api/v1/events", json=_event_payload(leaf_category.id), headers=headers)
+    assert resp.status_code == 422
+
+    client.patch("/api/v1/auth/me", json={"full_name": "کاربر تازه"}, headers=headers)
+    resp = client.post("/api/v1/events", json=_event_payload(leaf_category.id), headers=headers)
+    assert resp.status_code == 201
+
+
 def test_create_event_rejects_parent_category(client, leaf_category, auth_headers, db_session):
     from app.models.category import Category
 
