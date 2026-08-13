@@ -38,6 +38,7 @@ export type EventListItem = {
 export type EventDetail = {
   id: number;
   organizer_id: number;
+  organizer_name: string | null;
   title: string;
   slug: string;
   event_code: string;

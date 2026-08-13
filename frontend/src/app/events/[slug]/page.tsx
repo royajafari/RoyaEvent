@@ -2,6 +2,10 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 import { EventCard } from "@/components/EventCard";
+import { FavoriteButton } from "@/components/FavoriteButton";
+import { FollowOrganizerButton } from "@/components/FollowOrganizerButton";
+import { StickyTicketFooter } from "@/components/StickyTicketFooter";
+import { TicketCheckout } from "@/components/TicketCheckout";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { formatJalaliDateTime } from "@/lib/date";
@@ -50,7 +54,7 @@ export default async function EventDetailPage({ params }: Props) {
   };
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-8">
+    <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-8 pb-24">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -79,12 +83,25 @@ export default async function EventDetailPage({ params }: Props) {
 
       <h1 className="text-2xl font-bold sm:text-3xl">{event.title}</h1>
 
-      <div className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-2 text-sm">
-        <span>کد رویداد: {event.event_code}</span>
-        {firstSession && <span>شروع: {formatJalaliDateTime(firstSession.starts_at)}</span>}
-        <span>مدت کل: {totalDuration} دقیقه</span>
-        <span>{isMultiSession ? `${event.sessions.length} جلسه` : "تک‌جلسه‌ای"}</span>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <span>کد رویداد: {event.event_code}</span>
+          {firstSession && <span>شروع: {formatJalaliDateTime(firstSession.starts_at)}</span>}
+          <span>مدت کل: {totalDuration} دقیقه</span>
+          <span>{isMultiSession ? `${event.sessions.length} جلسه` : "تک‌جلسه‌ای"}</span>
+        </div>
+        <FavoriteButton eventId={event.id} />
       </div>
+
+      {event.organizer_name && (
+        <div className="flex items-center justify-between gap-3 rounded-md border p-3">
+          <div className="flex flex-col">
+            <span className="text-muted-foreground text-xs">برگزارکننده</span>
+            <span className="font-medium">{event.organizer_name}</span>
+          </div>
+          <FollowOrganizerButton organizerId={event.organizer_id} />
+        </div>
+      )}
 
       <Separator />
 
@@ -134,6 +151,15 @@ export default async function EventDetailPage({ params }: Props) {
         </>
       )}
 
+      {event.status === "published" && (
+        <>
+          <Separator />
+          <section>
+            <TicketCheckout event={event} />
+          </section>
+        </>
+      )}
+
       {related.length > 0 && (
         <>
           <Separator />
@@ -147,6 +173,8 @@ export default async function EventDetailPage({ params }: Props) {
           </section>
         </>
       )}
+
+      {event.status === "published" && <StickyTicketFooter event={event} />}
     </div>
   );
 }

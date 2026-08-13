@@ -84,12 +84,20 @@ export default function MyEventsPage() {
             </CardHeader>
             <CardContent className="flex items-center gap-2">
               {event.status === "published" && (
-                <Link
-                  href={`/events/${event.slug}`}
-                  className={buttonVariants({ variant: "outline", size: "sm" })}
-                >
-                  مشاهده صفحه‌ی عمومی
-                </Link>
+                <>
+                  <Link
+                    href={`/events/${event.slug}`}
+                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                  >
+                    مشاهده صفحه‌ی عمومی
+                  </Link>
+                  <Link
+                    href={`/organizer/events/${event.id}/attendees`}
+                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                  >
+                    شرکت‌کنندگان
+                  </Link>
+                </>
               )}
               {event.status === "draft" && (
                 <Button size="sm" onClick={() => handlePublish(event.id)}>

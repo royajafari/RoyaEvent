@@ -17,6 +17,9 @@ export function SiteHeader() {
           <Link href="/events/mine" className={buttonVariants({ variant: "ghost", size: "sm" })}>
             رویدادهای من
           </Link>
+          <Link href="/tickets" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+            بلیط‌های من
+          </Link>
           <Link href="/events/create" className={buttonVariants({ variant: "ghost", size: "sm" })}>
             ایجاد رویداد
           </Link>

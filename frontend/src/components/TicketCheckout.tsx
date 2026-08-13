@@ -1,0 +1,191 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { formatJalaliDateTime } from "@/lib/date";
+import { ApiError } from "@/lib/api-client";
+import type { EventDetail, EventSessionOut } from "@/lib/events-api";
+import { ordersApi } from "@/lib/orders-api";
+import type { TicketType } from "@/lib/tickets-api";
+import { ticketsApi } from "@/lib/tickets-api";
+import { useAuthStore } from "@/store/auth-store";
+
+const PRICING_LABELS: Record<TicketType["pricing_model"], string> = {
+  free: "رایگان",
+  paid: "پولی",
+  donation: "حمایتی",
+};
+
+function formatPrice(ticket: TicketType) {
+  if (ticket.pricing_model === "free") return "رایگان";
+  return `${ticket.price.toLocaleString("fa-IR")} تومان`;
+}
+
+export function TicketCheckout({ event }: { event: EventDetail }) {
+  const accessToken = useAuthStore((s) => s.accessToken);
+
+  const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(true);
+  const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<number | null>(
+    event.sessions[0]?.id ?? null,
+  );
+  const [discountCode, setDiscountCode] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successCode, setSuccessCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    ticketsApi
+      .listByEvent(event.id)
+      .then((types) => {
+        setTicketTypes(types);
+        const firstAvailable = types.find((t) => !t.is_sold_out);
+        setSelectedTicketId(firstAvailable?.id ?? types[0]?.id ?? null);
+      })
+      .catch(() => setError("خطا در دریافت نوع بلیط‌ها"))
+      .finally(() => setLoadingTickets(false));
+  }, [event.id]);
+
+  const selectedTicket = ticketTypes.find((t) => t.id === selectedTicketId) ?? null;
+
+  async function handleSubmit() {
+    if (!accessToken || !selectedTicketId || !selectedSessionId) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const order = await ordersApi.create(
+        {
+          ticket_type_id: selectedTicketId,
+          session_id: selectedSessionId,
+          discount_code: discountCode || null,
+        },
+        accessToken,
+      );
+      await ordersApi.complete(order.id, accessToken);
+      setSuccessCode(order.id.toString());
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "خطا در ثبت‌نام؛ دوباره تلاش کنید");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (loadingTickets) {
+    return <p className="text-muted-foreground text-sm">در حال بارگذاری بلیط‌ها...</p>;
+  }
+
+  if (ticketTypes.length === 0) {
+    return <p className="text-muted-foreground text-sm">هنوز بلیطی برای این رویداد تعریف نشده است.</p>;
+  }
+
+  if (successCode) {
+    return (
+      <Card id="ticket-checkout" className="border-primary text-right">
+        <CardHeader>
+          <CardTitle>ثبت‌نام با موفقیت انجام شد 🎉</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <p className="text-muted-foreground text-sm">
+            بلیط شما صادر شد. می‌توانید جزئیات و لینک تقویم را در «بلیط‌های من» ببینید.
+          </p>
+          <Link href="/tickets" className={buttonVariants({ className: "w-fit" })}>
+            مشاهده بلیط‌های من
+          </Link>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card id="ticket-checkout" className="text-right">
+      <CardHeader>
+        <CardTitle>انتخاب بلیط</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          {ticketTypes.map((ticket) => (
+            <button
+              key={ticket.id}
+              type="button"
+              disabled={ticket.is_sold_out || (ticket.is_early_bird && !ticket.is_early_bird_active)}
+              onClick={() => setSelectedTicketId(ticket.id)}
+              className={`flex items-center justify-between rounded-md border p-3 text-right transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                selectedTicketId === ticket.id ? "border-primary bg-primary/5" : "border-border"
+              }`}
+            >
+              <span className="flex flex-col items-start gap-1">
+                <span className="font-medium">{ticket.name}</span>
+                <span className="flex gap-1">
+                  <Badge variant="outline">{PRICING_LABELS[ticket.pricing_model]}</Badge>
+                  {ticket.is_early_bird && (
+                    <Badge variant={ticket.is_early_bird_active ? "default" : "secondary"}>
+                      {ticket.is_early_bird_active ? "زودهنگام (فعال)" : "زودهنگام (پایان‌یافته)"}
+                    </Badge>
+                  )}
+                  {ticket.is_sold_out && <Badge variant="destructive">تکمیل ظرفیت</Badge>}
+                </span>
+              </span>
+              <span className="font-semibold">{formatPrice(ticket)}</span>
+            </button>
+          ))}
+        </div>
+
+        {event.sessions.length > 1 && (
+          <div className="flex flex-col gap-2">
+            <Label>جلسه</Label>
+            <div className="flex flex-col gap-2">
+              {event.sessions.map((session: EventSessionOut, index: number) => (
+                <button
+                  key={session.id}
+                  type="button"
+                  onClick={() => setSelectedSessionId(session.id)}
+                  className={`rounded-md border p-2 text-right text-sm transition-colors ${
+                    selectedSessionId === session.id ? "border-primary bg-primary/5" : "border-border"
+                  }`}
+                >
+                  جلسه {index + 1} — {formatJalaliDateTime(session.starts_at)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="discount">کد تخفیف (اختیاری)</Label>
+          <Input
+            id="discount"
+            dir="ltr"
+            value={discountCode}
+            onChange={(e) => setDiscountCode(e.target.value)}
+            placeholder="مثلاً OFF10"
+          />
+        </div>
+
+        {error && <p className="text-destructive text-sm">{error}</p>}
+
+        {!accessToken ? (
+          <Link href="/login" className={buttonVariants({ className: "w-full" })}>
+            برای ثبت‌نام وارد شوید
+          </Link>
+        ) : (
+          <Button
+            disabled={submitting || !selectedTicket || !selectedSessionId || selectedTicket.is_sold_out}
+            onClick={handleSubmit}
+            className="w-full"
+          >
+            {submitting ? "در حال ثبت..." : "ثبت‌نام و دریافت بلیط"}
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export default TicketCheckout;
