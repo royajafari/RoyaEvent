@@ -33,12 +33,15 @@ export function StickyTicketFooter({ event }: { event: EventDetail }) {
 
   return (
     <div className="bg-background/95 fixed inset-x-0 bottom-0 z-30 border-t backdrop-blur">
-      <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
-        <div className="flex flex-col">
-          <span className="text-muted-foreground text-xs">قیمت بلیط</span>
-          <span className="font-semibold">{soldOut ? "ظرفیت تکمیل شده" : priceLabel}</span>
+      <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-4">
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className="truncate text-sm font-semibold sm:text-base">{event.title}</span>
+          <span className="text-base font-semibold sm:text-lg">
+            {soldOut ? "ظرفیت تکمیل شده" : priceLabel}
+          </span>
         </div>
         <Button
+          size="lg"
           disabled={soldOut}
           onClick={() =>
             document.getElementById("ticket-checkout")?.scrollIntoView({ behavior: "smooth" })
