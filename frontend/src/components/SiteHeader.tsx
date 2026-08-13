@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CircleHelp } from "lucide-react";
@@ -13,7 +14,14 @@ import { useAuthStore } from "@/store/auth-store";
 export function SiteHeader() {
   const router = useRouter();
   const accessToken = useAuthStore((s) => s.accessToken);
+  const user = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
   const clearAuth = useAuthStore((s) => s.clear);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    authApi.me(accessToken).then(setUser).catch(() => {});
+  }, [accessToken, setUser]);
 
   async function handleLogout() {
     clearAuth();
@@ -58,6 +66,9 @@ export function SiteHeader() {
           <Link href="/favorites" className={buttonVariants({ variant: "ghost", size: "sm" })}>
             علاقه‌مندی‌ها
           </Link>
+          <Link href="/follows" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+            دنبال‌کردن‌ها
+          </Link>
           <Link
             href="/events/create"
             id="tour-create"
@@ -66,14 +77,29 @@ export function SiteHeader() {
             ایجاد رویداد
           </Link>
           {accessToken ? (
-            <Button
-              id="tour-login"
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-            >
-              خروج
-            </Button>
+            <>
+              <Link
+                href="/profile"
+                className={buttonVariants({
+                  variant: "ghost",
+                  size: "sm",
+                  className: "gap-2",
+                })}
+              >
+                {user?.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={user.avatar_url}
+                    alt="عکس پروفایل"
+                    className="h-6 w-6 rounded-full object-cover"
+                  />
+                ) : null}
+                پروفایل
+              </Link>
+              <Button id="tour-login" variant="outline" size="sm" onClick={handleLogout}>
+                خروج
+              </Button>
+            </>
           ) : (
             <Link
               href="/login"

@@ -9,6 +9,8 @@ export type CategoryOut = {
 
 export type TagOut = { id: number; name: string; slug: string };
 
+export type InstructorRefOut = { id: number; name: string; avatar_url: string | null };
+
 export type EventSessionOut = {
   id: number;
   starts_at: string;
@@ -59,6 +61,7 @@ export type EventDetail = {
   published_at: string | null;
   sessions: EventSessionOut[];
   tags: TagOut[];
+  instructors: InstructorRefOut[];
 };
 
 export type EventSessionInput = {
@@ -79,14 +82,16 @@ export type EventCreateInput = {
   visibility?: "public" | "private";
   refund_policy?: string | null;
   tag_names?: string[];
+  instructor_names?: string[];
   sessions: EventSessionInput[];
 };
 
 export const eventsApi = {
-  listPublic: (params?: { categoryId?: number; format?: string }) => {
+  listPublic: (params?: { categoryId?: number; format?: string; sort?: string }) => {
     const qs = new URLSearchParams();
     if (params?.categoryId) qs.set("category_id", String(params.categoryId));
     if (params?.format) qs.set("format", params.format);
+    if (params?.sort) qs.set("sort", params.sort);
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
     return request<EventListItem[]>(`/events${suffix}`);
   },

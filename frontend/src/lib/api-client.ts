@@ -197,12 +197,28 @@ export const authApi = {
 
   logout: () => request<{ success: boolean }>("/auth/logout", { method: "POST" }),
 
-  me: (accessToken: string) => request("/auth/me", { accessToken }),
+  me: (accessToken: string) => request<UserOut>("/auth/me", { accessToken }),
 
   updateProfile: (fullName: string, accessToken: string) =>
-    request<{ full_name: string | null }>("/auth/me", {
+    request<UserOut>("/auth/me", {
       method: "PATCH",
       body: JSON.stringify({ full_name: fullName }),
       accessToken,
     }),
+
+  uploadAvatar: (
+    file: File,
+    accessToken: string,
+    onProgress?: (percent: number) => void,
+  ) => uploadFileWithProgress<UserOut>("/auth/me/avatar", file, accessToken, onProgress),
+};
+
+export type UserOut = {
+  id: number;
+  phone: string | null;
+  email: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+  role: string;
+  status: string;
 };

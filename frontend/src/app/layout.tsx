@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import { SessionBootstrap } from "@/components/SessionBootstrap";
+import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { kalameh } from "@/fonts/kalameh";
 import "./globals.css";
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SessionBootstrap />
         <SiteHeader />
         {children}
+        <SiteFooter />
         <OnboardingTour />
       </body>
     </html>

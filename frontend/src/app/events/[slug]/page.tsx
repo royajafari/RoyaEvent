@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
+import Link from "next/link";
+
 import { EventCard } from "@/components/EventCard";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { FollowInstructorButton } from "@/components/FollowInstructorButton";
 import { FollowOrganizerButton } from "@/components/FollowOrganizerButton";
 import { StickyTicketFooter } from "@/components/StickyTicketFooter";
 import { TicketCheckout } from "@/components/TicketCheckout";
@@ -108,6 +111,25 @@ export default async function EventDetailPage({ params }: Props) {
             <span className="font-medium">{event.organizer_name}</span>
           </div>
           <FollowOrganizerButton organizerId={event.organizer_id} />
+        </div>
+      )}
+
+      {event.instructors.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <h2 className="text-lg font-semibold">مدرس‌ها</h2>
+          <div className="flex flex-col gap-2">
+            {event.instructors.map((instructor) => (
+              <div
+                key={instructor.id}
+                className="flex items-center justify-between gap-3 rounded-md border p-3"
+              >
+                <Link href={`/instructors/${instructor.id}`} className="font-medium hover:underline">
+                  {instructor.name}
+                </Link>
+                <FollowInstructorButton instructorId={instructor.id} />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

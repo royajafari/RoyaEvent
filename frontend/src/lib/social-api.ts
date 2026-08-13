@@ -3,6 +3,10 @@ import type { EventListItem } from "@/lib/events-api";
 
 export type FollowStatus = { following: boolean; follower_count: number };
 export type MyFollows = { organizer_ids: number[]; instructor_ids: number[] };
+export type MyFollowsDetail = {
+  organizers: { id: number; name: string | null }[];
+  instructors: { id: number; name: string; avatar_url: string | null }[];
+};
 
 export const socialApi = {
   addFavorite: (eventId: number, accessToken: string) =>
@@ -26,4 +30,7 @@ export const socialApi = {
     request<FollowStatus>(`/follows/instructors/${instructorId}`, { method: "DELETE", accessToken }),
 
   myFollows: (accessToken: string) => request<MyFollows>("/me/follows", { accessToken }),
+
+  myFollowsDetail: (accessToken: string) =>
+    request<MyFollowsDetail>("/me/follows/details", { accessToken }),
 };

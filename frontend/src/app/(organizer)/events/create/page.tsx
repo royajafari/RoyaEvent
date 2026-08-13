@@ -87,6 +87,7 @@ export default function CreateEventPage() {
   const [onlinePlatform, setOnlinePlatform] = useState("");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
   const [tagNames, setTagNames] = useState("");
+  const [instructorNames, setInstructorNames] = useState("");
   const [sessions, setSessions] = useState<SessionRow[]>([{ starts_at: "", duration_minutes: 60 }]);
   const [error, setError] = useState<string | null>(null);
   const [needsProfile, setNeedsProfile] = useState(false);
@@ -146,6 +147,10 @@ export default function CreateEventPage() {
           visibility,
           tag_names: tagNames
             .split(/[,#]/)
+            .map((t) => t.trim())
+            .filter(Boolean),
+          instructor_names: instructorNames
+            .split(",")
             .map((t) => t.trim())
             .filter(Boolean),
           sessions: sessionInputs,
@@ -447,6 +452,20 @@ export default function CreateEventPage() {
             value={tagNames}
             onChange={(e) => setTagNames(e.target.value)}
           />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="instructors">مدرس‌ها (با کاما جدا کنید، اختیاری)</Label>
+          <Input
+            id="instructors"
+            dir="rtl"
+            placeholder="مثلاً علی رضایی، سارا احمدی"
+            value={instructorNames}
+            onChange={(e) => setInstructorNames(e.target.value)}
+          />
+          <p className="text-muted-foreground text-xs">
+            اگه مدرس قبلاً تو سایت ثبت شده باشه دقیقاً همون اسم رو تایپ کنید تا به پروفایلش وصل بشه، وگرنه پروفایل مدرس جدید خودکار ساخته می‌شه.
+          </p>
         </div>
 
         <div className="flex flex-col gap-3">
