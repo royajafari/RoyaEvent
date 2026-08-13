@@ -49,10 +49,13 @@ RoyaEvent/
       (auth)/login/page.tsx        # ورود OTP (client)
       (organizer)/events/create/   # فرم ایجاد رویداد (client)
       (organizer)/events/mine/     # لیست رویدادهای من (client)
+      (organizer)/organizer/events/[id]/attendees/  # داشبورد شرکت‌کنندگان + export CSV (client)
       events/page.tsx              # لیستینگ عمومی (SSR/dynamic)
-      events/[slug]/page.tsx       # جزئیات رویداد عمومی (SSR/dynamic + JSON-LD)
+      events/[slug]/page.tsx       # جزئیات رویداد عمومی (SSR/dynamic + JSON-LD + چک‌اوت/فوتر چسبان/favorite/follow)
+      tickets/page.tsx             # «بلیط‌های من» (client)
       page.tsx                     # خانه
     components/EventCard.tsx       # کارت رویداد (Server Component)
+    components/TicketCheckout.tsx, StickyTicketFooter.tsx, FavoriteButton.tsx, FollowOrganizerButton.tsx  # فاز ۳ (client)
     components/RoyaEventLogo.tsx   # لوگوی متنی برند (سبز/سفید/قرمز)
     components/RoyaEventLoader.tsx # اسپلش‌اسکرین، وصل به app/loading.tsx (Suspense خودکار نکست‌جس)
     components/SiteHeader.tsx      # هدر مشترک (لوگو+ناوبری)، در layout ریشه
@@ -61,6 +64,7 @@ RoyaEvent/
       api-client.ts    # fetch wrapper سمت کلاینت، credentials:include، پشتیبانی FormData
       events-api.ts     # انواع TS + توابع کلاینت events/categories (نیاز به accessToken)
       events-server.ts  # فراخوانی سمت سرور برای RSC (cache:"no-store"، بدون کوکی)
+      tickets-api.ts, orders-api.ts, social-api.ts, organizer-api.ts  # فاز ۳
       date.ts            # formatJalali* — Intl بومی fa-IR-u-ca-persian، بدون کتابخانه‌ی جانبی
     store/auth-store.ts  # Zustand، access token فقط در حافظه
     fonts/kalameh.ts
@@ -77,12 +81,12 @@ RoyaEvent/
 - **فاز ۰ (Scaffolding)** ✅ کامل و commit‌شده.
 - **فاز ۱ (Auth/OTP)** ✅ کامل، تست‌شده، commit‌شده، push‌شده.
 - **فاز ۲ (Event CRUD + دسته‌بندی/تگ/جلسه + آپلود بنر امن)** ✅ **کامل (بک‌اند + فرانت‌اند)، تست‌شده، لینت تمیز، تأیید بصری end-to-end. همه commit/push شده (بک‌اند، فرانت، لوگو/اسپلش‌اسکرین، تم رنگی برند).**
-- **فاز ۳ (بلیط/سفارش/تخفیف/علاقه‌مندی/دنبال‌کردن)** 🚧 **بک‌اند کامل و تست‌شده (۷۲ تست جدید، لینت تمیز)؛ فرانت‌اند هنوز شروع نشده.** جزئیات کامل زیر. **نقطه‌ی ادامه: فرانت چک‌اوت.**
-- فازهای ۴ تا ۱۱: هنوز شروع نشده (جستجو، ادمین، اعلان‌ها، امتیازدهی، آنالیتیکس، مانیتورینگ، تست/RTL نهایی، دیپلوی).
+- **فاز ۳ (بلیط/سفارش/تخفیف/علاقه‌مندی/دنبال‌کردن)** ✅ **کامل (بک‌اند + فرانت‌اند)، تست‌شده، لینت/build تمیز، تأیید بصری end-to-end واقعی انجام‌شده.** جزئیات کامل زیر.
+- فازهای ۴ تا ۱۱: هنوز شروع نشده (جستجو، ادمین، اعلان‌ها، امتیازدهی، آنالیتیکس، مانیتورینگ، تست/RTL نهایی، دیپلوی). **درخواست بعدی/فوری کاربر (هنوز شروع نشده):** آپلود کلیپ کوتاه تبلیغاتی رویداد (کنار بنر، نه جایگزینش) — نگاه کن به بخش «کارهای درخواستی در صف» پایین‌تر.
 
-**بک‌اند در مجموع الان ۱۷۳ تست دارد (unit + integration)، همه پاس، `ruff check .` تمیز، migration تا آخر (`956ea659d2be`) verify شده.** فرانت `npm run build` و `npm run lint` هر دو تمیز.
+**بک‌اند در مجموع الان ۱۷۳ تست دارد (unit + integration)، همه پاس، `ruff check .` تمیز، migration تا آخر (`956ea659d2be`) verify شده.** فرانت `npm run build`، `npx eslint src --max-warnings=0` و `npx tsc --noEmit` هر سه تمیز.
 
-**تأیید بصری واقعی فاز ۲ (نه فقط build/test):** بک‌اند و فرانت هر دو به‌صورت real dev server بالا آورده شدن، دسته‌بندی‌ها seed شدن، از طریق OTP واقعی لاگین شد، یک رویداد واقعی از طریق API ساخته و publish شد، و HTML خروجی SSR صفحات `/events` و `/events/[slug]` با `curl` بررسی شد — عنوان فارسی، تاریخ شمسی، دسته‌بندی، JSON-LD همه درست رندر شدن. (Playwright برای اسکرین‌شات واقعی مرورگر هنوز در دسترس نیست — نگاه کن به دام #۴.) **فاز ۳ هنوز این‌جور تأیید بصری نشده — فقط pytest/ruff، بعد از فرانت باید انجام بشه.**
+**تأیید بصری واقعی فاز ۲ و ۳ (نه فقط build/test):** بک‌اند و فرانت هر دو به‌صورت real dev server بالا آورده شدن (API=8000، Next=3000)، دسته‌بندی‌ها seed شدن، از طریق OTP واقعی (دو کاربر: برگزارکننده + خریدار) لاگین شد، یک رویداد واقعی ساخته/publish شد با دو نوع بلیط (رایگان/پولی) و یک کد تخفیف، و کل چرخه‌ی فاز ۳ (favorite، follow organizer، create+complete order با تخفیف، calendar-link، لیست/CSV export شرکت‌کنندگان برگزارکننده، cancel registration) مستقیماً روی سرور واقعی با `curl` تست شد — همه‌چیز درست کار کرد. HTML خروجی SSR صفحه‌ی جزئیات رویداد هم بررسی شد (RTL/فارسی، organizer_name، ticket checkout wire شده در RSC payload). (Playwright/Chromium هنوز نصب نیست — نگاه کن به دام #۴؛ برای تست بصری فعلاً از `curl`/بررسی HTML خام استفاده کن.)
 
 ### فاز ۳ — بک‌اند کامل و تست‌شده؛ فرانت‌اند نقطه‌ی ادامه‌ی کار
 
@@ -100,10 +104,21 @@ RoyaEvent/
 - تست‌ها: `test_ticket_service.py` (۸)، `test_discount_service.py` (۱۱)، `test_order_service.py` (۱۷)، `test_social_service.py` (۵) در unit/؛ `test_tickets_api.py` (۹)، `test_orders_api.py` (۱۲)، `test_social_api.py` (۷)، `test_organizer_api.py` (۵) در integration/ — جمعاً ۷۲ تست جدید. فیکسچرهای جدید در `conftest.py`: `buyer`/`buyer_auth_headers`، `admin_user`/`admin_auth_headers`، `published_event` (رویداد منتشرشده‌ی آماده برای تست)، `free_ticket_type`/`paid_ticket_type`.
 - **نکته‌ی مهم برای تست early-bird:** برای شبیه‌سازی «بازه‌ی زودهنگام گذشته»، `published_at` رو با `utcnow() - timedelta(days=N)` (گذشته‌ی واقعی) عقب ببر، نه با تفریق کسری از `starts_at` — اون روش اول باعث شد `published_at` به آینده بره (باگ در خود تست، نه در `ticket_service`) و تست اشتباهی pass/fail می‌داد.
 
-**هنوز نیاز به تکمیل:**
-1. فرانت فاز ۳ اصلاً شروع نشده: صفحه‌ی چک‌اوت/انتخاب بلیط (با فیلد کد تخفیف + نمایش early-bird)، دکمه‌ی علاقه‌مندی/دنبال‌کردن روی کارت/صفحه‌ی رویداد، فوتر چسبان «انتخاب بلیط» (نیازمندی ۳۷)، داشبورد شرکت‌کنندگان برگزارکننده (با دکمه‌ی export CSV)، صفحه‌ی «بلیط‌های من» (با لینک افزودن به تقویم).
-2. بعد از تکمیل فرانت، تأیید بصری end-to-end واقعی مثل فاز ۲ (seed + OTP + ساخت ticket_type + خرید واقعی + بررسی HTML) قبل از commit نهایی فرانت.
-3. `docs/architecture.md` بخش ۱۴ باید بعد از تکمیل کل فاز ۳ (شامل فرانت) به‌روزرسانی بشه.
+**کد رویداد (event_code) — فرمت به‌روزشده:** از `RE-XXXXXX` (پیشوند ثابت `RE` برای RoyaEvent + ۶ رقم تصادفی امن، مثل `RE-482913`) تولید می‌شه — `app/core/slug.py: generate_event_code()`. این تغییر به درخواست صریح کاربر اضافه شد («یه کلمه کلیدی برای RoyaEvent اضافه کن») تا کد رویداد قابل‌تشخیص از رقبا باشه. برای URL/slug، نسخه‌ی lowercase کد به انتهای slug اضافه می‌شه (`_generate_unique_slug` در `event_service.py`)، ولی خودِ `event_code` ذخیره‌شده و نمایشی uppercase می‌مونه. تست‌های مرتبط (`test_event_service.py`, `test_events_api.py`) به‌روز شدن.
+
+**فرانت‌اند فاز ۳ (کامل):**
+- `lib/tickets-api.ts` — `TicketType`, `ticketsApi.listByEvent`, `ticketsApi.validateDiscount`
+- `lib/orders-api.ts` — `Order`, `Registration`, `MyTicket`, `ordersApi.create/complete/get/myTickets/cancelRegistration/calendarLink`
+- `lib/social-api.ts` — `socialApi.addFavorite/removeFavorite/myFavorites/followOrganizer/unfollowOrganizer/followInstructor/unfollowInstructor/myFollows`
+- `lib/organizer-api.ts` — `organizerApi.listAttendees/removeAttendee/downloadAttendeesCsv` (دانلود CSV با auth header دستی از طریق `fetch`+blob، نه لینک مستقیم، چون endpoint نیاز به `Authorization: Bearer` داره نه کوکی)
+- `components/TicketCheckout.tsx` — انتخاب نوع بلیط (کارت‌های کلیک‌پذیر، نه Select)، انتخاب جلسه (اگه چندجلسه‌ای)، فیلد کد تخفیف، ثبت‌نام یک‌مرحله‌ای (create+complete پشت‌سرهم چون پرداخت شبیه‌سازی‌شده‌ست و نیاز به مرحله‌ی جدا نداره)
+- `components/StickyTicketFooter.tsx` — نوار پایین صفحه با قیمت ارزان‌ترین بلیط + دکمه‌ی اسکرول به `#ticket-checkout`
+- `components/FavoriteButton.tsx`, `components/FollowOrganizerButton.tsx` — فقط وقتی `accessToken` هست رندر می‌شن (وگرنه `null`)؛ وضعیت اولیه از `GET /me/favorites` / `GET /me/follows` می‌خونن
+- `app/tickets/page.tsx` — «بلیط‌های من»: لیست، لغو ثبت‌نام، افزودن به تقویم (لینک گوگل‌کلندر در تب جدید باز می‌شه)
+- `app/(organizer)/organizer/events/[id]/attendees/page.tsx` — داشبورد شرکت‌کنندگان برگزارکننده + دکمه‌ی export CSV. **توجه:** مسیرش `/organizer/events/[id]/attendees` است، نه `/events/[id]/attendees` — دلیلش پایین در دام‌ها توضیح داده شده.
+- `app/events/[slug]/page.tsx` به‌روز شد: بخش برگزارکننده (نام + `FollowOrganizerButton`)، `FavoriteButton` کنار عنوان، `<TicketCheckout>` قبل از بخش پیشنهادی‌ها (فقط برای رویداد `published`)، `<StickyTicketFooter>` (فقط `published`)، `pb-24` روی wrapper برای جا باز کردن زیر فوتر چسبان.
+- بک‌اند: `Event.organizer` relationship + `organizer_name` property (`full_name or phone or email` — چون کاربرهای OTP-only معمولاً `full_name` ندارن)، `EventDetailOut.organizer_name`، `event_query()` حالا `selectinload(Event.organizer)` هم داره؛ `GET /me/follows` تازه اضافه شد (`{organizer_ids, instructor_ids}`) — `social_service.list_my_follows()`.
+- **تصمیم عمدی (اسکوپ محدود این پاس):** دکمه‌ی favorite روی کارت‌های لیستینگ (`EventCard`) اضافه نشد — چون صفحات لیستینگ Server Component هستن و بدون context کاربر؛ اضافه‌کردن N بررسی وضعیت به‌ازای هر کارت یعنی fetch storm. فعلاً فقط در صفحه‌ی جزئیات رویداد.
 
 ### فاز ۲ — کامل (بک‌اند + فرانت‌اند)
 
@@ -124,7 +139,7 @@ RoyaEvent/
 
 **تست‌ها:** `tests/unit/test_slug.py`, `test_image_service.py`, `test_event_service.py` + `tests/integration/test_events_api.py` (پوشش: auth، مالکیت/۴۰۳، DRAFT leak، publish idempotency، لیست عمومی در برابر `/mine`، رویداد خصوصی + توکن، آپلود بنر معتبر/نامعتبر/غیرمجاز، related events، دسته‌بندی‌ها). فیکسچرهای جدید در `conftest.py`: `organizer`, `auth_headers`, `leaf_category`, و یک `autouse` فیکسچر `_reset_rate_limiter` که `limiter.reset()` رو قبل/بعد هر تست صدا می‌زنه (وگرنه چون Limiter حافظه‌ی in-process داره، تست‌های پشت‌سرهم روی endpointهای rate-limit‌شده به هم نشت می‌کنن).
 
-**فرانت‌اند (کامل، build+lint تمیز، uncommitted):**
+**فرانت‌اند (کامل، build+lint تمیز، commit/push شده):**
 - `lib/date.ts` — تاریخ شمسی با `Intl.DateTimeFormat("fa-IR-u-ca-persian", ...)` بومی (بدون dayjs/jalaliday؛ Node این محیط ICU کامل داره، تست شد). این جایگزین چیزیه که در `docs/architecture.md` («dayjs + پلاگین جلالی») نوشته شده بود — سبک‌تره و کار می‌کنه، ولی سند رسماً به‌روز نشده (اگه لازم شد یادت باشه).
 - `lib/events-api.ts` (کلاینت) و `lib/events-server.ts` (Server Components، `cache:"no-store"`) — جدا نگه داشته شدن چون سرور نیازی به کوکی/accessToken نداره.
 - `components/EventCard.tsx` — کارت رویداد با blur/badge «این وبینار برگزار شده است» برای جلسه‌ی گذشته، badge «ویژه»، رتبه.
@@ -136,7 +151,14 @@ RoyaEvent/
 **نکات جزئی/اختیاری باقی‌مانده (بدون فوریت):**
 - حداکثر حجم بنر (۵ مگابایت) در دو جا جدا hardcode شده — `MAX_BANNER_UPLOAD_BYTES` در `events.py` و `MAX_UPLOAD_BYTES` در `image_service.py`. یکسان‌اند، ولی بهتره یه‌جا (مثلاً `core/config.py`) متمرکز بشه.
 - سند `docs/architecture.md` بخش ۱۲ هنوز «dayjs + پلاگین جلالی» رو به‌عنوان تصمیم ذکر می‌کنه؛ پیاده‌سازی واقعی از `Intl` بومی استفاده کرد (بالاتر توضیح داده شد) — عملکرد یکسانه، فقط مستندسازی sync نیست.
-- کامیت فرانت فاز ۲ هنوز زده نشده (بک‌اند و CLAUDE.md قبلاً commit/push شدن).
+
+## کارهای درخواستی در صف (خارج از نقشه‌ی راه اصلی، هنوز شروع نشده)
+
+کاربر این‌ها رو مستقیم درخواست داده؛ باید قبل از فاز ۴ یا در کنارش انجام بشن:
+
+1. **آپلود کلیپ کوتاه تبلیغاتی رویداد** (کنار بنر، نه جایگزین) — فیلد جدید `promo_video_url` روی `events` (migration ساده، افزایشی)؛ محدودیت حجم سخت‌گیرانه (پیشنهاد: ۲۰-۳۰ مگابایت)، فرمت محدود به MP4/WebM بر اساس **magic bytes** (نه پسوند/Content-Type کلاینت — طبق همون منطق امنیتی بنر در بخش ۱۶ پلن)، بدون transcode واقعی در MVP (ffmpeg سنگینه، فعلاً فقط اعتبارسنجی+ذخیره در MinIO با نام تصادفی)، نمایش با `<video controls preload="metadata">` در صفحه‌ی رویداد. برگزارکننده می‌تونه بنر، کلیپ، یا هر دو رو بذاره.
+2. **تور آموزشی سایت (onboarding tour)** برای بازدیدکننده‌ی اولین‌بار — معرفی امکانات کلیدی سایت با یک کتابخونه‌ی سبک (مثلاً driver.js/react-joyride)، نمایش یک‌بار (چک با `localStorage`)، قابل رد‌کردن/تکرار دستی.
+3. **TLS/HTTPS اجباری در production** — از قبل بخشی از فاز ۱۱ (Nginx reverse proxy + Let's Encrypt، ریدایرکت خودکار HTTP→HTTPS) بود؛ کاربر صراحتاً تأکید کرد. در `docker-compose.prod.yml` و راهنمای دیپلوی فاز ۱۱ باید کامل مستند/پیاده بشه، نه فقط اشاره.
 
 ## قراردادهای API
 
@@ -190,7 +212,11 @@ npm run dev   # http://localhost:3000
 11. **Limiter عمومی slowapi حافظه‌ی in-process داره** (نه Redis-backed) — در تست‌ها اگه بین تست‌ها ریست نشه، یک endpoint با سقف پایین (مثلاً ۱۰-۲۰/دقیقه) بعد از چند تست پشت‌سرهم واقعاً ۴۲۹ برمی‌گردونه و تست‌های بعدی رو به‌طور نامرتبط fail می‌کنه. فیکسچر `autouse` در `conftest.py` (`_reset_rate_limiter`) این رو حل می‌کنه — اگه فیکسچر رو حذف/تغییر دادی حواست باشه.
 12. **همیشه بعد از نوشتن endpointهای عمومی/بدون احراز هویت، از خودت بپرس «آیا وضعیت DRAFT/CANCELLED هم از این مسیر قابل دیدنه؟»** — این دقیقاً همون باگی بود که در فاز ۲ حین نوشتن تست integration کشف و رفع شد (نگاه کن به بخش «وضعیت فعلی» بالا).
 13. **بدون `logging.basicConfig(...)`، لاگرهای خودمون (`ConsoleSmsProvider` و بقیه) در اجرای واقعی سرور اصلاً چاپ نمی‌شن** — چون root logger پیش‌فرض Python سطح `WARNING` داره و `.info(...)` صدا زده نمی‌شه، برخلاف تست‌ها که pytest caplog جدا رفتار می‌کنه. این باعث شد اولین تلاش برای گرفتن OTP از لاگ سرور واقعی (برای تست دستی) هیچی نشون نده. فیکس: `logging.basicConfig(level=logging.INFO, ...)` در بالای `app/main.py`. اگه لاگ چیزی رو نمی‌بینی، این رو اول چک کن.
-14. **در Git Bash روی ویندوز، پاس‌دادن متن فارسی مستقیم داخل آرگومان `curl -d '...'` یا حتی داخل یک دستور `grep` می‌تونه بایت‌های چندبایتی UTF-8 رو به `?` خراب کنه** (مشاهده شد: یک رویداد تستی با `title` واقعاً به‌صورت `??????...` در دیتابیس ذخیره شد — این یک باگ اپلیکیشن نبود، چون همون لحظه ۱۰۱ تست pytest که رشته‌های فارسی رو in-process از فایل‌های `.py` می‌خونن بدون مشکل پاس می‌شدن). **راه‌حل امن برای تست دستی API با داده‌ی فارسی:** payload رو با ابزار Write در یک فایل UTF-8 بنویس، بعد `curl --data-binary @file.json` بزن — هرگز متن فارسی رو مستقیم در آرگومان shell تایپ نکن. برای grep/جست‌وجوی متن فارسی در خروجی هم به همین دلیل نتیجه‌ی نگرفتن لزوماً یعنی «پیدا نشد» نیست؛ با فایل/ابزار Read مطمئن‌تر چک کن.
+14a. **Next.js App Router الزام می‌کنه همه‌ی route های هم‌سطح روی یک segment، اسم پارامتر dynamic یکسانی داشته باشن** (چون route groups مثل `(organizer)` در URL نامرئی‌ان). یک بار `app/(organizer)/events/[id]/attendees/` با `app/events/[slug]/` تصادم کرد (هر دو روی `/events/*` می‌شینن) و کل `next dev` با خطای `You cannot use different slug names for the same dynamic path` کرش کرد. فیکس: مسیر داشبورد شرکت‌کنندگان رو بردیم زیر `/organizer/events/[id]/attendees` (هم‌راستا با namespace بک‌اند `/api/v1/organizer/...`) تا اصلاً همون segment رو با `[slug]` شریک نشه. قبل از افزودن هر route جدید با پارامتر dynamic، چک کن آیا segment هم‌نامش جای دیگه با اسم پارامتر متفاوت قبلاً تعریف شده.
+14b. **دانلود فایل (مثل CSV export) که نیاز به `Authorization: Bearer` داره رو نمی‌شه با `<a href>` مستقیم زد** — چون مرورگر هیچ header دلخواهی به ناوبری معمولی اضافه نمی‌کنه (فقط کوکی خودکار می‌ره، و access token عمداً در کوکی نیست، بخش ۷ پلن). راه‌حل: `fetch` با header دستی، گرفتن `blob()`، ساخت `URL.createObjectURL` و کلیک برنامه‌ای روی یک `<a>` موقت (`organizer-api.ts: downloadAttendeesCsv`).
+14c. **پورت ۳۱۰۰ توسط Loki (از `infra/docker-compose.yml`) اشغاله، نه فرانت.** اگه با `curl localhost:3100` روی صفحه‌ی «404 page not found» ساده (نه HTML نکست‌جس) خوردی، یعنی داری Loki رو صدا می‌زنی نه Next dev — پورت پیش‌فرض Next.js دقیقاً ۳۰۰۰ است مگر تصادم پورت مجبورش کنه عوض کنه (خروجی ترمینال `next dev` همیشه پورت واقعی رو چاپ می‌کنه، به همون اعتماد کن نه به فرض قبلی).
+14d. **سرور uvicorn بدون `--reload` بعد از هر تغییر کد بک‌اند دستی باید restart بشه** — یک بار بعد از اضافه‌کردن fallback به `organizer_name` (property)، فراخوانی API همچنان نتیجه‌ی قدیمی (`None`) برمی‌گردوند چون پردازه‌ی از قبل بالا کد رو در حافظه داشت. برای نشست‌های تأیید بصری طولانی، `--reload` بزن یا حتماً بعد از ادیت بک‌اند سرور رو manual restart کن.
+15. **در Git Bash روی ویندوز، پاس‌دادن متن فارسی مستقیم داخل آرگومان `curl -d '...'` یا حتی داخل یک دستور `grep` می‌تونه بایت‌های چندبایتی UTF-8 رو به `?` خراب کنه** (مشاهده شد: یک رویداد تستی با `title` واقعاً به‌صورت `??????...` در دیتابیس ذخیره شد — این یک باگ اپلیکیشن نبود، چون همون لحظه ۱۰۱ تست pytest که رشته‌های فارسی رو in-process از فایل‌های `.py` می‌خونن بدون مشکل پاس می‌شدن). **راه‌حل امن برای تست دستی API با داده‌ی فارسی:** payload رو با ابزار Write در یک فایل UTF-8 بنویس، بعد `curl --data-binary @file.json` بزن — هرگز متن فارسی رو مستقیم در آرگومان shell تایپ نکن. برای grep/جست‌وجوی متن فارسی در خروجی هم به همین دلیل نتیجه‌ی نگرفتن لزوماً یعنی «پیدا نشد» نیست؛ با فایل/ابزار Read مطمئن‌تر چک کن.
 
 ## تصمیمات کلیدی کاربر (خلاصه‌ی فشرده — کامل در architecture.md)
 
