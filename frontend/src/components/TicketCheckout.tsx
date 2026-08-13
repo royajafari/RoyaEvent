@@ -6,10 +6,11 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CompleteProfilePrompt } from "@/components/CompleteProfilePrompt";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatJalaliDateTime } from "@/lib/date";
-import { ApiError } from "@/lib/api-client";
+import { ApiError, isIncompleteProfileError } from "@/lib/api-client";
 import type { EventDetail, EventSessionOut } from "@/lib/events-api";
 import { ordersApi } from "@/lib/orders-api";
 import type { TicketType } from "@/lib/tickets-api";
@@ -39,6 +40,7 @@ export function TicketCheckout({ event }: { event: EventDetail }) {
   const [discountCode, setDiscountCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsProfile, setNeedsProfile] = useState(false);
   const [successCode, setSuccessCode] = useState<string | null>(null);
 
   useEffect(() => {
@@ -59,6 +61,7 @@ export function TicketCheckout({ event }: { event: EventDetail }) {
     if (!accessToken || !selectedTicketId || !selectedSessionId) return;
     setSubmitting(true);
     setError(null);
+    setNeedsProfile(false);
     try {
       const order = await ordersApi.create(
         {
@@ -71,7 +74,11 @@ export function TicketCheckout({ event }: { event: EventDetail }) {
       await ordersApi.complete(order.id, accessToken);
       setSuccessCode(order.id.toString());
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "خطا در ثبت‌نام؛ دوباره تلاش کنید");
+      if (isIncompleteProfileError(err)) {
+        setNeedsProfile(true);
+      } else {
+        setError(err instanceof ApiError ? err.message : "خطا در ثبت‌نام؛ دوباره تلاش کنید");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -169,6 +176,9 @@ export function TicketCheckout({ event }: { event: EventDetail }) {
         </div>
 
         {error && <p className="text-destructive text-sm">{error}</p>}
+        {needsProfile && (
+          <CompleteProfilePrompt onCompleted={() => { setNeedsProfile(false); handleSubmit(); }} />
+        )}
 
         {!accessToken ? (
           <Link href="/login" className={buttonVariants({ className: "w-full" })}>

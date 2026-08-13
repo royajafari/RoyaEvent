@@ -152,6 +152,13 @@ export async function uploadFileWithProgress<T>(
   }
 }
 
+// پیام دقیق و اختصاصی است (core/permissions.py: require_complete_profile) —
+// برای تشخیص این خطای خاص از بقیه‌ی خطاهای ۴۲۲ استفاده می‌شه (مثلاً «ظرفیت
+// تکمیل شده» رو با هم اشتباه نگیره، چون اونم شامل کلمه‌ی «تکمیل»ه).
+export function isIncompleteProfileError(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 422 && err.message.includes("نام و نام خانوادگی");
+}
+
 export type OTPRequestOut = {
   success: boolean;
   challenge_id: number;
@@ -191,4 +198,11 @@ export const authApi = {
   logout: () => request<{ success: boolean }>("/auth/logout", { method: "POST" }),
 
   me: (accessToken: string) => request("/auth/me", { accessToken }),
+
+  updateProfile: (fullName: string, accessToken: string) =>
+    request<{ full_name: string | null }>("/auth/me", {
+      method: "PATCH",
+      body: JSON.stringify({ full_name: fullName }),
+      accessToken,
+    }),
 };

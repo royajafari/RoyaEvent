@@ -32,7 +32,8 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ApiError } from "@/lib/api-client";
+import { ApiError, isIncompleteProfileError } from "@/lib/api-client";
+import { CompleteProfilePrompt } from "@/components/CompleteProfilePrompt";
 import type { CategoryOut, EventDetail, EventSessionInput } from "@/lib/events-api";
 import { eventsApi } from "@/lib/events-api";
 import { useAuthStore } from "@/store/auth-store";
@@ -88,6 +89,7 @@ export default function CreateEventPage() {
   const [tagNames, setTagNames] = useState("");
   const [sessions, setSessions] = useState<SessionRow[]>([{ starts_at: "", duration_minutes: 60 }]);
   const [error, setError] = useState<string | null>(null);
+  const [needsProfile, setNeedsProfile] = useState(false);
   const [loading, setLoading] = useState(false);
   const [createdEvent, setCreatedEvent] = useState<EventDetail | null>(null);
   const [bannerProgress, setBannerProgress] = useState<number | null>(null);
@@ -117,13 +119,13 @@ export default function CreateEventPage() {
     setSessions((prev) => prev.filter((_, i) => i !== index));
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submitEvent() {
     if (!accessToken) {
       setError("برای ایجاد رویداد باید وارد شوید");
       return;
     }
     setError(null);
+    setNeedsProfile(false);
     setLoading(true);
     try {
       const sessionInputs: EventSessionInput[] = sessions
@@ -152,10 +154,19 @@ export default function CreateEventPage() {
       );
       setCreatedEvent(event);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "خطا در ایجاد رویداد");
+      if (isIncompleteProfileError(err)) {
+        setNeedsProfile(true);
+      } else {
+        setError(err instanceof ApiError ? err.message : "خطا در ایجاد رویداد");
+      }
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    submitEvent();
   }
 
   async function handleBannerUpload(file: File) {
@@ -483,6 +494,7 @@ export default function CreateEventPage() {
         </div>
 
         {error && <p className="text-destructive text-sm">{error}</p>}
+        {needsProfile && <CompleteProfilePrompt onCompleted={submitEvent} />}
 
         <Button type="submit" disabled={loading || !categoryId}>
           ایجاد رویداد
