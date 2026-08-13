@@ -14,7 +14,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="fa"
       dir="rtl"
-      className={`${kalameh.variable} h-full antialiased`}
+      className={`dark ${kalameh.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
         <SiteHeader />
