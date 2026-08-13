@@ -25,7 +25,7 @@
 | ۱۰ | تقویت تست + مقاومت آفلاین/RTL | ⏳ شروع نشده |
 | ۱۱ | آماده‌سازی دیپلوی VPS (TLS/HTTPS اجباری — نگاه کن به بخش تصمیمات) | ⏳ باقی فاز نشده؛ بخش TLS/Nginx/Docker زودتر و مستقل انجام شد، نگاه کن به `docs/deployment_tls.md` و `specs/spec3.md` |
 
-بک‌اند در مجموع الان **۱۸۲ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
+بک‌اند در مجموع الان **۱۸۸ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
 
 ## استک فنی (تصمیم قطعی، تغییر نده مگر کاربر بخواد)
 
@@ -53,7 +53,8 @@ RoyaEvent/
     api/v1/routers/   # auth.py, events.py, tickets.py, orders.py, social.py, organizer.py
     api/deps.py        # get_db, get_current_user, get_current_admin_user, get_redis, get_sms/email_provider, get_client_ip
     core/               # config, security (JWT+OTP hash), rate_limit (OTP), rate_limit_middleware (عمومی/slowapi)
-                        # redis_client, storage (MinIO), slug, validators, calendar (لینک گوگل‌کلندر)، permissions (require_event_owner)
+                        # redis_client, storage (MinIO), slug, validators, calendar (لینک گوگل‌کلندر)
+                        # permissions (require_event_owner, require_complete_profile)
     db/                 # session.py (engine/Base/get_db)، migrations/ (Alembic)، seed_categories.py
     models/             # User, OTPChallenge, RefreshToken, Category, Tag, Instructor, Event, EventSession,
                         # TicketType, DiscountCode, PlatformDiscountCode, Order, OrderItem, Payment, Registration,
@@ -62,7 +63,7 @@ RoyaEvent/
     schemas/            # auth.py, event.py, ticket.py, order.py, social.py, organizer.py (Pydantic)
     services/           # otp_service, auth_service, event_service (+event_query/to_list_item_out عمومی),
                         # image_service, video_service, ticket_service, discount_service, order_service, social_service
-  backend/tests/unit|integration/   # pytest، fakeredis، بدون نیاز به Redis واقعی
+  backend/tests/unit|integration/   # pytest، fakeredis، بدون نیاز به Redis واقعی (+ test_auth_api.py برای PATCH /auth/me)
   frontend/src/
     app/
       (auth)/login/page.tsx        # ورود OTP (client)
@@ -84,6 +85,7 @@ RoyaEvent/
     components/SiteHeader.tsx      # هدر مشترک (لوگو+ناوبری+دکمه‌ی تور)، در layout ریشه، client، واکنش‌گرا به وضعیت ورود
     components/OnboardingTour.tsx  # اجرای خودکار تور بار اول (driver.js)، بدون UI خودش
     components/SessionBootstrap.tsx # بازیابی خودکار access token با کوکی refresh موقع لود صفحه، بدون UI
+    components/CompleteProfilePrompt.tsx # فرم تکمیل نام، وقتی require_complete_profile خطای ۴۲۲ بده (داخل TicketCheckout/create-event)
     components/NewsletterSignup.tsx # کارت خبرنامه (فقط اعتبارسنجی/localStorage، بدون بک‌اند واقعی)
     components/JalaliDateTimePicker.tsx # تاریخ‌ساعت شمسی (react-multi-date-picker) برای فیلدهای جلسه
     components/ui/                 # shadcn primitives (+ textarea, select, combobox, progress)
@@ -123,6 +125,7 @@ RoyaEvent/
 - همه‌ی مدل‌های زمانی در DB **naive UTC** هستن (نه timezone-aware) — SQLite مقایسه‌ی aware/naive رو با TypeError رد می‌کنه؛ همیشه از `app.models.base.utcnow()` استفاده کن، نه `datetime.now(timezone.utc)` مستقیم
 - Provider abstraction: کد سرویس هرگز مستقیم IPPanel/Kavenegar/Brevo/Resend صدا نمی‌زنه؛ از `get_sms_provider()`/`get_email_provider()` (factory، بر اساس `.env`) رد می‌شه. بدون API key، خودکار می‌ره روی `ConsoleProvider` (فقط لاگ، برای dev/test)
 - **قاعده‌ی دائمی (از باگ امنیتی فاز ۲):** بعد از نوشتن هر endpoint عمومی/بدون احراز هویت که رویداد یا هر رکورد دارای وضعیت (status) برمی‌گردونه، از خودت بپرس «آیا وضعیت DRAFT/CANCELLED هم از این مسیر قابل دیدنه؟» — جزئیات حادثه در `specs/spec2.md`.
+- **تکمیل پروفایل اجباری:** `PATCH /auth/me` (`{full_name}`) نام کاربر رو آپدیت می‌کنه. `core/permissions.py: require_complete_profile(user)` قبل از `POST /events` و `POST /orders` صدا زده می‌شه و اگه `full_name` خالی باشه ۴۲۲ با پیام «برای این کار باید ابتدا نام و نام خانوادگی خود را تکمیل کنید» برمی‌گردونه. فرانت این پیام دقیق رو با `isIncompleteProfileError()` (`lib/api-client.ts`) تشخیص می‌ده و به‌جای نمایش خطای خام، `CompleteProfilePrompt` رو نشون می‌ده. هر endpoint نوشتنی جدیدی که یک کاربر OTP-only (بدون نام) می‌تونه بهش برسه، باید همین گارد رو صدا بزنه.
 
 ## قراردادهای UI
 
@@ -189,6 +192,7 @@ npm run dev   # http://localhost:3000
 - سایت باید کاملاً ریسپانسیو باشه
 - تم سایت همیشه تیره (navy برند)، نه توگل روشن/تیره
 - TLS/HTTPS اجباری در production (فاز ۱۱)
+- OTP-only به‌عنوان روش اصلی لاگین می‌مونه (نه Google Sign-In — ریسک دسترسی/تحریم برای پلتفرم ایرانی)؛ ولی تکمیل نام و نام خانوادگی قبل از ایجاد رویداد یا خرید بلیط **اجباری**ه (`core/permissions.py: require_complete_profile`) — پیاده شد
 
 ## مرجع‌های بیرونی مهم
 

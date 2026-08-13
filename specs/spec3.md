@@ -111,6 +111,18 @@
 - **بدون صفحه‌ی «علاقه‌مندی‌های من»:** دکمه‌ی FavoriteButton از قبل رو صفحه‌ی رویداد بود و toggle می‌کرد، ولی جایی برای دیدن لیست نتیجه نبود. `app/favorites/page.tsx` اضافه شد (همون الگوی `/tickets`، `socialApi.myFavorites()`)، لینک تو هدر.
 - **اسم روزهای هفته‌ی تقویم شمسی خیلی کوتاه/ناخوانا بود:** جزئیات کامل در دام #۱۴ (CLAUDE.md) — `weekDays` صریح override شد، عرض تقویم زیاد شد.
 
+### بعد از فاز — تکمیل نام و نام خانوادگی اجباری قبل از ایجاد رویداد/خرید بلیط
+
+**زمینه:** کاربر پرسید چرا لاگین «کامل» نیست (نه گزینه‌ی Google Sign-In، نه ورود ایمیل+رمز) و درخواست کرد قبل از پاسخ، مستندات فاز ۳ تکمیل بشه. بعد از تکمیل مستندات، توضیح داده شد OTP-only برای بازار ایران تصمیم درست‌تریه (بدون ریسک تحریم/فیلترینگ Google، بدون هزینه‌ی مدیریت رمز) و به‌جای اضافه‌کردن OAuth، یک مرحله‌ی «تکمیل نام» قبل از اولین اقدام مهم (ایجاد رویداد یا خرید بلیط) اضافه بشه — چون مشکل واقعی کاربر «مشخصات ناقص» بود نه «روش ورود». کاربر با این پیشنهاد موافقت کرد.
+
+**چیزی که ساخته شد:**
+- بک‌اند: `schemas/auth.py: ProfileUpdateIn` (`full_name: str، min_length=2`)، `PATCH /auth/me` (`update_me` در `routers/auth.py`) که `current_user.full_name` رو آپدیت و `UserOut` برمی‌گردونه.
+- `core/permissions.py: require_complete_profile(user)` — اگه `full_name` خالی/whitespace باشه، `HTTPException(422, "برای این کار باید ابتدا نام و نام خانوادگی خود را تکمیل کنید")`. صدا زده می‌شه از ابتدای `create_event` (`routers/events.py`) و `create_order_endpoint` (`routers/orders.py`)، قبل از هر منطق دیگه.
+- **چک ایمنی تست‌ها:** فیکسچرهای `organizer`/`buyer` در `conftest.py` از قبل `full_name` ست می‌کنن، پس هیچ‌کدوم از ۱۸۸ تست قبلی نباید بشکنه — تأیید شد با اجرای کامل `pytest`.
+- تست‌های جدید: `tests/integration/test_auth_api.py` (۴ تست PATCH /auth/me: موفق، نیاز به auth، رد نام خالی، `/me` منعکس‌کننده‌ی آپدیت)، `test_events_api.py::test_create_event_requires_complete_profile` و `test_orders_api.py::test_create_order_requires_complete_profile` (هر دو: کاربر `User(phone=...)` بدون `full_name` می‌سازن، ۴۲۲ می‌گیرن، PATCH می‌کنن، بعد ۲۰۱/۲۰۱ می‌گیرن).
+- فرانت: `lib/api-client.ts` — `authApi.updateProfile()` و `isIncompleteProfileError(err)` (تشخیص دقیق پیام فارسی، تا با خطای ۴۲۲ دیگه‌ای مثل «ظرفیت تکمیل شده» قاطی نشه چون اونم شامل کلمه‌ی «تکمیل»ه). `components/CompleteProfilePrompt.tsx` (فرم inline نام، `onCompleted` callback). Wire شد تو `TicketCheckout.tsx` (catch → اگه `isIncompleteProfileError` بود `needsProfile=true` → نمایش prompt → بعد از تکمیل، `handleSubmit()` دوباره صدا زده می‌شه) و `app/(organizer)/events/create/page.tsx` (همون الگو، `submitEvent()` جدا شد از `handleSubmit(e)` تا هم از submit فرم هم از `onCompleted` قابل صدا زدن باشه).
+- **تست زنده (curl):** کاربر بدون نام ساخته شد → `POST /events` و `POST /orders` هر دو ۴۲۲ دادن با پیام فارسی درست → `PATCH /auth/me {"full_name":"..."}` → همون درخواست‌ها ۲۰۱ دادن → `GET /events/{slug}` نشون داد `organizer_name` حالا اسم واقعی رو برمی‌گردونه (قبلاً fallback به شماره تلفن بود).
+
 ## نکات/دام‌های این فاز
 
 - **برای تست early-bird:** برای شبیه‌سازی «بازه‌ی زودهنگام گذشته»، `published_at` رو با `utcnow() - timedelta(days=N)` (گذشته‌ی واقعی) عقب ببر، نه با تفریق کسری از `starts_at` — اون روش اول باعث شد `published_at` به آینده بره (باگ در خود تست، نه در `ticket_service`) و تست اشتباهی pass/fail می‌داد.
