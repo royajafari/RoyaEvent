@@ -1,4 +1,4 @@
-import { request } from "@/lib/api-client";
+import { request, uploadFileWithProgress } from "@/lib/api-client";
 
 export type CategoryOut = {
   id: number;
@@ -44,6 +44,7 @@ export type EventDetail = {
   event_code: string;
   description: string;
   banner_url: string | null;
+  promo_video_url: string | null;
   category: CategoryOut | null;
   visibility: "public" | "private";
   format: "online" | "in_person" | "hybrid";
@@ -121,13 +122,18 @@ export const eventsApi = {
   cancel: (id: number, accessToken: string) =>
     request<EventDetail>(`/events/${id}`, { method: "DELETE", accessToken }),
 
-  uploadBanner: (id: number, file: File, accessToken: string) => {
-    const form = new FormData();
-    form.append("file", file);
-    return request<EventDetail>(`/events/${id}/banner`, {
-      method: "POST",
-      body: form,
-      accessToken,
-    });
-  },
+  uploadBanner: (
+    id: number,
+    file: File,
+    accessToken: string,
+    onProgress?: (percent: number) => void,
+  ) => uploadFileWithProgress<EventDetail>(`/events/${id}/banner`, file, accessToken, onProgress),
+
+  uploadPromoVideo: (
+    id: number,
+    file: File,
+    accessToken: string,
+    onProgress?: (percent: number) => void,
+  ) =>
+    uploadFileWithProgress<EventDetail>(`/events/${id}/promo-video`, file, accessToken, onProgress),
 };

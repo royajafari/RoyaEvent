@@ -38,6 +38,49 @@ export async function request<T>(
   return response.json() as Promise<T>;
 }
 
+// fetch امکان دنبال‌کردن پیشرفت آپلود رو نمی‌ده؛ برای فایل‌های حجیم (مثل کلیپ
+// تبلیغاتی) از XMLHttpRequest استفاده می‌کنیم تا درصد آپلود رو نشون بدیم.
+export function uploadFileWithProgress<T>(
+  path: string,
+  file: File,
+  accessToken: string,
+  onProgress?: (percent: number) => void,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const form = new FormData();
+    form.append("file", file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${API_BASE_URL}${path}`);
+    xhr.withCredentials = true;
+    xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress) {
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve((xhr.responseText ? JSON.parse(xhr.responseText) : undefined) as T);
+        return;
+      }
+      let message = "خطای غیرمنتظره رخ داد";
+      try {
+        const body = JSON.parse(xhr.responseText);
+        message = body.message ?? body.detail ?? message;
+      } catch {
+        // پاسخ JSON نبود؛ پیام پیش‌فرض استفاده می‌شه
+      }
+      reject(new ApiError(xhr.status, message));
+    };
+
+    xhr.onerror = () => reject(new ApiError(0, "خطا در ارتباط با سرور"));
+    xhr.send(form);
+  });
+}
+
 export type OTPRequestOut = {
   success: boolean;
   challenge_id: number;

@@ -60,7 +60,15 @@ export default async function EventDetailPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {event.banner_url ? (
+      {event.promo_video_url ? (
+        <video
+          controls
+          preload="metadata"
+          poster={event.banner_url ?? undefined}
+          src={event.promo_video_url}
+          className="aspect-video w-full rounded-lg bg-black"
+        />
+      ) : event.banner_url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={event.banner_url}

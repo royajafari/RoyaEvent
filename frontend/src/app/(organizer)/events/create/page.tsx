@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -50,6 +51,8 @@ export default function CreateEventPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [createdEvent, setCreatedEvent] = useState<EventDetail | null>(null);
+  const [bannerProgress, setBannerProgress] = useState<number | null>(null);
+  const [videoProgress, setVideoProgress] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -112,11 +115,38 @@ export default function CreateEventPage() {
   async function handleBannerUpload(file: File) {
     if (!accessToken || !createdEvent) return;
     setError(null);
+    setBannerProgress(0);
     try {
-      const updated = await eventsApi.uploadBanner(createdEvent.id, file, accessToken);
+      const updated = await eventsApi.uploadBanner(
+        createdEvent.id,
+        file,
+        accessToken,
+        setBannerProgress,
+      );
       setCreatedEvent(updated);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "خطا در آپلود بنر");
+    } finally {
+      setBannerProgress(null);
+    }
+  }
+
+  async function handlePromoVideoUpload(file: File) {
+    if (!accessToken || !createdEvent) return;
+    setError(null);
+    setVideoProgress(0);
+    try {
+      const updated = await eventsApi.uploadPromoVideo(
+        createdEvent.id,
+        file,
+        accessToken,
+        setVideoProgress,
+      );
+      setCreatedEvent(updated);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "خطا در آپلود کلیپ");
+    } finally {
+      setVideoProgress(null);
     }
   }
 
@@ -151,12 +181,42 @@ export default function CreateEventPage() {
                 accept="image/png,image/jpeg,image/webp"
                 onChange={(e) => e.target.files?.[0] && handleBannerUpload(e.target.files[0])}
               />
+              {bannerProgress !== null && (
+                <div className="flex items-center gap-2">
+                  <Progress value={bannerProgress} className="flex-1" />
+                  <span className="text-muted-foreground text-xs">{bannerProgress}٪</span>
+                </div>
+              )}
               {createdEvent.banner_url && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={createdEvent.banner_url}
                   alt="بنر رویداد"
                   className="aspect-video w-full rounded-md object-cover"
+                />
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="promo-video">کلیپ کوتاه تبلیغاتی (اختیاری، کنار بنر — حداکثر ۳۰ مگابایت، MP4/WebM)</Label>
+              <input
+                id="promo-video"
+                type="file"
+                accept="video/mp4,video/webm"
+                onChange={(e) => e.target.files?.[0] && handlePromoVideoUpload(e.target.files[0])}
+              />
+              {videoProgress !== null && (
+                <div className="flex items-center gap-2">
+                  <Progress value={videoProgress} className="flex-1" />
+                  <span className="text-muted-foreground text-xs">{videoProgress}٪</span>
+                </div>
+              )}
+              {createdEvent.promo_video_url && (
+                <video
+                  controls
+                  preload="metadata"
+                  src={createdEvent.promo_video_url}
+                  className="aspect-video w-full rounded-md bg-black"
                 />
               )}
             </div>
