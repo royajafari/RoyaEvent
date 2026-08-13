@@ -25,7 +25,7 @@
 | ۱۰ | تقویت تست + مقاومت آفلاین/RTL | ⏳ شروع نشده |
 | ۱۱ | آماده‌سازی دیپلوی VPS (TLS/HTTPS اجباری — نگاه کن به بخش تصمیمات) | ⏳ باقی فاز نشده؛ بخش TLS/Nginx/Docker زودتر و مستقل انجام شد، نگاه کن به `docs/deployment_tls.md` و `specs/spec3.md` |
 
-بک‌اند در مجموع الان **۱۸۸ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
+بک‌اند در مجموع الان **۱۹۸ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
 
 ## استک فنی (تصمیم قطعی، تغییر نده مگر کاربر بخواد)
 
@@ -50,8 +50,8 @@
 ```
 RoyaEvent/
   backend/app/
-    api/v1/routers/   # auth.py, events.py, tickets.py, orders.py, social.py, organizer.py
-    api/deps.py        # get_db, get_current_user, get_current_admin_user, get_redis, get_sms/email_provider, get_client_ip
+    api/v1/routers/   # auth.py, events.py, tickets.py, orders.py, social.py, organizer.py, instructors.py
+    api/deps.py        # get_db, get_current_user, get_current_user_optional, get_current_admin_user, get_redis, get_sms/email_provider, get_client_ip
     core/               # config, security (JWT+OTP hash), rate_limit (OTP), rate_limit_middleware (عمومی/slowapi)
                         # redis_client, storage (MinIO), slug, validators, calendar (لینک گوگل‌کلندر)
                         # permissions (require_event_owner, require_complete_profile)
@@ -60,10 +60,11 @@ RoyaEvent/
                         # TicketType, DiscountCode, PlatformDiscountCode, Order, OrderItem, Payment, Registration,
                         # Favorite, OrganizerFollow, InstructorFollow
     providers/sms|email/ # base + console(dev) + ippanel/kavenegar/brevo/resend
-    schemas/            # auth.py, event.py, ticket.py, order.py, social.py, organizer.py (Pydantic)
-    services/           # otp_service, auth_service, event_service (+event_query/to_list_item_out عمومی),
-                        # image_service, video_service, ticket_service, discount_service, order_service, social_service
-  backend/tests/unit|integration/   # pytest، fakeredis، بدون نیاز به Redis واقعی (+ test_auth_api.py برای PATCH /auth/me)
+    schemas/            # auth.py, event.py, ticket.py, order.py, social.py, organizer.py, instructor.py (Pydantic)
+    services/           # otp_service, auth_service, event_service (+event_query/to_list_item_out عمومی)،
+                        # image_service, video_service, ticket_service, discount_service, order_service,
+                        # social_service, instructor_service (لیست/جزئیات مدرس، get-or-create در event_service)
+  backend/tests/unit|integration/   # pytest، fakeredis، بدون نیاز به Redis واقعی (+ test_auth_api.py، test_instructors_api.py)
   frontend/src/
     app/
       (auth)/login/page.tsx        # ورود OTP (client)
@@ -76,13 +77,18 @@ RoyaEvent/
       events/[slug]/page.tsx       # جزئیات رویداد عمومی (SSR/dynamic + JSON-LD + چک‌اوت/فوتر چسبان/favorite/follow)
       tickets/page.tsx             # «بلیط‌های من» (client)
       favorites/page.tsx           # «علاقه‌مندی‌های من» (client)
-      page.tsx                     # خانه
+      follows/page.tsx             # «دنبال‌کردن‌های من» — برگزارکننده‌ها + مدرس‌ها با اسم (client)
+      instructors/[id]/page.tsx    # پروفایل عمومی مدرس — بیوگرافی/آواتار/رویدادهای منتشرشده (SSR/dynamic)
+      profile/page.tsx             # فرم نام + آپلود آواتار کاربر (client)
+      page.tsx                     # خانه (async Server Component؛ بخش‌های وبینار/مدرس‌های محبوب)
     components/EventCard.tsx       # کارت رویداد (Server Component)
     components/EventsFilter.tsx    # Select دسته‌بندی/نوع‌برگزاری برای events/page.tsx، sync با URL
     components/TicketCheckout.tsx, StickyTicketFooter.tsx, FavoriteButton.tsx, FollowOrganizerButton.tsx  # فاز ۳ (client)
+    components/FollowInstructorButton.tsx # دکمه‌ی دنبال‌کردن مدرس، کپی الگوی FollowOrganizerButton (client)
     components/RoyaEventLogo.tsx   # لوگوی متنی برند (سبز/سفید/قرمز)
     components/RoyaEventLoader.tsx # اسپلش‌اسکرین، وصل به app/loading.tsx (Suspense خودکار نکست‌جس)
-    components/SiteHeader.tsx      # هدر مشترک (لوگو+ناوبری+دکمه‌ی تور)، در layout ریشه، client، واکنش‌گرا به وضعیت ورود
+    components/SiteHeader.tsx      # هدر مشترک (لوگو+ناوبری+دکمه‌ی تور+آواتار کنار پروفایل)، در layout ریشه، client
+    components/SiteFooter.tsx      # فوتر مشترک — کپی‌رایت با سال شمسی + لوگوی کوچک، در layout ریشه
     components/OnboardingTour.tsx  # اجرای خودکار تور بار اول (driver.js)، بدون UI خودش
     components/SessionBootstrap.tsx # بازیابی خودکار access token با کوکی refresh موقع لود صفحه، بدون UI
     components/CompleteProfilePrompt.tsx # فرم تکمیل نام، وقتی require_complete_profile خطای ۴۲۲ بده (داخل TicketCheckout/create-event)
@@ -91,12 +97,13 @@ RoyaEvent/
     components/ui/                 # shadcn primitives (+ textarea, select, combobox, progress)
     lib/
       api-client.ts    # fetch wrapper سمت کلاینت، credentials:include، پشتیبانی FormData،
-                        # refreshAccessToken() (guard تک‌پرواز رفرش توکن) + retry خودکار روی ۴۰۱
+                        # refreshAccessToken() (guard تک‌پرواز رفرش توکن) + retry خودکار روی ۴۰۱، authApi (+uploadAvatar)
       events-api.ts     # انواع TS + توابع کلاینت events/categories (نیاز به accessToken)
       events-server.ts  # فراخوانی سمت سرور برای RSC (cache:"no-store"، بدون کوکی)
-      tickets-api.ts, orders-api.ts, social-api.ts, organizer-api.ts  # فاز ۳
+      instructors-api.ts, instructors-server.ts  # کلاینت + SSR برای /instructors (مشابه events-api/events-server)
+      tickets-api.ts, orders-api.ts, social-api.ts, organizer-api.ts  # فاز ۳ (social-api.ts: +myFollowsDetail)
       date.ts            # formatJalali* — Intl بومی fa-IR-u-ca-persian، بدون کتابخانه‌ی جانبی
-    store/auth-store.ts  # Zustand، access token فقط در حافظه
+    store/auth-store.ts  # Zustand، accessToken فقط در حافظه + user (UserOut، برای نمایش‌های سبک مثل آواتار هدر)
     fonts/kalameh.ts
   backend/Dockerfile, frontend/Dockerfile   # production images (نگاه کن به docs/deployment_tls.md)
   infra/docker-compose.yml        # dev: redis, mongo, minio, loki, prometheus, grafana
@@ -116,6 +123,7 @@ RoyaEvent/
 1. ~~آپلود کلیپ کوتاه تبلیغاتی رویداد~~ ✅ **انجام شد** — `promo_video_url` روی `events`، `app/services/video_service.py` (اعتبارسنجی magic-byte MP4/WebM، سقف ۳۰MB، بدون transcode)، endpoint `POST /events/{id}/promo-video`، آپلود پیشرفت‌دار (XMLHttpRequest + درصد) در فرم ایجاد رویداد، پخش‌کننده در صفحه‌ی رویداد (video با poster=banner اگه هر دو باشن). جزئیات کامل در `specs/spec3.md`.
 2. ~~تور آموزشی سایت~~ ✅ **انجام شد** — با `driver.js`. `lib/onboarding-tour.ts` (تعریف مراحل + استارت)، `components/OnboardingTour.tsx` (فقط اجرای خودکار بار اول، چک با `localStorage`، بدون رندر UI)، دکمه‌ی «راهنمای سایت» (آیکون `CircleHelp`) در `SiteHeader` برای تکرار دستی هروقت کاربر خواست. مراحل تور روی `id`های `tour-logo/tour-events/tour-create/tour-mine/tour-tickets/tour-login` در هدر. RTL polish برای popover در `globals.css` (کلاس `.roya-tour-popover`). جزئیات کامل در `specs/spec3.md`.
 3. ~~TLS/HTTPS اجباری در production~~ ✅ **انجام شد** — `backend/Dockerfile`+`frontend/Dockerfile` (production images، تست build شد و موفق بود)، `infra/docker-compose.prod.yml` (nginx+certbot+backend+frontend+redis+mongo+minio اختیاری)، `infra/nginx/conf.d/royaevent.conf` (ریدایرکت اجباری HTTP→HTTPS + HSTS)، `infra/renew-certs.sh` (تمدید گواهی از کرون هاست). راهنمای کامل قدم‌به‌قدم در `docs/deployment_tls.md`. جزئیات/تصمیمات فنی (چرا certbot سرویس همیشه‌روشن نیست، مشکل apt-get و راه‌حلش) در `specs/spec3.md`.
+4. ~~لیست «دنبال‌کردن‌های من» + مدرس‌های محبوب/وبینارهای محبوب در صفحه‌ی اصلی + آپلود عکس پروفایل~~ ✅ **انجام شد** — سیستم «مدرس» (که فقط یه جدول خالی بود) از پایه ساخته شد: get-or-create با اسم موقع ایجاد رویداد، `GET /instructors`، `GET /instructors/{id}` (+رویدادهاش)، صفحه‌ی عمومی `instructors/[id]`. `GET /me/follows/details` (نسخه‌ی enrich‌شده‌ی `/me/follows`) + صفحه‌ی `follows/`. `avatar_url` روی `User` + `POST /auth/me/avatar` + صفحه‌ی `profile/`. `GET /events?sort=popular` (بر اساس `view_count`، چون فاز ۷ امتیازدهی هنوز نیست). جزئیات کامل در `specs/spec3.md`.
 
 ## قراردادهای API
 
@@ -126,6 +134,9 @@ RoyaEvent/
 - Provider abstraction: کد سرویس هرگز مستقیم IPPanel/Kavenegar/Brevo/Resend صدا نمی‌زنه؛ از `get_sms_provider()`/`get_email_provider()` (factory، بر اساس `.env`) رد می‌شه. بدون API key، خودکار می‌ره روی `ConsoleProvider` (فقط لاگ، برای dev/test)
 - **قاعده‌ی دائمی (از باگ امنیتی فاز ۲):** بعد از نوشتن هر endpoint عمومی/بدون احراز هویت که رویداد یا هر رکورد دارای وضعیت (status) برمی‌گردونه، از خودت بپرس «آیا وضعیت DRAFT/CANCELLED هم از این مسیر قابل دیدنه؟» — جزئیات حادثه در `specs/spec2.md`.
 - **تکمیل پروفایل اجباری:** `PATCH /auth/me` (`{full_name}`) نام کاربر رو آپدیت می‌کنه. `core/permissions.py: require_complete_profile(user)` قبل از `POST /events` و `POST /orders` صدا زده می‌شه و اگه `full_name` خالی باشه ۴۲۲ با پیام «برای این کار باید ابتدا نام و نام خانوادگی خود را تکمیل کنید» برمی‌گردونه. فرانت این پیام دقیق رو با `isIncompleteProfileError()` (`lib/api-client.ts`) تشخیص می‌ده و به‌جای نمایش خطای خام، `CompleteProfilePrompt` رو نشون می‌ده. هر endpoint نوشتنی جدیدی که یک کاربر OTP-only (بدون نام) می‌تونه بهش برسه، باید همین گارد رو صدا بزنه.
+- **آواتار کاربر:** `POST /auth/me/avatar` — همون `validate_and_reencode_image` امن بنر رویداد رو re-use می‌کنه، فقط `storage.upload_avatar_image()` جدا (namespace `avatars/{user_id}/...` تو MinIO/ArvanCloud).
+- **مدرس (get-or-create با اسم):** `instructor_names` روی `EventCreateIn`/`EventUpdateIn`، دقیقاً مثل `tag_names` — رشته‌ی دقیقاً یکسان = همون رکورد، وگرنه رکورد جدید (`event_service._get_or_create_instructors`). `GET /instructors` (مرتب بر اساس follower_count زنده)، `GET /instructors/{id}` (بیوگرافی+رویدادهای منتشرشده+`is_following`). برای auth اختیاری (کاربر لاگین‌کرده یا نه، رفتار endpoint کمی فرق می‌کنه) از `deps.py: get_current_user_optional` استفاده کن، نه `get_current_user` اجباری.
+- **محبوبیت (MVP):** `GET /events?sort=popular` بر اساس `view_count` (نه `rating_avg`، چون سیستم امتیازدهی فاز ۷ هنوز نیست). همین‌طور `GET /instructors` بر اساس `follower_count` زنده، نه رول‌آپ شبانه‌ی `popularity_score` (که در `architecture.md` برای آینده/مقیاس بزرگ‌تر پیش‌بینی شده).
 
 ## قراردادهای UI
 
@@ -177,6 +188,8 @@ npm run dev   # http://localhost:3000
 14. **`react-multi-date-picker`/`react-date-object` با locale فارسی (`persian_fa`) پیش‌فرض فرم خلاصه‌ی اسم روزهای هفته رو نشون می‌ده** (مثلاً «شن» به‌جای «شنبه» — چون locale خودش هر روز رو به‌صورت تاپل `[نام‌کامل, خلاصه]` تعریف کرده و کتابخونه پیش‌فرض عضو دوم رو رندر می‌کنه). برای نام کامل، prop جدای `weekDays` رو صریح override کن (نمونه در `JalaliDateTimePicker.tsx`). همچنین چون ردیف هدر روزها عرضش رو از ردیف اعداد (که خودش تنگه) به ارث می‌بره، برای جا باز کردن اسم کامل باید `min-width` کل تقویم رو هم تو CSS بزرگ‌تر کرد (نگاه کن به `globals.css`، بخش `.rmdp-*`).
 15. **دو تا guard جدا برای «رفرش خودکار access token» (یکی موقع لود صفحه، یکی موقع برخورد به ۴۰۱) اصلاً کافی نیست** — باید هردو از **همون یک** promise سطح‌ماژول تک‌پرواز استفاده کنن (`lib/api-client.ts: refreshAccessToken()`)، وگرنه دو مسیر جدا می‌تونن هم‌زمان `/auth/refresh` رو با همون کوکی چرخشی صدا بزنن و دقیقاً همون مشکل تشخیص سرقت (دام #۱۲) رخ بده. `request()` و `uploadFileWithProgress()` هردو روی ۴۰۱ (فقط وقتی `accessToken` واقعاً پاس داده شده بود) یک‌بار `refreshAccessToken()` رو صدا می‌زنن و درخواست اصلی رو با توکن تازه تکرار می‌کنن — چون access token فقط ۱۵ دقیقه اعتباره، بدون این مکانیزم هر فرم طولانی (مثل ایجاد رویداد با جلسه‌های زیاد) بعد از ۱۵ دقیقه با «توکن نامعتبر یا منقضی‌شده» fail می‌کرد.
 16. **در Docker build بک‌اند، `apt-get update`/`install` می‌تونه رو شبکه‌ی این محیط به‌طور کامل گیر کنه یا timeout بده** (بدون خطای واضح، فقط خیلی کند/بی‌نتیجه) — قبل از افزودن `build-essential` یا هر پکیج apt دیگه، اول چک کن آیا واقعاً لازمه: اکثر پکیج‌های pip (از جمله `cryptography`, `Pillow`, `pymongo`) برای `python:3.12-slim` روی `linux/amd64` از قبل wheel آماده دارن و کامپایلر نمی‌خوان. همچنین `pip install` گاهی با خطای `THESE PACKAGES DO NOT MATCH THE HASHES` روی دانلود پکیج‌های خیلی بزرگ (مثل wheelهای CUDA/nvidia که transitive dependency ی سنگین کتابخونه‌هایی مثل `sentence-transformers`ان) fail می‌کنه — این معمولاً یعنی دانلود ناقص/خراب روی شبکه‌ی ناپایدار این محیط بوده، نه واقعاً تهدید امنیتی؛ راه‌حل بهتر از retry صرف، حذف اون وابستگی سنگین از `requirements.txt` تا زمانی که واقعاً لازم بشه (نمونه: `chromadb`/`sentence-transformers` که فاز ۴ هنوز شروع نشده کامنت شدن).
+17. **اجرای `npm run build` برای تأیید نهایی، درحالی‌که `npm run dev` هم‌زمان روی همون پوشه‌ی `frontend/` در حال اجراست، `.next/` مشترک رو خراب می‌کنه** (build خروجی production می‌نویسه، dev سرور با webpack/HMR خودش گیج می‌شه — نشونه‌ی معمول: چانک‌های `/_next/static/...` با ۴۰۴ خام fail می‌شن، نه صفحه‌ی خطای Next.js). بعد از هر `npm run build` تأییدی، اگه `npm run dev` قراره ادامه بده، حتماً dev server رو kill کن، `rm -rf .next`، و دوباره `npm run dev` بزن — وگرنه تست بصری بعدی (خود کاربر یا خودت با curl) نتیجه‌ی خراب/قدیمی می‌بینه و به‌اشتباه فکر می‌کنی feature یا فیکس تازه باگ داره.
+18. **اضافه‌کردن یک router جدید (فایل تازه) به بک‌اند، یا هر import جدید در `main.py`، با uvicorn بدون `--reload` اصلاً پیک‌آپ نمی‌شه** — نه فقط تغییر کد endpoint موجود (که در نکته‌ی #۲ گفته شده)، بلکه خود endpointهای جدید تا restart دستی اصلاً تو `/openapi.json` ظاهر نمی‌شن؛ راحت‌ترین تشخیص: بعد از افزودن route جدید، `curl .../openapi.json` بزن و چک کن مسیر جدید توش هست یا نه، قبل از این‌که فکر کنی کد اشتباهه.
 
 ## تصمیمات کلیدی کاربر (خلاصه‌ی فشرده — کامل در architecture.md)
 
