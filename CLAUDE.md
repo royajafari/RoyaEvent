@@ -25,7 +25,7 @@
 | ۱۰ | تقویت تست + مقاومت آفلاین/RTL | ⏳ شروع نشده |
 | ۱۱ | آماده‌سازی دیپلوی VPS (TLS/HTTPS اجباری — نگاه کن به بخش تصمیمات) | ⏳ شروع نشده |
 
-بک‌اند در مجموع الان **۱۷۳ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build`، `npx eslint src --max-warnings=0` و `npx tsc --noEmit` هر سه تمیز.
+بک‌اند در مجموع الان **۱۸۲ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
 
 ## استک فنی (تصمیم قطعی، تغییر نده مگر کاربر بخواد)
 
@@ -61,7 +61,7 @@ RoyaEvent/
     providers/sms|email/ # base + console(dev) + ippanel/kavenegar/brevo/resend
     schemas/            # auth.py, event.py, ticket.py, order.py, social.py, organizer.py (Pydantic)
     services/           # otp_service, auth_service, event_service (+event_query/to_list_item_out عمومی),
-                        # image_service, ticket_service, discount_service, order_service, social_service
+                        # image_service, video_service, ticket_service, discount_service, order_service, social_service
   backend/tests/unit|integration/   # pytest، fakeredis، بدون نیاز به Redis واقعی
   frontend/src/
     app/
@@ -98,7 +98,7 @@ RoyaEvent/
 
 کاربر این‌ها رو مستقیم درخواست داده؛ باید قبل از فاز ۴ یا در کنارش انجام بشن:
 
-1. **آپلود کلیپ کوتاه تبلیغاتی رویداد** (کنار بنر، نه جایگزین) — فیلد جدید `promo_video_url` روی `events` (migration ساده، افزایشی)؛ محدودیت حجم سخت‌گیرانه (پیشنهاد: ۲۰-۳۰ مگابایت)، فرمت محدود به MP4/WebM بر اساس **magic bytes** (نه پسوند/Content-Type کلاینت — طبق همون منطق امنیتی بنر در بخش ۱۶ پلن)، بدون transcode واقعی در MVP (ffmpeg سنگینه، فعلاً فقط اعتبارسنجی+ذخیره در MinIO با نام تصادفی)، نمایش با `<video controls preload="metadata">` در صفحه‌ی رویداد. برگزارکننده می‌تونه بنر، کلیپ، یا هر دو رو بذاره.
+1. ~~آپلود کلیپ کوتاه تبلیغاتی رویداد~~ ✅ **انجام شد** — `promo_video_url` روی `events`، `app/services/video_service.py` (اعتبارسنجی magic-byte MP4/WebM، سقف ۳۰MB، بدون transcode)، endpoint `POST /events/{id}/promo-video`، آپلود پیشرفت‌دار (XMLHttpRequest + درصد) در فرم ایجاد رویداد، پخش‌کننده در صفحه‌ی رویداد (video با poster=banner اگه هر دو باشن). جزئیات کامل در `specs/spec3.md`.
 2. **تور آموزشی سایت (onboarding tour)** برای بازدیدکننده‌ی اولین‌بار — معرفی امکانات کلیدی سایت با یک کتابخونه‌ی سبک (مثلاً driver.js/react-joyride)، نمایش یک‌بار (چک با `localStorage`)، قابل رد‌کردن/تکرار دستی.
 3. **TLS/HTTPS اجباری در production** — از قبل بخشی از فاز ۱۱ (Nginx reverse proxy + Let's Encrypt، ریدایرکت خودکار HTTP→HTTPS) بود؛ کاربر صراحتاً تأکید کرد. در `docker-compose.prod.yml` و راهنمای دیپلوی فاز ۱۱ باید کامل مستند/پیاده بشه، نه فقط اشاره.
 

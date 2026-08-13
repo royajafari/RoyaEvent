@@ -48,6 +48,16 @@
 
 - کاربر تصویر لوگو رو دید و گفت پس‌زمینه‌ی هدر باید همون navy تیره‌ی لوگو باشه تا حرف سفید لوگو گم نشه، و بعد خواست کل پس‌زمینه‌ی سایت با پس‌زمینه‌ی لوگو یکی بشه (کاربر متوجه مرز نشه). راه‌حل نهایی: کلاس `dark` به‌صورت دائمی روی `<html>` در `app/layout.tsx` اضافه شد (نه یک toggle) — چون `globals.css` از فاز ۲ کامل رنگ‌های dark mode (`--background: var(--brand-dark)` و بقیه‌ی توکن‌ها) رو داشت، فقط فعال نبود. با فعال‌شدنش کل سایت (هدر + بدنه + کارت‌ها) یکدست navy شد، بدون نیاز به جعبه‌ی جدا پشت لوگو.
 
+### بعد از فاز — پیاده‌سازی «آپلود کلیپ کوتاه تبلیغاتی» از لیست کارهای درخواستی
+
+این آیتم اول لیست «کارهای درخواستی در صف» بود (CLAUDE.md)؛ کنار بنر، نه جایگزینش.
+
+- بک‌اند: `Event.promo_video_url` (String(500), nullable) — migration `5c8b87af0219` روی پایه‌ی `956ea659d2be` (فقط add column). `app/services/video_service.py: validate_video_file()` فرمت رو از روی magic bytes تشخیص می‌ده (MP4: بایت ۴-۷ باید `ftyp` باشه؛ WebM: ۴ بایت اول باید `1A 45 DF A3` باشه — EBML header)، سقف حجم ۳۰ مگابایت، **بدون transcode واقعی** (تصمیم آگاهانه‌ی MVP، برخلاف بنر که کامل re-encode می‌شه چون ffmpeg سنگینه). `app/core/storage.py: upload_promo_video()` فایل خام رو با نام تصادفی در `promo-videos/{event_id}/{uuid}.{ext}` ذخیره می‌کنه. Endpoint: `POST /events/{id}/promo-video` (فقط مالک، rate-limit ۱۰/دقیقه، مثل بنر).
+- فرانت: `eventsApi.uploadPromoVideo()`. فرم ایجاد رویداد (`create/page.tsx`) یک فیلد آپلود ویدیوی جدا کنار بنر داره. صفحه‌ی جزئیات رویداد: اگه `promo_video_url` باشه، `<video controls preload="metadata">` به‌جای بنر خام نشون داده می‌شه (با `poster={banner_url}` اگه بنر هم باشه)؛ اگه ویدیو نباشه، مثل قبل بنر یا جای‌خالی نشون داده می‌شه.
+- **درخواست بعدی کاربر که همین‌جا اضافه شد:** نوار پیشرفت آپلود (درصد لحظه‌ای) برای هر دو فایل (بنر و ویدیو). چون `fetch` امکان دنبال‌کردن upload progress رو نمی‌ده، `lib/api-client.ts: uploadFileWithProgress()` با `XMLHttpRequest` (نه fetch) نوشته شد؛ `xhr.upload.onprogress` درصد رو محاسبه می‌کنه. کامپوننت UI جدید و مینیمال `components/ui/progress.tsx` (بدون کتابخونه‌ی جانبی، فقط دو `div` تو در تو با Tailwind) برای نمایش نوار اضافه شد.
+- تست‌ها: `tests/unit/test_video_service.py` (۶ تست: مسیر موفق mp4/webm، رد فایل خالی/غیرویدیو/حجم زیاد/عکس با ادعای پسوند ویدیو) + ۳ تست integration (`test_promo_video_upload_*` در `test_events_api.py`، مشابه الگوی تست‌های بنر، mock روی `upload_promo_video`). مجموع تست بعد از این کار: **۱۸۲**.
+- راستی‌آزمایی واقعی: با سرور واقعی (نه mock) یک فایل mp4 مینیمال (فقط magic bytes معتبر) آپلود شد، `promo_video_url` واقعاً در MinIO واقعی ذخیره و از طریق `curl` با `content-type: video/mp4` قابل بازیابی بود؛ HTML خروجی SSR صفحه‌ی رویداد هم تگ `<video preload="metadata">` با همون URL رو نشون داد.
+
 ## نکات/دام‌های این فاز
 
 - **برای تست early-bird:** برای شبیه‌سازی «بازه‌ی زودهنگام گذشته»، `published_at` رو با `utcnow() - timedelta(days=N)` (گذشته‌ی واقعی) عقب ببر، نه با تفریق کسری از `starts_at` — اون روش اول باعث شد `published_at` به آینده بره (باگ در خود تست، نه در `ticket_service`) و تست اشتباهی pass/fail می‌داد.
