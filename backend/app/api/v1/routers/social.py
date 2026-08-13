@@ -6,6 +6,7 @@ from app.models.event import Event
 from app.models.favorite import Favorite
 from app.models.instructor import Instructor
 from app.models.user import User
+from app.schemas.social import MyFollowsDetailOut
 from app.services import social_service
 from app.services.event_service import event_query, to_list_item_out
 
@@ -42,6 +43,11 @@ def list_my_favorites(current_user: User = Depends(get_current_user), db: Sessio
 @router.get("/me/follows")
 def list_my_follows(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return social_service.list_my_follows(db, current_user.id)
+
+
+@router.get("/me/follows/details", response_model=MyFollowsDetailOut)
+def list_my_follows_detail(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return social_service.list_my_follows_detail(db, current_user.id)
 
 
 @router.post("/follows/organizers/{organizer_id}")

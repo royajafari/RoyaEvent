@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile, status
 from redis import Redis
 from sqlalchemy.orm import Session
 
@@ -12,6 +12,7 @@ from app.api.deps import (
 )
 from app.core.config import get_settings
 from app.core.rate_limit_middleware import limiter
+from app.core.storage import upload_avatar_image
 from app.core.validators import InvalidEmail, InvalidPhoneNumber
 from app.models.otp_challenge import OTPPurpose
 from app.models.user import User
@@ -28,7 +29,10 @@ from app.schemas.auth import (
     UserOut,
 )
 from app.services.auth_service import AuthError, AuthService
+from app.services.image_service import InvalidImageError, validate_and_reencode_image
 from app.services.otp_service import OTPRequestThrottled, OTPService, OTPVerificationFailed
+
+MAX_AVATAR_UPLOAD_BYTES = 5 * 1024 * 1024
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -190,6 +194,29 @@ def update_me(
     db: Session = Depends(get_db),
 ):
     current_user.full_name = body.full_name.strip()
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.post("/me/avatar", response_model=UserOut)
+@limiter.limit("10/minute")
+async def upload_my_avatar(
+    request: Request,
+    file: UploadFile,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    raw = await file.read(MAX_AVATAR_UPLOAD_BYTES + 1)
+    if len(raw) > MAX_AVATAR_UPLOAD_BYTES:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "حجم فایل نباید بیش از ۵ مگابایت باشد")
+
+    try:
+        clean_jpeg = validate_and_reencode_image(raw)
+    except InvalidImageError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+
+    current_user.avatar_url = upload_avatar_image(current_user.id, clean_jpeg)
     db.commit()
     db.refresh(current_user)
     return current_user

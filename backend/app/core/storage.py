@@ -64,6 +64,26 @@ def upload_banner_image(event_id: int, jpeg_bytes: bytes) -> str:
     return f"{scheme}://{settings.minio_endpoint}/{settings.minio_bucket}/{object_key}"
 
 
+def upload_avatar_image(user_id: int, jpeg_bytes: bytes) -> str:
+    """آپلود عکس پروفایل کاربر — دقیقاً همون منطق re-encode امن بنر رویداد،
+    فقط با namespace متفاوت در باکت (avatars/{user_id}/...)."""
+    settings = get_settings()
+    client = get_minio_client()
+    ensure_bucket_ready()
+
+    object_key = f"avatars/{user_id}/{uuid4().hex}.jpg"
+    client.put_object(
+        settings.minio_bucket,
+        object_key,
+        data=io.BytesIO(jpeg_bytes),
+        length=len(jpeg_bytes),
+        content_type="image/jpeg",
+    )
+
+    scheme = "https" if settings.minio_secure else "http"
+    return f"{scheme}://{settings.minio_endpoint}/{settings.minio_bucket}/{object_key}"
+
+
 def upload_promo_video(event_id: int, raw: bytes, content_type: str) -> str:
     """آپلود کلیپ کوتاه تبلیغاتی رویداد (بدون transcode، طبق تصمیم MVP) با
     نام تصادفی — کنار upload_banner_image، نه جایگزینش.

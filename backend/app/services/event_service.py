@@ -6,6 +6,7 @@ from app.core.slug import generate_event_code, slugify_ascii
 from app.models.base import utcnow
 from app.models.category import Category
 from app.models.event import Event, EventSession, EventStatus
+from app.models.instructor import Instructor
 from app.models.tag import Tag
 from app.schemas.event import CategoryOut, EventCreateIn, EventListItemOut, EventSessionIn, EventUpdateIn
 
@@ -18,6 +19,7 @@ def event_query(db: Session):
     return db.query(Event).options(
         selectinload(Event.sessions),
         selectinload(Event.tags),
+        selectinload(Event.instructors),
         selectinload(Event.category),
         selectinload(Event.organizer),
     )
@@ -86,6 +88,23 @@ def _get_or_create_tags(db: Session, tag_names: list[str]) -> list[Tag]:
     return tags
 
 
+def _get_or_create_instructors(db: Session, instructor_names: list[str]) -> list[Instructor]:
+    """مثل _get_or_create_tags: برگزارکننده فقط اسم مدرس رو تایپ می‌کنه؛ اولین
+    بار رکورد Instructor ساخته می‌شه، دفعات بعد همون رکورد پیدا و لینک می‌شه."""
+    instructors: list[Instructor] = []
+    for raw_name in instructor_names:
+        name = raw_name.strip()
+        if not name:
+            continue
+        instructor = db.query(Instructor).filter_by(name=name).first()
+        if instructor is None:
+            instructor = Instructor(name=name)
+            db.add(instructor)
+            db.flush()
+        instructors.append(instructor)
+    return instructors
+
+
 def create_event(db: Session, organizer_id: int, data: EventCreateIn) -> Event:
     _validate_leaf_category(db, data.category_id)
 
@@ -108,6 +127,7 @@ def create_event(db: Session, organizer_id: int, data: EventCreateIn) -> Event:
         status=EventStatus.DRAFT,
     )
     event.tags = _get_or_create_tags(db, data.tag_names)
+    event.instructors = _get_or_create_instructors(db, data.instructor_names)
 
     for index, session_in in enumerate(
         sorted(data.sessions, key=lambda s: s.starts_at)
@@ -150,6 +170,8 @@ def update_event(db: Session, event: Event, data: EventUpdateIn) -> Event:
         event.refund_policy = data.refund_policy
     if data.tag_names is not None:
         event.tags = _get_or_create_tags(db, data.tag_names)
+    if data.instructor_names is not None:
+        event.instructors = _get_or_create_instructors(db, data.instructor_names)
 
     db.commit()
     db.refresh(event)

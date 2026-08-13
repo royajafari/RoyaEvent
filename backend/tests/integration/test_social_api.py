@@ -57,3 +57,21 @@ def test_follow_and_unfollow_instructor(client, db_session, buyer_auth_headers):
         f"/api/v1/follows/instructors/{instructor.id}", headers=buyer_auth_headers
     )
     assert unfollow_resp.json()["following"] is False
+
+
+def test_my_follows_detail_includes_names(client, db_session, organizer, buyer_auth_headers):
+    from app.models.instructor import Instructor
+
+    instructor = Instructor(name="مدرس تست")
+    db_session.add(instructor)
+    db_session.commit()
+    db_session.refresh(instructor)
+
+    client.post(f"/api/v1/follows/organizers/{organizer.id}", headers=buyer_auth_headers)
+    client.post(f"/api/v1/follows/instructors/{instructor.id}", headers=buyer_auth_headers)
+
+    resp = client.get("/api/v1/me/follows/details", headers=buyer_auth_headers)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["organizers"] == [{"id": organizer.id, "name": organizer.full_name}]
+    assert body["instructors"] == [{"id": instructor.id, "name": instructor.name, "avatar_url": None}]

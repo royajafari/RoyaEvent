@@ -38,6 +38,7 @@ class UserOut(BaseModel):
     phone: str | None
     email: str | None
     full_name: str | None
+    avatar_url: str | None
     role: str
     status: str
 

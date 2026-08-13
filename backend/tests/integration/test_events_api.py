@@ -130,6 +130,27 @@ def test_list_events_only_shows_published_public(client, leaf_category, auth_hea
     assert draft["id"] not in ids
 
 
+def test_list_events_sort_popular_orders_by_view_count(client, leaf_category, auth_headers, db_session):
+    from app.models.event import Event
+
+    low = client.post(
+        "/api/v1/events", json=_event_payload(leaf_category.id, title="بازدید کم"), headers=auth_headers
+    ).json()
+    high = client.post(
+        "/api/v1/events", json=_event_payload(leaf_category.id, title="بازدید زیاد"), headers=auth_headers
+    ).json()
+    client.post(f"/api/v1/events/{low['id']}/publish", headers=auth_headers)
+    client.post(f"/api/v1/events/{high['id']}/publish", headers=auth_headers)
+
+    db_session.query(Event).filter(Event.id == high["id"]).update({"view_count": 50})
+    db_session.query(Event).filter(Event.id == low["id"]).update({"view_count": 1})
+    db_session.commit()
+
+    resp = client.get("/api/v1/events?sort=popular")
+    ids = [e["id"] for e in resp.json()]
+    assert ids.index(high["id"]) < ids.index(low["id"])
+
+
 def test_list_my_events_shows_all_own_statuses(client, leaf_category, auth_headers):
     client.post("/api/v1/events", json=_event_payload(leaf_category.id), headers=auth_headers)
     client.post("/api/v1/events", json=_event_payload(leaf_category.id), headers=auth_headers)

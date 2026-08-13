@@ -52,6 +52,20 @@ def get_current_user(
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, str(exc)) from exc
 
 
+def get_current_user_optional(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """برای endpointهای عمومی که رفتارشون فقط برای کاربر لاگین‌کرده کمی فرق
+    می‌کنه (مثلاً is_following)، بدون این‌که auth رو اجباری کنه."""
+    if credentials is None:
+        return None
+    try:
+        return AuthService(db).get_user_from_access_token(credentials.credentials)
+    except AuthError:
+        return None
+
+
 def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role.value != "admin":
         raise HTTPException(status.HTTP_403_FORBIDDEN, "این عملیات فقط برای ادمین مجاز است")

@@ -42,6 +42,7 @@ def list_categories(db: Session = Depends(get_db)):
 def list_events(
     category_id: int | None = None,
     format: str | None = None,
+    sort: str | None = None,
     db: Session = Depends(get_db),
 ):
     query = _event_query(db).filter(
@@ -52,7 +53,14 @@ def list_events(
     if format is not None:
         query = query.filter(Event.format == format)
 
-    events = query.order_by(Event.published_at.desc()).limit(50).all()
+    # sort=popular: بازدید تنها معیار محبوبیت واقعیه که الان داریم — سیستم
+    # امتیازدهی هنوز پیاده نشده (فاز ۷)، پس rating_avg برای همه صفره
+    if sort == "popular":
+        query = query.order_by(Event.view_count.desc())
+    else:
+        query = query.order_by(Event.published_at.desc())
+
+    events = query.limit(50).all()
     return [_to_list_item(e) for e in events]
 
 

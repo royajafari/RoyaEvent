@@ -41,6 +41,16 @@ class EventSessionOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class InstructorRefOut(BaseModel):
+    """نسخه‌ی سبک مدرس برای جاسازی داخل EventDetailOut — بدون follower_count/bio."""
+
+    id: int
+    name: str
+    avatar_url: str | None
+
+    model_config = {"from_attributes": True}
+
+
 class EventCreateIn(BaseModel):
     title: str = Field(min_length=3, max_length=200)
     description: str = Field(min_length=1)
@@ -51,6 +61,7 @@ class EventCreateIn(BaseModel):
     visibility: Literal["public", "private"] = "public"
     refund_policy: str | None = None
     tag_names: list[str] = Field(default_factory=list, max_length=10)
+    instructor_names: list[str] = Field(default_factory=list, max_length=10)
     sessions: list[EventSessionIn] = Field(min_length=1)
 
     @field_validator("sessions")
@@ -78,6 +89,7 @@ class EventUpdateIn(BaseModel):
     online_platform_name: str | None = None
     refund_policy: str | None = None
     tag_names: list[str] | None = Field(default=None, max_length=10)
+    instructor_names: list[str] | None = Field(default=None, max_length=10)
 
 
 class EventListItemOut(BaseModel):
@@ -122,5 +134,6 @@ class EventDetailOut(BaseModel):
     published_at: datetime | None
     sessions: list[EventSessionOut]
     tags: list[TagOut]
+    instructors: list[InstructorRefOut]
 
     model_config = {"from_attributes": True}
