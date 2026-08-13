@@ -55,6 +55,7 @@ class Event(Base, TimestampMixin):
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     description_plain: Mapped[str] = mapped_column(Text, nullable=False, default="")
     banner_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    promo_video_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     category_id: Mapped[int | None] = mapped_column(ForeignKey("categories.id"), nullable=True, index=True)
 

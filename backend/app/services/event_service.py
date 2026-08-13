@@ -192,3 +192,10 @@ def set_banner_url(db: Session, event: Event, banner_url: str) -> Event:
     db.commit()
     db.refresh(event)
     return event
+
+
+def set_promo_video_url(db: Session, event: Event, promo_video_url: str) -> Event:
+    event.promo_video_url = promo_video_url
+    db.commit()
+    db.refresh(event)
+    return event

@@ -107,6 +107,7 @@ class EventDetailOut(BaseModel):
     event_code: str
     description: str
     banner_url: str | None
+    promo_video_url: str | None
     category: CategoryOut | None
     visibility: str
     format: str

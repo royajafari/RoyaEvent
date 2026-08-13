@@ -29,6 +29,10 @@ def _make_jpeg_bytes() -> bytes:
     return buffer.getvalue()
 
 
+def _make_mp4_bytes() -> bytes:
+    return b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom"
+
+
 def test_create_event_requires_auth(client, leaf_category):
     resp = client.post("/api/v1/events", json=_event_payload(leaf_category.id))
     assert resp.status_code == 401
@@ -296,6 +300,68 @@ def test_banner_upload_forbidden_for_non_owner(client, leaf_category, auth_heade
     resp = client.post(
         f"/api/v1/events/{event_id}/banner",
         files={"file": ("banner.jpg", _make_jpeg_bytes(), "image/jpeg")},
+        headers={"Authorization": f"Bearer {other_tokens.access_token}"},
+    )
+    assert resp.status_code == 403
+
+
+def test_promo_video_upload_rejects_non_video(client, leaf_category, auth_headers):
+    create_resp = client.post(
+        "/api/v1/events", json=_event_payload(leaf_category.id), headers=auth_headers
+    )
+    event_id = create_resp.json()["id"]
+
+    resp = client.post(
+        f"/api/v1/events/{event_id}/promo-video",
+        files={"file": ("evil.txt", b"not a video", "text/plain")},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 422
+
+
+def test_promo_video_upload_success_with_mocked_storage(
+    client, leaf_category, auth_headers, monkeypatch
+):
+    import app.api.v1.routers.events as events_module
+
+    monkeypatch.setattr(
+        events_module,
+        "upload_promo_video",
+        lambda event_id, raw, content_type: "http://minio.local/x.mp4",
+    )
+
+    create_resp = client.post(
+        "/api/v1/events", json=_event_payload(leaf_category.id), headers=auth_headers
+    )
+    event_id = create_resp.json()["id"]
+
+    resp = client.post(
+        f"/api/v1/events/{event_id}/promo-video",
+        files={"file": ("promo.mp4", _make_mp4_bytes(), "video/mp4")},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["promo_video_url"] == "http://minio.local/x.mp4"
+
+
+def test_promo_video_upload_forbidden_for_non_owner(client, leaf_category, auth_headers, db_session):
+    from app.models.user import User
+    from app.services.auth_service import AuthService
+
+    create_resp = client.post(
+        "/api/v1/events", json=_event_payload(leaf_category.id), headers=auth_headers
+    )
+    event_id = create_resp.json()["id"]
+
+    other_user = User(phone="09351234568")
+    db_session.add(other_user)
+    db_session.commit()
+    db_session.refresh(other_user)
+    other_tokens = AuthService(db_session).issue_token_pair(other_user)
+
+    resp = client.post(
+        f"/api/v1/events/{event_id}/promo-video",
+        files={"file": ("promo.mp4", _make_mp4_bytes(), "video/mp4")},
         headers={"Authorization": f"Bearer {other_tokens.access_token}"},
     )
     assert resp.status_code == 403

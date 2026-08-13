@@ -62,3 +62,25 @@ def upload_banner_image(event_id: int, jpeg_bytes: bytes) -> str:
 
     scheme = "https" if settings.minio_secure else "http"
     return f"{scheme}://{settings.minio_endpoint}/{settings.minio_bucket}/{object_key}"
+
+
+def upload_promo_video(event_id: int, raw: bytes, content_type: str) -> str:
+    """آپلود کلیپ کوتاه تبلیغاتی رویداد (بدون transcode، طبق تصمیم MVP) با
+    نام تصادفی — کنار upload_banner_image، نه جایگزینش.
+    """
+    settings = get_settings()
+    client = get_minio_client()
+    ensure_bucket_ready()
+
+    extension = "webm" if content_type == "video/webm" else "mp4"
+    object_key = f"promo-videos/{event_id}/{uuid4().hex}.{extension}"
+    client.put_object(
+        settings.minio_bucket,
+        object_key,
+        data=io.BytesIO(raw),
+        length=len(raw),
+        content_type=content_type,
+    )
+
+    scheme = "https" if settings.minio_secure else "http"
+    return f"{scheme}://{settings.minio_endpoint}/{settings.minio_bucket}/{object_key}"

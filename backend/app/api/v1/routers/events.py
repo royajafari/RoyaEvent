@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db
 from app.core.permissions import require_event_owner
 from app.core.rate_limit_middleware import limiter
-from app.core.storage import upload_banner_image
+from app.core.storage import upload_banner_image, upload_promo_video
 from app.models.category import Category
 from app.models.event import Event, EventStatus, EventVisibility
 from app.models.user import User
@@ -21,10 +21,12 @@ from app.schemas.event import (
 from app.services import event_service
 from app.services.event_service import EventServiceError, event_query, to_list_item_out
 from app.services.image_service import InvalidImageError, validate_and_reencode_image
+from app.services.video_service import InvalidVideoError, validate_video_file
 
 router = APIRouter(prefix="/events", tags=["events"])
 
 MAX_BANNER_UPLOAD_BYTES = 5 * 1024 * 1024
+MAX_PROMO_VIDEO_UPLOAD_BYTES = 30 * 1024 * 1024
 
 _event_query = event_query
 _to_list_item = to_list_item_out
@@ -243,3 +245,30 @@ async def upload_event_banner(
 
     banner_url = upload_banner_image(event.id, clean_jpeg)
     return event_service.set_banner_url(db, event, banner_url)
+
+
+@router.post("/{event_id}/promo-video", response_model=EventDetailOut)
+@limiter.limit("10/minute")
+async def upload_event_promo_video(
+    request: Request,
+    event_id: int,
+    file: UploadFile,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    event = db.get(Event, event_id)
+    if event is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "رویداد یافت نشد")
+    require_event_owner(event, current_user)
+
+    raw = await file.read(MAX_PROMO_VIDEO_UPLOAD_BYTES + 1)
+    if len(raw) > MAX_PROMO_VIDEO_UPLOAD_BYTES:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "حجم کلیپ نباید بیش از ۳۰ مگابایت باشد")
+
+    try:
+        content_type = validate_video_file(raw)
+    except InvalidVideoError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+
+    promo_video_url = upload_promo_video(event.id, raw, content_type)
+    return event_service.set_promo_video_url(db, event, promo_video_url)
