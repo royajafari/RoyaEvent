@@ -1,12 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { NewsletterSignup } from "@/components/NewsletterSignup";
 
 export default function Home() {
   return (
@@ -21,24 +14,7 @@ export default function Home() {
           رو کشف کنید، بلیط بگیرید و رویداد خودتون رو برگزار کنید.
         </p>
 
-        <Card className="w-full text-right">
-          <CardHeader>
-            <CardTitle>عضویت در خبرنامه</CardTitle>
-            <CardDescription>
-              برای اطلاع از آخرین اخبار و وبینارهای مختلف، در خبرنامه‌ی
-              پلتفرم مدیریت و تجربه‌ی رویداد رویا ایونت عضو شوید.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3 sm:flex-row">
-            <input
-              type="email"
-              placeholder="ایمیل شما"
-              dir="ltr"
-              className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-right text-sm shadow-xs outline-none"
-            />
-            <Button className="shrink-0">عضویت</Button>
-          </CardContent>
-        </Card>
+        <NewsletterSignup />
       </div>
     </div>
   );

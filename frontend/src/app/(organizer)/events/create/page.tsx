@@ -6,18 +6,24 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Combobox,
+  ComboboxCollection,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxGroup,
+  ComboboxGroupLabel,
+  ComboboxInput,
+  ComboboxInputGroup,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxTrigger,
+} from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
+import { JalaliDateTimePicker } from "@/components/JalaliDateTimePicker";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api-client";
 import type { CategoryOut, EventDetail, EventSessionInput } from "@/lib/events-api";
@@ -26,11 +32,37 @@ import { useAuthStore } from "@/store/auth-store";
 
 type SessionRow = { starts_at: string; duration_minutes: number };
 
+// Base UI's Select.Value (برخلاف Radix) به‌صورت پیش‌فرض فقط raw value رو نشون
+// می‌ده، نه لیبل آیتم متناظرش — باید صریحاً یه children (تابع) بهش بدیم که
+// value رو به لیبل نمایشی نگاشت کنه.
+const FORMAT_LABELS: Record<string, string> = {
+  online: "آنلاین",
+  in_person: "حضوری",
+  hybrid: "ترکیبی",
+};
+
+const VISIBILITY_LABELS: Record<string, string> = {
+  public: "عمومی",
+  private: "خصوصی (فقط با لینک دعوت)",
+};
+
 function groupCategories(categories: CategoryOut[]) {
   const parents = categories.filter((c) => c.parent_id === null);
   return parents.map((parent) => ({
     parent,
     children: categories.filter((c) => c.parent_id === parent.id),
+  }));
+}
+
+type CategoryComboboxItem = { value: string; label: string };
+
+function buildCategoryComboboxGroups(categories: CategoryOut[]) {
+  return groupCategories(categories).map(({ parent, children }) => ({
+    label: parent.name,
+    items: children.map((child): CategoryComboboxItem => ({
+      value: String(child.id),
+      label: child.name,
+    })),
   }));
 }
 
@@ -58,6 +90,10 @@ export default function CreateEventPage() {
   useEffect(() => {
     eventsApi.listCategories().then(setCategories).catch(() => setError("خطا در دریافت دسته‌بندی‌ها"));
   }, []);
+
+  const categoryComboboxGroups = buildCategoryComboboxGroups(categories);
+  const selectedCategoryItem =
+    categoryComboboxGroups.flatMap((g) => g.items).find((i) => i.value === categoryId) ?? null;
 
   function updateSession(index: number, patch: Partial<SessionRow>) {
     setSessions((prev) => prev.map((s, i) => (i === index ? { ...s, ...patch } : s)));
@@ -250,30 +286,42 @@ export default function CreateEventPage() {
 
         <div className="flex flex-col gap-2">
           <Label>دسته‌بندی</Label>
-          <Select value={categoryId} onValueChange={(v) => setCategoryId(v ?? "")}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="یک زیردسته انتخاب کنید" />
-            </SelectTrigger>
-            <SelectContent>
-              {groupCategories(categories).map(({ parent, children }) => (
-                <SelectGroup key={parent.id}>
-                  <SelectLabel>{parent.name}</SelectLabel>
-                  {children.map((child) => (
-                    <SelectItem key={child.id} value={String(child.id)}>
-                      {child.name}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              ))}
-            </SelectContent>
-          </Select>
+          <Combobox
+            items={categoryComboboxGroups}
+            value={selectedCategoryItem}
+            onValueChange={(item: CategoryComboboxItem | null) => setCategoryId(item ? item.value : "")}
+            itemToStringLabel={(item: CategoryComboboxItem) => item.label}
+            itemToStringValue={(item: CategoryComboboxItem) => item.value}
+          >
+            <ComboboxInputGroup>
+              <ComboboxInput placeholder="جستجو یا انتخاب زیردسته..." />
+              <ComboboxTrigger />
+            </ComboboxInputGroup>
+            <ComboboxContent>
+              <ComboboxEmpty>موردی یافت نشد</ComboboxEmpty>
+              <ComboboxList>
+                {categoryComboboxGroups.map((group) => (
+                  <ComboboxGroup key={group.label} items={group.items}>
+                    <ComboboxGroupLabel>{group.label}</ComboboxGroupLabel>
+                    <ComboboxCollection>
+                      {(item: CategoryComboboxItem) => (
+                        <ComboboxItem key={item.value} value={item}>
+                          {item.label}
+                        </ComboboxItem>
+                      )}
+                    </ComboboxCollection>
+                  </ComboboxGroup>
+                ))}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
         </div>
 
         <div className="flex flex-col gap-2">
           <Label>نوع برگزاری</Label>
           <Select value={format} onValueChange={(v) => v && setFormat(v as typeof format)}>
             <SelectTrigger className="w-full">
-              <SelectValue />
+              <SelectValue>{(value: string) => FORMAT_LABELS[value] ?? value}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="online">آنلاین</SelectItem>
@@ -310,7 +358,7 @@ export default function CreateEventPage() {
           <Label>نوع دسترسی</Label>
           <Select value={visibility} onValueChange={(v) => v && setVisibility(v as typeof visibility)}>
             <SelectTrigger className="w-full">
-              <SelectValue />
+              <SelectValue>{(value: string) => VISIBILITY_LABELS[value] ?? value}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="public">عمومی</SelectItem>
@@ -336,11 +384,10 @@ export default function CreateEventPage() {
             <div key={index} className="flex flex-wrap items-end gap-2 rounded-md border p-3">
               <div className="flex flex-col gap-1">
                 <Label htmlFor={`session-start-${index}`}>تاریخ و ساعت شروع</Label>
-                <Input
+                <JalaliDateTimePicker
                   id={`session-start-${index}`}
-                  type="datetime-local"
                   value={session.starts_at}
-                  onChange={(e) => updateSession(index, { starts_at: e.target.value })}
+                  onChange={(isoString) => updateSession(index, { starts_at: isoString })}
                   required
                 />
               </div>
