@@ -23,7 +23,7 @@
 | ۸ | آنالیتیکس/KPI | ⏳ شروع نشده |
 | ۹ | استک مانیتورینگ | ⏳ شروع نشده |
 | ۱۰ | تقویت تست + مقاومت آفلاین/RTL | ⏳ شروع نشده |
-| ۱۱ | آماده‌سازی دیپلوی VPS (TLS/HTTPS اجباری — نگاه کن به بخش تصمیمات) | ⏳ شروع نشده |
+| ۱۱ | آماده‌سازی دیپلوی VPS (TLS/HTTPS اجباری — نگاه کن به بخش تصمیمات) | ⏳ باقی فاز نشده؛ بخش TLS/Nginx/Docker زودتر و مستقل انجام شد، نگاه کن به `docs/deployment_tls.md` و `specs/spec3.md` |
 
 بک‌اند در مجموع الان **۱۸۲ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
 
@@ -37,7 +37,7 @@
 | آنالیتیکس رفتاری | MongoDB (فاز ۸، هنوز کدی نیست) |
 | کش/Rate-limit | Redis |
 | فایل/بنر/ویدیو | S3-compatible Object Storage — **ArvanCloud Object Storage** فعال (production/dev اشتراکی، کلید در `.env`، هرگز commit نمی‌شه)؛ **MinIO خودمیزبان** (`infra/docker-compose.yml`) به‌عنوان سناریوی جایگزین همیشه در دسترس می‌مونه — کد (`app/core/storage.py`) با `minio-py` صحبت می‌کنه که با هر دو کار می‌کنه، سوییچ فقط تغییر ۴-۵ متغیر در `.env` است، بدون تغییر کد |
-| جستجوی محتوایی | ChromaDB embedded (فاز ۴، هنوز نیست) |
+| جستجوی محتوایی | ChromaDB embedded (فاز ۴، هنوز نیست) — `chromadb`/`sentence-transformers` عمداً در `requirements.txt` کامنت‌ان (سنگین، torch/CUDA می‌کشن) تا فاز ۴ واقعاً شروع بشه؛ موقع شروع فاز ۴ اول uncomment‌شون کن |
 | احراز هویت | OTP-only (بدون پسورد) + JWT (access کوتاه + refresh چرخشی) |
 | SMS | IPPanel (اصلی) / Kavenegar (جایگزین) |
 | Email | Brevo (اصلی) / Resend (جایگزین) |
@@ -69,11 +69,15 @@ RoyaEvent/
       (organizer)/events/create/   # فرم ایجاد رویداد (client)
       (organizer)/events/mine/     # لیست رویدادهای من (client)
       (organizer)/organizer/events/[id]/attendees/  # داشبورد شرکت‌کنندگان + export CSV (client)
-      events/page.tsx              # لیستینگ عمومی (SSR/dynamic)
+      (organizer)/organizer/events/[id]/media/      # ویرایش بنر/کلیپ بعد از ایجاد یا حتی بعد از انتشار (client)
+      (organizer)/organizer/events/[id]/tickets/    # مدیریت انواع بلیط رویداد — افزودن/لیست (client)
+      events/page.tsx              # لیستینگ عمومی (SSR/dynamic + فیلتر دسته‌بندی/نوع‌برگزاری با searchParams)
       events/[slug]/page.tsx       # جزئیات رویداد عمومی (SSR/dynamic + JSON-LD + چک‌اوت/فوتر چسبان/favorite/follow)
       tickets/page.tsx             # «بلیط‌های من» (client)
+      favorites/page.tsx           # «علاقه‌مندی‌های من» (client)
       page.tsx                     # خانه
     components/EventCard.tsx       # کارت رویداد (Server Component)
+    components/EventsFilter.tsx    # Select دسته‌بندی/نوع‌برگزاری برای events/page.tsx، sync با URL
     components/TicketCheckout.tsx, StickyTicketFooter.tsx, FavoriteButton.tsx, FollowOrganizerButton.tsx  # فاز ۳ (client)
     components/RoyaEventLogo.tsx   # لوگوی متنی برند (سبز/سفید/قرمز)
     components/RoyaEventLoader.tsx # اسپلش‌اسکرین، وصل به app/loading.tsx (Suspense خودکار نکست‌جس)
@@ -84,17 +88,22 @@ RoyaEvent/
     components/JalaliDateTimePicker.tsx # تاریخ‌ساعت شمسی (react-multi-date-picker) برای فیلدهای جلسه
     components/ui/                 # shadcn primitives (+ textarea, select, combobox, progress)
     lib/
-      api-client.ts    # fetch wrapper سمت کلاینت، credentials:include، پشتیبانی FormData
+      api-client.ts    # fetch wrapper سمت کلاینت، credentials:include، پشتیبانی FormData،
+                        # refreshAccessToken() (guard تک‌پرواز رفرش توکن) + retry خودکار روی ۴۰۱
       events-api.ts     # انواع TS + توابع کلاینت events/categories (نیاز به accessToken)
       events-server.ts  # فراخوانی سمت سرور برای RSC (cache:"no-store"، بدون کوکی)
       tickets-api.ts, orders-api.ts, social-api.ts, organizer-api.ts  # فاز ۳
       date.ts            # formatJalali* — Intl بومی fa-IR-u-ca-persian، بدون کتابخانه‌ی جانبی
     store/auth-store.ts  # Zustand، access token فقط در حافظه
     fonts/kalameh.ts
-  infra/docker-compose.yml   # redis, mongo, minio, loki, prometheus, grafana
+  backend/Dockerfile, frontend/Dockerfile   # production images (نگاه کن به docs/deployment_tls.md)
+  infra/docker-compose.yml        # dev: redis, mongo, minio, loki, prometheus, grafana
+  infra/docker-compose.prod.yml   # production: + nginx (TLS)، certbot، backend، frontend
+  infra/nginx/conf.d/royaevent.conf, infra/renew-certs.sh   # پیکربندی TLS + اسکریپت تمدید گواهی (کرون هاست)
   data/eseminar.tv/, data/evand.com/   # تحلیل رقبا
   docs/architecture.md        # پلن کامل معماری (مرجع اصلی طراحی)
   docs/event_otp_email_sms_plan_fa.md  # سند اولیه‌ی OTP (کاربر داده، مرجع دقیق مکانیزم OTP)
+  docs/deployment_tls.md      # راهنمای دیپلوی production + TLS اجباری با Nginx/Let's Encrypt
   specs/                       # تاریخچه‌ی اجرای فازها — یک specN.md به‌ازای هر فاز (نگاه کن به specs/README.md)
 ```
 
@@ -104,7 +113,7 @@ RoyaEvent/
 
 1. ~~آپلود کلیپ کوتاه تبلیغاتی رویداد~~ ✅ **انجام شد** — `promo_video_url` روی `events`، `app/services/video_service.py` (اعتبارسنجی magic-byte MP4/WebM، سقف ۳۰MB، بدون transcode)، endpoint `POST /events/{id}/promo-video`، آپلود پیشرفت‌دار (XMLHttpRequest + درصد) در فرم ایجاد رویداد، پخش‌کننده در صفحه‌ی رویداد (video با poster=banner اگه هر دو باشن). جزئیات کامل در `specs/spec3.md`.
 2. ~~تور آموزشی سایت~~ ✅ **انجام شد** — با `driver.js`. `lib/onboarding-tour.ts` (تعریف مراحل + استارت)، `components/OnboardingTour.tsx` (فقط اجرای خودکار بار اول، چک با `localStorage`، بدون رندر UI)، دکمه‌ی «راهنمای سایت» (آیکون `CircleHelp`) در `SiteHeader` برای تکرار دستی هروقت کاربر خواست. مراحل تور روی `id`های `tour-logo/tour-events/tour-create/tour-mine/tour-tickets/tour-login` در هدر. RTL polish برای popover در `globals.css` (کلاس `.roya-tour-popover`). جزئیات کامل در `specs/spec3.md`.
-3. **TLS/HTTPS اجباری در production** — از قبل بخشی از فاز ۱۱ (Nginx reverse proxy + Let's Encrypt، ریدایرکت خودکار HTTP→HTTPS) بود؛ کاربر صراحتاً تأکید کرد. در `docker-compose.prod.yml` و راهنمای دیپلوی فاز ۱۱ باید کامل مستند/پیاده بشه، نه فقط اشاره.
+3. ~~TLS/HTTPS اجباری در production~~ ✅ **انجام شد** — `backend/Dockerfile`+`frontend/Dockerfile` (production images، تست build شد و موفق بود)، `infra/docker-compose.prod.yml` (nginx+certbot+backend+frontend+redis+mongo+minio اختیاری)، `infra/nginx/conf.d/royaevent.conf` (ریدایرکت اجباری HTTP→HTTPS + HSTS)، `infra/renew-certs.sh` (تمدید گواهی از کرون هاست). راهنمای کامل قدم‌به‌قدم در `docs/deployment_tls.md`. جزئیات/تصمیمات فنی (چرا certbot سرویس همیشه‌روشن نیست، مشکل apt-get و راه‌حلش) در `specs/spec3.md`.
 
 ## قراردادهای API
 
@@ -162,6 +171,9 @@ npm run dev   # http://localhost:3000
 11. **شادکن `Select` بر پایه‌ی Base UI (نه Radix) پیش‌فرض value خام رو نشون می‌ده، نه لیبل آیتم متناظرش.** برخلاف Radix که `SelectValue` خودکار لیبل انتخاب‌شده رو رندر می‌کنه، اینجا باید صریحاً یه children (تابع) به `SelectValue` بدی که value رو به لیبل نگاشت کنه (`<SelectValue>{(v) => LABELS[v] ?? v}</SelectValue>`) — وگرنه کاربر مثلاً «۹» یا «online» می‌بینه به‌جای «ادبیات»/«آنلاین». همین قاعده برای `Combobox` هم صادقه (`components/ui/combobox.tsx`، بر پایه‌ی `@base-ui/react/combobox`) — آیتم‌ها رو به شکل `{value, label}` بده تا خودکار درست کار کنه.
 12. **هر endpoint‌ای که با کوکی refresh چرخشی (rotating) کار می‌کنه رو هرگز از دو جای مختلف هم‌زمان صدا نزن.** چون هر فراخوانی توکن قبلی رو باطل و یکی جدید صادر می‌کنه، دو فراخوانی هم‌زمان با همون کوکی اولیه (مثلاً به‌خاطر React StrictMode که effectها رو دوبار در dev اجرا می‌کنه) باعث می‌شه فراخوانی دوم به‌عنوان «استفاده‌ی مجدد از توکن باطل‌شده» (سرقت) تشخیص داده بشه و کل session باطل بشه. اگه یه effect سراسری قراره `/auth/refresh` رو موقع لود صفحه صدا بزنه (مثل `SessionBootstrap.tsx`)، حتماً با یه promise سطح‌ماژول (نه state) تضمین کن فراخوانی حداکثر یک‌بار در طول عمر صفحه اتفاق بیفته.
 13. **input نیتیو مرورگر `type="datetime-local"` همیشه با تقویم میلادی نمایش داده می‌شه، مهم نیست چی تو `lang`/`dir` صفحه باشه** — این محدودیت خود مرورگره (Chrome/Firefox/Safari هیچ‌کدوم پشتیبانی تقویم جلالی برای این input ندارن)، نه چیزی که با CSS/locale حل بشه. برای فیلد تاریخ/ساعت شمسی تعاملی، از `components/JalaliDateTimePicker.tsx` (بر پایه‌ی `react-multi-date-picker` + `react-date-object`) استفاده کن — مقدار ورودی/خروجیش همیشه رشته‌ی ISO میلادیه، فقط نمایش شمسیه. (این با `lib/date.ts` فرق داره: اونجا فقط *نمایش* یک‌طرفه‌ی تاریخ با `Intl` بومیه، نه یه picker تعاملی — `Intl` برای ساخت calendar grid تعاملی کافی نیست.)
+14. **`react-multi-date-picker`/`react-date-object` با locale فارسی (`persian_fa`) پیش‌فرض فرم خلاصه‌ی اسم روزهای هفته رو نشون می‌ده** (مثلاً «شن» به‌جای «شنبه» — چون locale خودش هر روز رو به‌صورت تاپل `[نام‌کامل, خلاصه]` تعریف کرده و کتابخونه پیش‌فرض عضو دوم رو رندر می‌کنه). برای نام کامل، prop جدای `weekDays` رو صریح override کن (نمونه در `JalaliDateTimePicker.tsx`). همچنین چون ردیف هدر روزها عرضش رو از ردیف اعداد (که خودش تنگه) به ارث می‌بره، برای جا باز کردن اسم کامل باید `min-width` کل تقویم رو هم تو CSS بزرگ‌تر کرد (نگاه کن به `globals.css`، بخش `.rmdp-*`).
+15. **دو تا guard جدا برای «رفرش خودکار access token» (یکی موقع لود صفحه، یکی موقع برخورد به ۴۰۱) اصلاً کافی نیست** — باید هردو از **همون یک** promise سطح‌ماژول تک‌پرواز استفاده کنن (`lib/api-client.ts: refreshAccessToken()`)، وگرنه دو مسیر جدا می‌تونن هم‌زمان `/auth/refresh` رو با همون کوکی چرخشی صدا بزنن و دقیقاً همون مشکل تشخیص سرقت (دام #۱۲) رخ بده. `request()` و `uploadFileWithProgress()` هردو روی ۴۰۱ (فقط وقتی `accessToken` واقعاً پاس داده شده بود) یک‌بار `refreshAccessToken()` رو صدا می‌زنن و درخواست اصلی رو با توکن تازه تکرار می‌کنن — چون access token فقط ۱۵ دقیقه اعتباره، بدون این مکانیزم هر فرم طولانی (مثل ایجاد رویداد با جلسه‌های زیاد) بعد از ۱۵ دقیقه با «توکن نامعتبر یا منقضی‌شده» fail می‌کرد.
+16. **در Docker build بک‌اند، `apt-get update`/`install` می‌تونه رو شبکه‌ی این محیط به‌طور کامل گیر کنه یا timeout بده** (بدون خطای واضح، فقط خیلی کند/بی‌نتیجه) — قبل از افزودن `build-essential` یا هر پکیج apt دیگه، اول چک کن آیا واقعاً لازمه: اکثر پکیج‌های pip (از جمله `cryptography`, `Pillow`, `pymongo`) برای `python:3.12-slim` روی `linux/amd64` از قبل wheel آماده دارن و کامپایلر نمی‌خوان. همچنین `pip install` گاهی با خطای `THESE PACKAGES DO NOT MATCH THE HASHES` روی دانلود پکیج‌های خیلی بزرگ (مثل wheelهای CUDA/nvidia که transitive dependency ی سنگین کتابخونه‌هایی مثل `sentence-transformers`ان) fail می‌کنه — این معمولاً یعنی دانلود ناقص/خراب روی شبکه‌ی ناپایدار این محیط بوده، نه واقعاً تهدید امنیتی؛ راه‌حل بهتر از retry صرف، حذف اون وابستگی سنگین از `requirements.txt` تا زمانی که واقعاً لازم بشه (نمونه: `chromadb`/`sentence-transformers` که فاز ۴ هنوز شروع نشده کامنت شدن).
 
 ## تصمیمات کلیدی کاربر (خلاصه‌ی فشرده — کامل در architecture.md)
 
