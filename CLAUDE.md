@@ -36,7 +36,7 @@
 | DB اصلی | SQLite (WAL mode)، از طریق SQLAlchemy 2.0 + Alembic |
 | آنالیتیکس رفتاری | MongoDB (فاز ۸، هنوز کدی نیست) |
 | کش/Rate-limit | Redis |
-| فایل/بنر | MinIO (S3-compatible) |
+| فایل/بنر/ویدیو | S3-compatible Object Storage — **ArvanCloud Object Storage** فعال (production/dev اشتراکی، کلید در `.env`، هرگز commit نمی‌شه)؛ **MinIO خودمیزبان** (`infra/docker-compose.yml`) به‌عنوان سناریوی جایگزین همیشه در دسترس می‌مونه — کد (`app/core/storage.py`) با `minio-py` صحبت می‌کنه که با هر دو کار می‌کنه، سوییچ فقط تغییر ۴-۵ متغیر در `.env` است، بدون تغییر کد |
 | جستجوی محتوایی | ChromaDB embedded (فاز ۴، هنوز نیست) |
 | احراز هویت | OTP-only (بدون پسورد) + JWT (access کوتاه + refresh چرخشی) |
 | SMS | IPPanel (اصلی) / Kavenegar (جایگزین) |

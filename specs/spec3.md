@@ -58,6 +58,16 @@
 - تست‌ها: `tests/unit/test_video_service.py` (۶ تست: مسیر موفق mp4/webm، رد فایل خالی/غیرویدیو/حجم زیاد/عکس با ادعای پسوند ویدیو) + ۳ تست integration (`test_promo_video_upload_*` در `test_events_api.py`، مشابه الگوی تست‌های بنر، mock روی `upload_promo_video`). مجموع تست بعد از این کار: **۱۸۲**.
 - راستی‌آزمایی واقعی: با سرور واقعی (نه mock) یک فایل mp4 مینیمال (فقط magic bytes معتبر) آپلود شد، `promo_video_url` واقعاً در MinIO واقعی ذخیره و از طریق `curl` با `content-type: video/mp4` قابل بازیابی بود؛ HTML خروجی SSR صفحه‌ی رویداد هم تگ `<video preload="metadata">` با همون URL رو نشون داد.
 
+### بعد از فاز — سوییچ object storage به ArvanCloud (سرویس مدیریت‌شده)
+
+کاربر گفته بود دنبال یک سرویس object storage مدیریت‌شده می‌گرده تا خودش MinIO رو نگه‌داری نکنه؛ یک اکانت ArvanCloud Object Storage گرفت (endpoint: `s3.ir-thr-at1.arvanstorage.ir`, bucket: `royaevent`، هم به‌صورت path-style هم virtual-hosted-style عمومی در دسترسه، هردو تست شدن و کار می‌کنن).
+
+- **هیچ تغییر کدی لازم نبود** — `app/core/storage.py` از قبل فقط با `minio-py` (کلاینت عمومی S3-compatible) صحبت می‌کنه، نه با چیزی مخصوص MinIO. فقط `backend/.env` (gitignored) با endpoint/کلید/باکت آروان‌کلود پر شد.
+- آروان‌کلود دو جفت کلید در پنلش نشون می‌ده: یک «Access Key/Secret Key» سطح اکانت، و یک کلید جدا برای «کاربر» نام‌گذاری‌شده (`royaevent_admin`). کلید کاربر `royaevent_admin` هنگام `ensure_bucket_ready()` (که `set_bucket_policy` صدا می‌زنه) با `AccessDenied` رد شد — احتمالاً دسترسی مدیریت policy نداره. کلید سطح اکانت (Access Key/Secret Key اول) کار کرد و برای این پروژه استفاده شد.
+- **تصمیم صریح کاربر: پیکربندی MinIO محلی حذف نشه**، به‌عنوان سناریوی جایگزین (سناریو ۲) همیشه مستند و در دسترس بمونه. `infra/docker-compose.yml` و کد بدون تغییر موندن؛ فقط `.env.example` (ریشه‌ی ریپو) هر دو سناریو رو کنار هم با کامنت نشون می‌ده — فعال‌سازی هرکدوم فقط تغییر ۵ متغیر `MINIO_*` در `.env` است.
+- راستی‌آزمایی: بنر واقعی از طریق endpoint واقعی (`POST /events/1/banner`) آپلود شد، `banner_url` به آدرس واقعی آروان‌کلود اشاره می‌کرد و با `curl` (`content-type: image/jpeg`, ۲۰۰) قابل بازیابی بود؛ کل تست‌سوییت (۱۸۲ تست، mock‌شده) هم بدون تغییر پاس شد چون تست‌ها به storage واقعی وابسته نیستن.
+- **نکته‌ی امنیتی:** کلیدهای واقعی مستقیم در چت کاربر پیست شدن (نه در فایل). فقط در `.env` ذخیره شدن، هیچ‌جا (کد/مستندات/کامیت) تکرار نشدن. اگه کاربر نگران لو رفتن این کلیدها از تاریخچه‌ی چته، بهتره از پنل آروان‌کلود rotate/regenerate بشن.
+
 ## نکات/دام‌های این فاز
 
 - **برای تست early-bird:** برای شبیه‌سازی «بازه‌ی زودهنگام گذشته»، `published_at` رو با `utcnow() - timedelta(days=N)` (گذشته‌ی واقعی) عقب ببر، نه با تفریق کسری از `starts_at` — اون روش اول باعث شد `published_at` به آینده بره (باگ در خود تست، نه در `ticket_service`) و تست اشتباهی pass/fail می‌داد.
