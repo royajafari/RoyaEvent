@@ -1,0 +1,65 @@
+# فاز ۳ — بلیط/سفارش/تخفیف/علاقه‌مندی/دنبال‌کردن
+
+وضعیت: ✅ کامل (بک‌اند + فرانت‌اند)، تست‌شده، لینت/build تمیز، تأیید بصری end-to-end واقعی انجام‌شده.
+
+## نتیجه‌ی فازهای قبل (خلاصه)
+
+فاز ۰: اسکلت پروژه. فاز ۱: احراز هویت OTP-only + JWT چرخشی. فاز ۲: CRUD رویداد کامل (دسته‌بندی دوسطحی، جلسه، آپلود بنر امن، صفحه‌ی عمومی SSR). جمعاً ۱۰۱ تست پاس تا قبل از این فاز. جزئیات: [`spec0.md`](spec0.md)، [`spec1.md`](spec1.md)، [`spec2.md`](spec2.md).
+
+## هدف
+
+خریدار بتونه بلیط رایگان/پولی (شبیه‌سازی‌شده) با کد تخفیف بخره، به رویداد/برگزارکننده علاقه‌مند/دنبال‌کننده بشه، و برگزارکننده بتونه شرکت‌کنندگان رو مدیریت/export کنه.
+
+## چیزی که ساخته شد
+
+### بک‌اند
+
+- مدل‌ها: `TicketType` (با `is_early_bird`)، `DiscountCode` (سطح رویداد)، `PlatformDiscountCode` (سطح سایت/ادمین)، `Order`/`OrderItem`/`Payment`/`Registration`، `Favorite`، `OrganizerFollow`/`InstructorFollow` — `app/models/ticket.py`, `order.py`, `favorite.py`.
+- Migration `956ea659d2be` روی پایه‌ی `567deeea1757` (فقط create، بدون drop).
+- `app/services/ticket_service.py` — `is_early_bird_active(event)`: فعاله اگر کمتر از یک‌سوم بازه‌ی «شروع فروش تا اولین جلسه» گذشته باشه؛ مرجع «شروع رویداد» = زودترین جلسه (ساده‌سازی برای رویداد چندجلسه‌ای).
+- `app/services/discount_service.py` — `find_valid_discount()` اول سطح رویداد بعد سطح سایت رو چک می‌کنه؛ `compute_discount_amount()` percent/fixed.
+- `app/services/order_service.py` — `create_order()` (اعتبارسنجی ticket/session/ظرفیت/early-bird/تخفیف، PENDING می‌سازه)، `complete_order()` (finalize، Registration با ticket_code یکتا می‌سازه، quantity_sold +۱، discount uses_count +۱ — پرداخت همیشه شبیه‌سازی می‌شه، بدون درگاه واقعی)، `cancel_registration()` (ظرفیت رو برمی‌گردونه).
+- `app/services/social_service.py` — toggle ساده برای favorite/organizer-follow/instructor-follow + `list_my_follows()`.
+- `app/core/calendar.py` — `google_calendar_link()`: تابع محض تولید URL، بدون OAuth (طبق تصمیم کاربر).
+- `app/core/permissions.py` — `require_event_owner()` منتقل شد این‌جا (قبلاً تکراری در events.py بود)؛ `event_service.py` هم `event_query()`/`to_list_item_out()` عمومی شدن تا `social.py` هم ازشون استفاده کنه.
+- Routerها: `tickets.py` (ticket-types CRUD + discount-codes رویداد/ادمین + validate)، `orders.py` (create/complete/get/me-tickets/cancel/calendar-link)، `social.py` (favorites + follows + `GET /me/follows`)، `organizer.py` (attendees list/remove/export CSV). مجموعاً ۳۶ route در `main.py`.
+- `Event.organizer` relationship + `organizer_name` property (`full_name or phone or email` — چون کاربرهای OTP-only معمولاً `full_name` ندارن)؛ `EventDetailOut.organizer_name`؛ `event_query()` حالا `selectinload(Event.organizer)` هم داره.
+
+**کد رویداد (event_code) — فرمت به‌روزشده:** از `RE-XXXXXX` (پیشوند ثابت `RE` برای RoyaEvent + ۶ رقم تصادفی امن، مثل `RE-482913`) تولید می‌شه — `app/core/slug.py: generate_event_code()`. این تغییر به درخواست صریح کاربر اضافه شد («یه کلمه کلیدی برای RoyaEvent اضافه کن») تا کد رویداد قابل‌تشخیص از رقبا باشه (در فاز ۲ فقط عددی خالص بود). برای URL/slug، نسخه‌ی lowercase کد به انتهای slug اضافه می‌شه، ولی خودِ `event_code` ذخیره‌شده و نمایشی uppercase می‌مونه.
+
+**تست‌ها:** `test_ticket_service.py` (۸)، `test_discount_service.py` (۱۱)، `test_order_service.py` (۱۷)، `test_social_service.py` (۵) در unit/؛ `test_tickets_api.py` (۹)، `test_orders_api.py` (۱۲)، `test_social_api.py` (۷)، `test_organizer_api.py` (۵) در integration/. فیکسچرهای جدید در `conftest.py`: `buyer`/`buyer_auth_headers`، `admin_user`/`admin_auth_headers`، `published_event`، `free_ticket_type`/`paid_ticket_type`. **مجموع تست تا این فاز: ۱۷۳.**
+
+### فرانت‌اند
+
+- `lib/tickets-api.ts` — `TicketType`, `ticketsApi.listByEvent`, `ticketsApi.validateDiscount`.
+- `lib/orders-api.ts` — `Order`, `Registration`, `MyTicket`, `ordersApi.create/complete/get/myTickets/cancelRegistration/calendarLink`.
+- `lib/social-api.ts` — `socialApi.addFavorite/removeFavorite/myFavorites/followOrganizer/unfollowOrganizer/followInstructor/unfollowInstructor/myFollows`.
+- `lib/organizer-api.ts` — `organizerApi.listAttendees/removeAttendee/downloadAttendeesCsv`.
+- `components/TicketCheckout.tsx` — انتخاب نوع بلیط (کارت‌های کلیک‌پذیر، نه Select)، انتخاب جلسه (اگه چندجلسه‌ای)، فیلد کد تخفیف، ثبت‌نام یک‌مرحله‌ای (create+complete پشت‌سرهم چون پرداخت شبیه‌سازی‌شده‌ست).
+- `components/StickyTicketFooter.tsx` — نوار پایین صفحه با قیمت ارزان‌ترین بلیط + دکمه‌ی اسکرول به `#ticket-checkout`.
+- `components/FavoriteButton.tsx`, `components/FollowOrganizerButton.tsx` — فقط وقتی `accessToken` هست رندر می‌شن؛ وضعیت اولیه از `GET /me/favorites` / `GET /me/follows`.
+- `app/tickets/page.tsx` — «بلیط‌های من»: لیست، لغو ثبت‌نام، افزودن به تقویم.
+- `app/(organizer)/organizer/events/[id]/attendees/page.tsx` — داشبورد شرکت‌کنندگان برگزارکننده + export CSV. مسیرش `/organizer/events/[id]/attendees` است (نه `/events/[id]/attendees`) — دلیل در بخش دام‌ها.
+- `app/events/[slug]/page.tsx` به‌روز شد: بخش برگزارکننده (نام + `FollowOrganizerButton`)، `FavoriteButton` کنار عنوان، `<TicketCheckout>` (فقط `published`)، `<StickyTicketFooter>` (فقط `published`)، `pb-24` برای جا باز کردن زیر فوتر چسبان.
+- لینک «بلیط‌های من» به `SiteHeader` اضافه شد.
+- **تصمیم عمدی (اسکوپ محدود این پاس):** دکمه‌ی favorite روی کارت‌های لیستینگ (`EventCard`) اضافه نشد — چون صفحات لیستینگ Server Component هستن و بدون context کاربر؛ اضافه‌کردن N بررسی وضعیت به‌ازای هر کارت یعنی fetch storm. فعلاً فقط در صفحه‌ی جزئیات رویداد.
+
+### پرداخت بصری بعد از تکمیل فاز (polish کوچک، همون commit-run)
+
+- کاربر تصویر لوگو رو دید و گفت پس‌زمینه‌ی هدر باید همون navy تیره‌ی لوگو باشه تا حرف سفید لوگو گم نشه، و بعد خواست کل پس‌زمینه‌ی سایت با پس‌زمینه‌ی لوگو یکی بشه (کاربر متوجه مرز نشه). راه‌حل نهایی: کلاس `dark` به‌صورت دائمی روی `<html>` در `app/layout.tsx` اضافه شد (نه یک toggle) — چون `globals.css` از فاز ۲ کامل رنگ‌های dark mode (`--background: var(--brand-dark)` و بقیه‌ی توکن‌ها) رو داشت، فقط فعال نبود. با فعال‌شدنش کل سایت (هدر + بدنه + کارت‌ها) یکدست navy شد، بدون نیاز به جعبه‌ی جدا پشت لوگو.
+
+## نکات/دام‌های این فاز
+
+- **برای تست early-bird:** برای شبیه‌سازی «بازه‌ی زودهنگام گذشته»، `published_at` رو با `utcnow() - timedelta(days=N)` (گذشته‌ی واقعی) عقب ببر، نه با تفریق کسری از `starts_at` — اون روش اول باعث شد `published_at` به آینده بره (باگ در خود تست، نه در `ticket_service`) و تست اشتباهی pass/fail می‌داد.
+- **Next.js App Router الزام می‌کنه همه‌ی route های هم‌سطح روی یک segment، اسم پارامتر dynamic یکسانی داشته باشن** (چون route groups مثل `(organizer)` در URL نامرئی‌ان). یک بار `app/(organizer)/events/[id]/attendees/` با `app/events/[slug]/` تصادم کرد (هر دو روی `/events/*` می‌شینن) و کل `next dev` با خطای `You cannot use different slug names for the same dynamic path` کرش کرد. فیکس: مسیر داشبورد شرکت‌کنندگان رو بردیم زیر `/organizer/events/[id]/attendees` (هم‌راستا با namespace بک‌اند). قبل از افزودن هر route جدید با پارامتر dynamic، چک کن آیا segment هم‌نامش جای دیگه با اسم پارامتر متفاوت قبلاً تعریف شده.
+- **دانلود فایل (مثل CSV export) که نیاز به `Authorization: Bearer` داره رو نمی‌شه با `<a href>` مستقیم زد** — چون مرورگر هیچ header دلخواهی به ناوبری معمولی اضافه نمی‌کنه و access token عمداً در کوکی نیست. راه‌حل: `fetch` با header دستی، گرفتن `blob()`، `URL.createObjectURL` و کلیک برنامه‌ای روی یک `<a>` موقت (`organizer-api.ts: downloadAttendeesCsv`).
+- سرور uvicorn بدون `--reload` بعد از هر تغییر کد بک‌اند دستی باید restart بشه — یک بار بعد از اضافه‌کردن fallback به `organizer_name`، فراخوانی API همچنان نتیجه‌ی قدیمی برمی‌گردوند چون پردازه‌ی از قبل بالا کد رو در حافظه داشت.
+- یه داده‌ی تستی (عنوان رویداد) با متن فارسی مستقیم در آرگومان `curl -d` روی Git Bash ویندوز مخدوش شد (`??????`) — رفع شد با پیلود UTF-8 فایل + `curl --data-binary`. جزئیات کامل این دام در CLAUDE.md بخش نکات عملیاتی همیشگی ثبت شده (نه اینجا، چون هر فازی ممکنه دوباره پیش بیاد).
+
+## راستی‌آزمایی
+
+بک‌اند و فرانت هر دو real dev server (API=8000, Next=3000)، دسته‌بندی‌ها seed شدن، از طریق OTP واقعی (دو کاربر: برگزارکننده + خریدار) لاگین شد، یک رویداد واقعی ساخته/publish شد با دو نوع بلیط (رایگان/پولی) و یک کد تخفیف، و کل چرخه‌ی فاز ۳ (favorite، follow organizer، create+complete order با تخفیف، calendar-link، لیست/CSV export شرکت‌کنندگان، cancel registration) مستقیماً روی سرور واقعی با `curl` تست شد — همه‌چیز درست کار کرد. HTML خروجی SSR صفحه‌ی جزئیات رویداد هم بررسی شد (RTL/فارسی، organizer_name، ticket checkout wire شده در RSC payload).
+
+## Commitهای مرتبط
+
+`d4120b7` (بک‌اند checkpoint بدون تست)، `f044e20` (تست‌ها)، `c0d7226` (organizer_name/me-follows/کد رویداد RE-)، `9a1e057` (فرانت)، `814b06b` (docs)، `b2dd081` (فیکس لوگوی هدر)، `6926eec` (تم تیره‌ی دائمی سایت)
