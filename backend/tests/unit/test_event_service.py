@@ -31,9 +31,10 @@ def _create_in(category_id: int, **overrides) -> EventCreateIn:
 def test_create_event_generates_unique_code_and_slug(db_session, leaf_category, organizer):
     event = event_service.create_event(db_session, organizer.id, _create_in(leaf_category.id))
 
-    assert len(event.event_code) == 6
-    assert event.event_code.isdigit()
-    assert event.slug.endswith(event.event_code)
+    assert event.event_code.startswith("RE-")
+    assert event.event_code[3:].isdigit()
+    assert len(event.event_code[3:]) == 6
+    assert event.slug.endswith(event.event_code.lower())
     assert event.status == EventStatus.DRAFT
     assert len(event.sessions) == 1
     assert {t.name for t in event.tags} == {"هوش‌مصنوعی", "ai"}

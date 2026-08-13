@@ -78,11 +78,18 @@ class Event(Base, TimestampMixin):
     published_at: Mapped[datetime | None] = mapped_column(DateTime(), nullable=True)
 
     category = relationship("Category")
+    organizer = relationship("User")
     sessions: Mapped[list[EventSession]] = relationship(
         back_populates="event", cascade="all, delete-orphan", order_by="EventSession.starts_at"
     )
     tags = relationship("Tag", secondary=event_tags)
     instructors = relationship("Instructor", secondary=event_instructors)
+
+    @property
+    def organizer_name(self) -> str | None:
+        if self.organizer is None:
+            return None
+        return self.organizer.full_name or self.organizer.phone or self.organizer.email
 
 
 class EventSession(Base, TimestampMixin):

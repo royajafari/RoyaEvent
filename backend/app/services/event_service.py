@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.slug import generate_numeric_code, slugify_ascii
+from app.core.slug import generate_event_code, slugify_ascii
 from app.models.base import utcnow
 from app.models.category import Category
 from app.models.event import Event, EventSession, EventStatus
@@ -16,7 +16,10 @@ class EventServiceError(ValueError):
 
 def event_query(db: Session):
     return db.query(Event).options(
-        selectinload(Event.sessions), selectinload(Event.tags), selectinload(Event.category)
+        selectinload(Event.sessions),
+        selectinload(Event.tags),
+        selectinload(Event.category),
+        selectinload(Event.organizer),
     )
 
 
@@ -42,7 +45,7 @@ def to_list_item_out(event: Event) -> EventListItemOut:
 
 def _generate_unique_event_code(db: Session) -> str:
     for _ in range(20):
-        code = generate_numeric_code(6)
+        code = generate_event_code(6)
         if db.query(Event).filter_by(event_code=code).first() is None:
             return code
     raise EventServiceError("امکان تولید کد یکتای رویداد وجود ندارد؛ دوباره تلاش کنید")
@@ -50,11 +53,12 @@ def _generate_unique_event_code(db: Session) -> str:
 
 def _generate_unique_slug(db: Session, title: str, event_code: str) -> str:
     base = slugify_ascii(title, fallback_prefix="event")
-    slug = f"{base}-{event_code}"
+    code_slug = event_code.lower()
+    slug = f"{base}-{code_slug}"
     suffix = 1
     while db.query(Event).filter_by(slug=slug).first() is not None:
         suffix += 1
-        slug = f"{base}-{event_code}-{suffix}"
+        slug = f"{base}-{code_slug}-{suffix}"
     return slug
 
 

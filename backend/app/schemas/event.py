@@ -101,6 +101,7 @@ class EventListItemOut(BaseModel):
 class EventDetailOut(BaseModel):
     id: int
     organizer_id: int
+    organizer_name: str | None = None
     title: str
     slug: str
     event_code: str

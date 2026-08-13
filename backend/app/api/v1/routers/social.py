@@ -39,6 +39,11 @@ def list_my_favorites(current_user: User = Depends(get_current_user), db: Sessio
     return [to_list_item_out(e) for e in events]
 
 
+@router.get("/me/follows")
+def list_my_follows(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return social_service.list_my_follows(db, current_user.id)
+
+
 @router.post("/follows/organizers/{organizer_id}")
 def follow_organizer(
     organizer_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)

@@ -52,6 +52,18 @@ def toggle_instructor_follow(db: Session, follower_user_id: int, instructor_id: 
     return False
 
 
+def list_my_follows(db: Session, follower_user_id: int) -> dict[str, list[int]]:
+    organizer_ids = [
+        f.organizer_id
+        for f in db.query(OrganizerFollow).filter_by(follower_user_id=follower_user_id).all()
+    ]
+    instructor_ids = [
+        f.instructor_id
+        for f in db.query(InstructorFollow).filter_by(follower_user_id=follower_user_id).all()
+    ]
+    return {"organizer_ids": organizer_ids, "instructor_ids": instructor_ids}
+
+
 def organizer_follower_count(db: Session, organizer_id: int) -> int:
     return db.query(OrganizerFollow).filter_by(organizer_id=organizer_id).count()
 

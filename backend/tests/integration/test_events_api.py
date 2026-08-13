@@ -41,7 +41,7 @@ def test_create_event_success(client, leaf_category, auth_headers):
     assert resp.status_code == 201
     body = resp.json()
     assert body["status"] == "draft"
-    assert len(body["event_code"]) == 6
+    assert body["event_code"].startswith("RE-")
     assert len(body["sessions"]) == 1
 
 

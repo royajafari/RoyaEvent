@@ -18,8 +18,17 @@ def slugify_ascii(text: str, fallback_prefix: str = "item") -> str:
 
 
 def generate_numeric_code(length: int = 6) -> str:
-    """کد رویداد عددی (مثل eseminar.tv) — از secrets برای امنیت کافی استفاده می‌شه."""
+    """کد عددی تصادفی — از secrets برای امنیت کافی استفاده می‌شه."""
     return "".join(secrets.choice(string.digits) for _ in range(length))
+
+
+EVENT_CODE_PREFIX = "RE"
+
+
+def generate_event_code(digits: int = 6) -> str:
+    """کد رویداد با پیشوند RoyaEvent (مثل RE-482913) — مثل eseminar.tv عددی و
+    کوتاه است، اما با پیشوند RE مشخص می‌شود که مخصوص RoyaEvent است."""
+    return f"{EVENT_CODE_PREFIX}-{generate_numeric_code(digits)}"
 
 
 def generate_alnum_code(length: int = 10) -> str:
