@@ -1,0 +1,99 @@
+# استک production — بخش ۱۱ پلن معماری. TLS با Nginx + Let's Encrypt اجباریه
+# (تصمیم صریح کاربر)؛ راهنمای کامل ترتیب اجرا در docs/deployment_tls.md.
+#
+# پیش‌نیاز env: یک فایل .env کنار همین فایل با DOMAIN_NAME و CERTBOT_EMAIL
+# (برای صدور/تمدید گواهی)، و backend/.env با مقادیر واقعی production
+# (JWT_SECRET_KEY، OTP_HASH_SECRET، کلیدهای provider پیامک/ایمیل، و
+# MINIO_* — نگاه کن به .env.example ریشه‌ی ریپو برای هر دو سناریوی
+# object storage: ArvanCloud یا MinIO خودمیزبان همین‌جا).
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+
+  # سناریوی ۲ (جایگزین): اگه از object storage مدیریت‌شده (مثل ArvanCloud)
+  # استفاده می‌کنی، این سرویس اصلاً لازم نیست بالا بیاد — کافیه در
+  # backend/.env مقادیر MINIO_* به همون سرویس مدیریت‌شده اشاره کنن و این
+  # سرویس رو از این فایل کامنت/حذف کنی.
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-royaevent}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?لطفاً MINIO_ROOT_PASSWORD را در .env production ست کنید}
+    volumes:
+      - minio_data:/data
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ../backend/.env
+    volumes:
+      - backend_data:/app/data
+    depends_on:
+      - redis
+      - mongo
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        # NEXT_PUBLIC_* باید در build-time برسه (بالا در Dockerfile توضیح
+        # داده شده)، نه به‌عنوان environment runtime این‌جا
+        NEXT_PUBLIC_API_BASE_URL: https://${DOMAIN_NAME}/api/v1
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - certbot_conf:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    depends_on:
+      - backend
+      - frontend
+
+  # certbot عمداً به‌صورت سرویس همیشه-روشن تعریف نشده: بدون دسترسی به
+  # docker socket، هیچ کانتینری نمی‌تونه بعد از تمدید گواهی، nginx رو
+  # reload کنه — یعنی یک حلقه‌ی خودکار این‌جا گواهی رو تمدید می‌کرد ولی
+  # nginx هیچ‌وقت نمی‌فهمید و گواهی جدید عملاً اعمال نمی‌شد. به‌جاش با
+  # `docker compose run --rm certbot ...` دستی/از کرون هاست صدا زده می‌شه
+  # (renew + reload nginx با هم) — نگاه کن به docs/deployment_tls.md و
+  # infra/renew-certs.sh. profile «tools» یعنی با `docker compose up`
+  # معمولی خودکار بالا نمی‌آد.
+  certbot:
+    image: certbot/certbot:latest
+    profiles: ["tools"]
+    ports:
+      - "80:80" # فقط موقع صدور اولیه با --standalone لازمه؛ در آن لحظه nginx هنوز بالا نیست
+    volumes:
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+
+volumes:
+  redis_data:
+  mongo_data:
+  minio_data:
+  backend_data:
+  certbot_conf:
+  certbot_www:
