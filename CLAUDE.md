@@ -77,9 +77,12 @@ RoyaEvent/
     components/TicketCheckout.tsx, StickyTicketFooter.tsx, FavoriteButton.tsx, FollowOrganizerButton.tsx  # فاز ۳ (client)
     components/RoyaEventLogo.tsx   # لوگوی متنی برند (سبز/سفید/قرمز)
     components/RoyaEventLoader.tsx # اسپلش‌اسکرین، وصل به app/loading.tsx (Suspense خودکار نکست‌جس)
-    components/SiteHeader.tsx      # هدر مشترک (لوگو+ناوبری+دکمه‌ی تور)، در layout ریشه، client
+    components/SiteHeader.tsx      # هدر مشترک (لوگو+ناوبری+دکمه‌ی تور)، در layout ریشه، client، واکنش‌گرا به وضعیت ورود
     components/OnboardingTour.tsx  # اجرای خودکار تور بار اول (driver.js)، بدون UI خودش
-    components/ui/                 # shadcn primitives (+ textarea, select)
+    components/SessionBootstrap.tsx # بازیابی خودکار access token با کوکی refresh موقع لود صفحه، بدون UI
+    components/NewsletterSignup.tsx # کارت خبرنامه (فقط اعتبارسنجی/localStorage، بدون بک‌اند واقعی)
+    components/JalaliDateTimePicker.tsx # تاریخ‌ساعت شمسی (react-multi-date-picker) برای فیلدهای جلسه
+    components/ui/                 # shadcn primitives (+ textarea, select, combobox, progress)
     lib/
       api-client.ts    # fetch wrapper سمت کلاینت، credentials:include، پشتیبانی FormData
       events-api.ts     # انواع TS + توابع کلاینت events/categories (نیاز به accessToken)
@@ -156,6 +159,9 @@ npm run dev   # http://localhost:3000
 8. نصب Playwright/Chromium با خطای ۴۰۳ جغرافیایی مسدود می‌شه (`cdn.playwright.dev`) — برای تست بصری فعلاً از `curl`/بررسی HTML خام استفاده کن، نه اسکرین‌شات مرورگر واقعی.
 9. `alembic.ini` از قبل `prepend_sys_path = .` داره؛ نیازی به دستکاری دستی `sys.path` در `env.py` نیست. **همیشه `import app.models` رو در `alembic/env.py` با `# noqa: F401` نگه دار** — حذف خودکارش توسط ruff باعث می‌شه `Base.metadata` خالی بمونه و autogenerate جدول‌های موجود رو drop کنه. قبل از هر `alembic revision --autogenerate`، output رو بخون و مطمئن شو فقط «Detected added» می‌بینی.
 10. یک `package.json`/`node_modules/` ناخواسته (پکیج `agentation`) ممکنه در ریشه‌ی ریپو (نه داخل `frontend/`) توسط ابزار محیط ساخته بشه — در `.gitignore` مستثناست، نادیده بگیرش.
+11. **شادکن `Select` بر پایه‌ی Base UI (نه Radix) پیش‌فرض value خام رو نشون می‌ده، نه لیبل آیتم متناظرش.** برخلاف Radix که `SelectValue` خودکار لیبل انتخاب‌شده رو رندر می‌کنه، اینجا باید صریحاً یه children (تابع) به `SelectValue` بدی که value رو به لیبل نگاشت کنه (`<SelectValue>{(v) => LABELS[v] ?? v}</SelectValue>`) — وگرنه کاربر مثلاً «۹» یا «online» می‌بینه به‌جای «ادبیات»/«آنلاین». همین قاعده برای `Combobox` هم صادقه (`components/ui/combobox.tsx`، بر پایه‌ی `@base-ui/react/combobox`) — آیتم‌ها رو به شکل `{value, label}` بده تا خودکار درست کار کنه.
+12. **هر endpoint‌ای که با کوکی refresh چرخشی (rotating) کار می‌کنه رو هرگز از دو جای مختلف هم‌زمان صدا نزن.** چون هر فراخوانی توکن قبلی رو باطل و یکی جدید صادر می‌کنه، دو فراخوانی هم‌زمان با همون کوکی اولیه (مثلاً به‌خاطر React StrictMode که effectها رو دوبار در dev اجرا می‌کنه) باعث می‌شه فراخوانی دوم به‌عنوان «استفاده‌ی مجدد از توکن باطل‌شده» (سرقت) تشخیص داده بشه و کل session باطل بشه. اگه یه effect سراسری قراره `/auth/refresh` رو موقع لود صفحه صدا بزنه (مثل `SessionBootstrap.tsx`)، حتماً با یه promise سطح‌ماژول (نه state) تضمین کن فراخوانی حداکثر یک‌بار در طول عمر صفحه اتفاق بیفته.
+13. **input نیتیو مرورگر `type="datetime-local"` همیشه با تقویم میلادی نمایش داده می‌شه، مهم نیست چی تو `lang`/`dir` صفحه باشه** — این محدودیت خود مرورگره (Chrome/Firefox/Safari هیچ‌کدوم پشتیبانی تقویم جلالی برای این input ندارن)، نه چیزی که با CSS/locale حل بشه. برای فیلد تاریخ/ساعت شمسی تعاملی، از `components/JalaliDateTimePicker.tsx` (بر پایه‌ی `react-multi-date-picker` + `react-date-object`) استفاده کن — مقدار ورودی/خروجیش همیشه رشته‌ی ISO میلادیه، فقط نمایش شمسیه. (این با `lib/date.ts` فرق داره: اونجا فقط *نمایش* یک‌طرفه‌ی تاریخ با `Intl` بومیه، نه یه picker تعاملی — `Intl` برای ساخت calendar grid تعاملی کافی نیست.)
 
 ## تصمیمات کلیدی کاربر (خلاصه‌ی فشرده — کامل در architecture.md)
 
