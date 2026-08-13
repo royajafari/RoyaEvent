@@ -134,3 +134,24 @@
     @apply font-sans;
   }
 }
+
+/* تور آموزشی سایت (driver.js) — استایل‌های خودش فرض LTR داره (دکمه‌ی بستن
+   و ترتیب دکمه‌های ناوبری)، این‌جا برای dir="rtl" سایت اصلاح می‌شن. */
+.roya-tour-popover {
+  text-align: right;
+  font-family: var(--font-sans);
+}
+.roya-tour-popover .driver-popover-close-btn {
+  right: auto;
+  left: 0;
+}
+.roya-tour-popover .driver-popover-footer {
+  flex-direction: row-reverse;
+}
+.roya-tour-popover .driver-popover-navigation-btns {
+  justify-content: flex-start;
+}
+.roya-tour-popover .driver-popover-navigation-btns button + button {
+  margin-left: 0;
+  margin-right: 4px;
+}

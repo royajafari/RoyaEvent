@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { OnboardingTour } from "@/components/OnboardingTour";
 import { SiteHeader } from "@/components/SiteHeader";
 import { kalameh } from "@/fonts/kalameh";
 import "./globals.css";
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col font-sans">
         <SiteHeader />
         {children}
+        <OnboardingTour />
       </body>
     </html>
   );
