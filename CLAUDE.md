@@ -77,16 +77,16 @@ RoyaEvent/
 - **فاز ۰ (Scaffolding)** ✅ کامل و commit‌شده.
 - **فاز ۱ (Auth/OTP)** ✅ کامل، تست‌شده، commit‌شده، push‌شده.
 - **فاز ۲ (Event CRUD + دسته‌بندی/تگ/جلسه + آپلود بنر امن)** ✅ **کامل (بک‌اند + فرانت‌اند)، تست‌شده، لینت تمیز، تأیید بصری end-to-end. همه commit/push شده (بک‌اند، فرانت، لوگو/اسپلش‌اسکرین، تم رنگی برند).**
-- **فاز ۳ (بلیط/سفارش/تخفیف/علاقه‌مندی/دنبال‌کردن)** 🚧 **بک‌اند: مدل‌ها + migration + schemas + services + همه‌ی routerها نوشته و در main.py wire شدن (۳۶ route کل، verify شده با openapi schema). هنوز uncommitted، هنوز تست نداره، فرانت شروع نشده.** جزئیات کامل زیر. **این‌جا متوقف شد — ادامه از این نقطه.**
+- **فاز ۳ (بلیط/سفارش/تخفیف/علاقه‌مندی/دنبال‌کردن)** 🚧 **بک‌اند کامل و تست‌شده (۷۲ تست جدید، لینت تمیز)؛ فرانت‌اند هنوز شروع نشده.** جزئیات کامل زیر. **نقطه‌ی ادامه: فرانت چک‌اوت.**
 - فازهای ۴ تا ۱۱: هنوز شروع نشده (جستجو، ادمین، اعلان‌ها، امتیازدهی، آنالیتیکس، مانیتورینگ، تست/RTL نهایی، دیپلوی).
 
-**بک‌اند در مجموع الان ۱۰۱ تست دارد (unit + integration، فاز ۳ صفر تست اضافه کرده هنوز)، همه پاس، `ruff check .` تمیز، migration تا آخر (`956ea659d2be`) verify شده.** فرانت `npm run build` و `npm run lint` هر دو تمیز.
+**بک‌اند در مجموع الان ۱۷۳ تست دارد (unit + integration)، همه پاس، `ruff check .` تمیز، migration تا آخر (`956ea659d2be`) verify شده.** فرانت `npm run build` و `npm run lint` هر دو تمیز.
 
-**تأیید بصری واقعی فاز ۲ (نه فقط build/test):** بک‌اند و فرانت هر دو به‌صورت real dev server بالا آورده شدن، دسته‌بندی‌ها seed شدن، از طریق OTP واقعی لاگین شد، یک رویداد واقعی از طریق API ساخته و publish شد، و HTML خروجی SSR صفحات `/events` و `/events/[slug]` با `curl` بررسی شد — عنوان فارسی، تاریخ شمسی، دسته‌بندی، JSON-LD همه درست رندر شدن. (Playwright برای اسکرین‌شات واقعی مرورگر هنوز در دسترس نیست — نگاه کن به دام #۴.) **فاز ۳ هنوز این‌جور تأیید نشده — اول باید فاز ۳ تست/build بشه.**
+**تأیید بصری واقعی فاز ۲ (نه فقط build/test):** بک‌اند و فرانت هر دو به‌صورت real dev server بالا آورده شدن، دسته‌بندی‌ها seed شدن، از طریق OTP واقعی لاگین شد، یک رویداد واقعی از طریق API ساخته و publish شد، و HTML خروجی SSR صفحات `/events` و `/events/[slug]` با `curl` بررسی شد — عنوان فارسی، تاریخ شمسی، دسته‌بندی، JSON-LD همه درست رندر شدن. (Playwright برای اسکرین‌شات واقعی مرورگر هنوز در دسترس نیست — نگاه کن به دام #۴.) **فاز ۳ هنوز این‌جور تأیید بصری نشده — فقط pytest/ruff، بعد از فرانت باید انجام بشه.**
 
-### فاز ۳ — بک‌اند wired اما تست‌نشده (نقطه‌ی ادامه‌ی کار)
+### فاز ۳ — بک‌اند کامل و تست‌شده؛ فرانت‌اند نقطه‌ی ادامه‌ی کار
 
-**نوشته‌شده (uncommitted):**
+**نوشته‌شده و تست‌شده:**
 - مدل‌ها: `TicketType` (با `is_early_bird`)، `DiscountCode` (سطح رویداد)، `PlatformDiscountCode` (سطح سایت/ادمین)، `Order`/`OrderItem`/`Payment`/`Registration`، `Favorite`، `OrganizerFollow`/`InstructorFollow` — `app/models/ticket.py`, `order.py`, `favorite.py`
 - Migration `956ea659d2be` روی پایه‌ی `567deeea1757` — اجرا و verify شد (فقط create، بدون drop)
 - `app/services/ticket_service.py` — `is_early_bird_active(event)`: طبق نیازمندی ۳۴ («اگر کمتر از یک‌سوم بازه‌ی شروع فروش تا اولین جلسه گذشته باشد»)؛ مرجع «شروع رویداد» = زودترین جلسه (ساده‌سازی برای رویداد چندجلسه‌ای)
@@ -97,14 +97,13 @@ RoyaEvent/
 - `app/core/permissions.py` — `require_event_owner()` منتقل شد این‌جا (قبلاً تکراری در events.py بود)؛ `app/services/event_service.py` هم `event_query()`/`to_list_item_out()` عمومی شدن (قبلاً private در events.py) تا `social.py` هم بتونه ازشون استفاده کنه برای `/me/favorites`
 - Routerها: `tickets.py` (ticket-types CRUD + discount-codes رویداد/ادمین + validate)، `orders.py` (create/complete/get/me-tickets/cancel/calendar-link)، `social.py` (favorites + follows)، `organizer.py` (attendees list/remove/export CSV)
 - همه در `main.py` wire شدن؛ مجموعاً ۳۶ route (بررسی‌شده با `app.openapi()['paths']`)
+- تست‌ها: `test_ticket_service.py` (۸)، `test_discount_service.py` (۱۱)، `test_order_service.py` (۱۷)، `test_social_service.py` (۵) در unit/؛ `test_tickets_api.py` (۹)، `test_orders_api.py` (۱۲)، `test_social_api.py` (۷)، `test_organizer_api.py` (۵) در integration/ — جمعاً ۷۲ تست جدید. فیکسچرهای جدید در `conftest.py`: `buyer`/`buyer_auth_headers`، `admin_user`/`admin_auth_headers`، `published_event` (رویداد منتشرشده‌ی آماده برای تست)، `free_ticket_type`/`paid_ticket_type`.
+- **نکته‌ی مهم برای تست early-bird:** برای شبیه‌سازی «بازه‌ی زودهنگام گذشته»، `published_at` رو با `utcnow() - timedelta(days=N)` (گذشته‌ی واقعی) عقب ببر، نه با تفریق کسری از `starts_at` — اون روش اول باعث شد `published_at` به آینده بره (باگ در خود تست، نه در `ticket_service`) و تست اشتباهی pass/fail می‌داد.
 
-**هنوز نیاز به تکمیل (فردا از این‌جا ادامه بده):**
-1. **هیچ تستی برای فاز ۳ نوشته نشده** — نه unit (ticket_service/discount_service/order_service/social_service) نه integration (tickets/orders/social/organizer API). این اولین کاریه که باید فردا انجام بشه، قبل از commit.
-2. بعد از نوشتن تست‌ها: `pytest` کامل + `ruff check .` (احتمالاً نیاز به فیکسچرهای جدید در conftest.py مثل `ticket_type`/`published_event` مشابه الگوی `leaf_category`).
-3. فرانت فاز ۳ اصلاً شروع نشده: صفحه‌ی چک‌اوت/انتخاب بلیط، دکمه‌ی علاقه‌مندی/دنبال‌کردن روی کارت/صفحه‌ی رویداد، فوتر چسبان «انتخاب بلیط» (نیازمندی ۳۷)، داشبورد شرکت‌کنندگان برگزارکننده، صفحه‌ی «بلیط‌های من».
-4. بعد از تکمیل، تأیید بصری end-to-end واقعی مثل فاز ۲ (seed + OTP + ساخت ticket_type + خرید واقعی + بررسی HTML) قبل از commit نهایی.
-5. `docs/architecture.md` بخش ۱۴ باید بعد از تکمیل فاز ۳ به‌روزرسانی بشه.
-6. **این commit فعلی (اگه همین الان زده بشه) یک checkpoint نیمه‌کاره‌ست، نه «فاز ۳ کامل»** — پیام commit باید صادقانه این رو نشون بده (مثل فاز ۱/۲ که فقط بعد از تست‌شدن کامل commit شدن).
+**هنوز نیاز به تکمیل:**
+1. فرانت فاز ۳ اصلاً شروع نشده: صفحه‌ی چک‌اوت/انتخاب بلیط (با فیلد کد تخفیف + نمایش early-bird)، دکمه‌ی علاقه‌مندی/دنبال‌کردن روی کارت/صفحه‌ی رویداد، فوتر چسبان «انتخاب بلیط» (نیازمندی ۳۷)، داشبورد شرکت‌کنندگان برگزارکننده (با دکمه‌ی export CSV)، صفحه‌ی «بلیط‌های من» (با لینک افزودن به تقویم).
+2. بعد از تکمیل فرانت، تأیید بصری end-to-end واقعی مثل فاز ۲ (seed + OTP + ساخت ticket_type + خرید واقعی + بررسی HTML) قبل از commit نهایی فرانت.
+3. `docs/architecture.md` بخش ۱۴ باید بعد از تکمیل کل فاز ۳ (شامل فرانت) به‌روزرسانی بشه.
 
 ### فاز ۲ — کامل (بک‌اند + فرانت‌اند)
 
