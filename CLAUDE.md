@@ -77,7 +77,8 @@ RoyaEvent/
     components/TicketCheckout.tsx, StickyTicketFooter.tsx, FavoriteButton.tsx, FollowOrganizerButton.tsx  # فاز ۳ (client)
     components/RoyaEventLogo.tsx   # لوگوی متنی برند (سبز/سفید/قرمز)
     components/RoyaEventLoader.tsx # اسپلش‌اسکرین، وصل به app/loading.tsx (Suspense خودکار نکست‌جس)
-    components/SiteHeader.tsx      # هدر مشترک (لوگو+ناوبری)، در layout ریشه
+    components/SiteHeader.tsx      # هدر مشترک (لوگو+ناوبری+دکمه‌ی تور)، در layout ریشه، client
+    components/OnboardingTour.tsx  # اجرای خودکار تور بار اول (driver.js)، بدون UI خودش
     components/ui/                 # shadcn primitives (+ textarea, select)
     lib/
       api-client.ts    # fetch wrapper سمت کلاینت، credentials:include، پشتیبانی FormData
@@ -99,7 +100,7 @@ RoyaEvent/
 کاربر این‌ها رو مستقیم درخواست داده؛ باید قبل از فاز ۴ یا در کنارش انجام بشن:
 
 1. ~~آپلود کلیپ کوتاه تبلیغاتی رویداد~~ ✅ **انجام شد** — `promo_video_url` روی `events`، `app/services/video_service.py` (اعتبارسنجی magic-byte MP4/WebM، سقف ۳۰MB، بدون transcode)، endpoint `POST /events/{id}/promo-video`، آپلود پیشرفت‌دار (XMLHttpRequest + درصد) در فرم ایجاد رویداد، پخش‌کننده در صفحه‌ی رویداد (video با poster=banner اگه هر دو باشن). جزئیات کامل در `specs/spec3.md`.
-2. **تور آموزشی سایت (onboarding tour)** برای بازدیدکننده‌ی اولین‌بار — معرفی امکانات کلیدی سایت با یک کتابخونه‌ی سبک (مثلاً driver.js/react-joyride)، نمایش یک‌بار (چک با `localStorage`)، قابل رد‌کردن/تکرار دستی.
+2. ~~تور آموزشی سایت~~ ✅ **انجام شد** — با `driver.js`. `lib/onboarding-tour.ts` (تعریف مراحل + استارت)، `components/OnboardingTour.tsx` (فقط اجرای خودکار بار اول، چک با `localStorage`، بدون رندر UI)، دکمه‌ی «راهنمای سایت» (آیکون `CircleHelp`) در `SiteHeader` برای تکرار دستی هروقت کاربر خواست. مراحل تور روی `id`های `tour-logo/tour-events/tour-create/tour-mine/tour-tickets/tour-login` در هدر. RTL polish برای popover در `globals.css` (کلاس `.roya-tour-popover`). جزئیات کامل در `specs/spec3.md`.
 3. **TLS/HTTPS اجباری در production** — از قبل بخشی از فاز ۱۱ (Nginx reverse proxy + Let's Encrypt، ریدایرکت خودکار HTTP→HTTPS) بود؛ کاربر صراحتاً تأکید کرد. در `docker-compose.prod.yml` و راهنمای دیپلوی فاز ۱۱ باید کامل مستند/پیاده بشه، نه فقط اشاره.
 
 ## قراردادهای API
