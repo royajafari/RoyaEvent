@@ -16,13 +16,12 @@ httpx==0.28.1
 python-multipart==0.0.20
 Pillow==12.3.0
 
-# جستجوی محتوایی (فاز ۴) — سنگین (torch/CUDA رو با خودش می‌کشه)، هنوز تو
-# کد استفاده نشده؛ عمداً کامنته تا فاز ۴ واقعاً شروع بشه. قبلاً این‌جا
-# uncommented بود ولی نه تو venv محلی نصب شده بود نه جایی import می‌شد —
-# فقط باعث کند/شکننده‌شدن build های Docker (دانلود چندصد مگابایتی روی
-# شبکه‌ی ناپایدار این محیط) می‌شد بدون هیچ فایده‌ای.
-# chromadb==0.5.23
-# sentence-transformers==3.3.1
+# جستجوی محتوایی (فاز ۴) — sentence-transformers خودش torch رو transitive
+# می‌کشه؛ حتماً قبل از نصب این دو خط، torch نسخه‌ی CPU-only رو جدا نصب کن
+# (pip install torch --index-url https://download.pytorch.org/whl/cpu) تا
+# pip سراغ wheel غول‌پیکر CUDA نره — جزئیات در specs/spec4.md.
+chromadb==0.5.23
+sentence-transformers==3.3.1
 
 # تست
 pytest==9.1.1

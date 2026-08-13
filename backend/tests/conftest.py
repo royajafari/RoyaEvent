@@ -24,6 +24,19 @@ def _reset_rate_limiter():
     limiter.reset()
 
 
+@pytest.fixture(autouse=True)
+def _mock_search_indexing(monkeypatch):
+    """sync_event_index واقعی مدل embedding سنگین (sentence-transformers) رو
+    لود و اجرا می‌کنه — بدون این mock، هر تستی که رویدادی publish/cancel/
+    update کنه (یعنی اکثر تست‌های events/orders/social/instructors) کند
+    می‌شد یا حتی fail می‌کرد (بار اول نیاز به دانلود مدل از HuggingFace
+    داره). تست‌های اختصاصی جستجو (test_search_api.py) خودشون این mock رو
+    override می‌کنن تا رفتار واقعی ایندکس رو با embedding قلابی بررسی کنن."""
+    import app.services.event_service as event_service_module
+
+    monkeypatch.setattr(event_service_module, "sync_event_index", lambda event: None)
+
+
 @pytest.fixture()
 def db_session(tmp_path):
     db_path = tmp_path / "test.db"

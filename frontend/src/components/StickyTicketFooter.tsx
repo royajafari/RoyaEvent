@@ -18,6 +18,7 @@ function cheapestLabel(ticketTypes: TicketType[]) {
 
 export function StickyTicketFooter({ event }: { event: EventDetail }) {
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
+  const [checkoutVisible, setCheckoutVisible] = useState(false);
 
   useEffect(() => {
     ticketsApi
@@ -26,7 +27,21 @@ export function StickyTicketFooter({ event }: { event: EventDetail }) {
       .catch(() => setTicketTypes([]));
   }, [event.id]);
 
-  if (event.status !== "published" || ticketTypes.length === 0) return null;
+  // وقتی خود بخش «انتخاب بلیط» (با دکمه‌ی واقعی «ثبت‌نام و دریافت بلیط»)
+  // تو دید کاربره، این دکمه‌ی شناور رو مخفی می‌کنیم — وگرنه کلیک روش با
+  // scrollIntoView به یه المنت از قبل قابل‌مشاهده هیچ اتفاق مرئی‌ای نداره
+  // و کاربر فکر می‌کنه دکمه خرابه.
+  useEffect(() => {
+    const target = document.getElementById("ticket-checkout");
+    if (!target) return;
+    const observer = new IntersectionObserver(([entry]) => setCheckoutVisible(entry.isIntersecting), {
+      threshold: 0.15,
+    });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [ticketTypes]);
+
+  if (event.status !== "published" || ticketTypes.length === 0 || checkoutVisible) return null;
 
   const priceLabel = cheapestLabel(ticketTypes);
   const soldOut = ticketTypes.every((t) => t.is_sold_out);

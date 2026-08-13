@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { formatJalaliDateTime } from "@/lib/date";
 import { ApiError, isIncompleteProfileError } from "@/lib/api-client";
 import type { EventDetail, EventSessionOut } from "@/lib/events-api";
+import type { MyTicket } from "@/lib/orders-api";
 import { ordersApi } from "@/lib/orders-api";
 import type { TicketType } from "@/lib/tickets-api";
 import { ticketsApi } from "@/lib/tickets-api";
@@ -42,6 +43,8 @@ export function TicketCheckout({ event }: { event: EventDetail }) {
   const [error, setError] = useState<string | null>(null);
   const [needsProfile, setNeedsProfile] = useState(false);
   const [successCode, setSuccessCode] = useState<string | null>(null);
+  const [existingTicket, setExistingTicket] = useState<MyTicket | null>(null);
+  const [checkingExisting, setCheckingExisting] = useState(() => Boolean(accessToken));
 
   useEffect(() => {
     ticketsApi
@@ -54,6 +57,20 @@ export function TicketCheckout({ event }: { event: EventDetail }) {
       .catch(() => setError("خطا در دریافت نوع بلیط‌ها"))
       .finally(() => setLoadingTickets(false));
   }, [event.id]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    ordersApi
+      .myTickets(accessToken)
+      .then((tickets) => {
+        const found = tickets.find(
+          (t) => t.registration.event_id === event.id && t.registration.status !== "cancelled",
+        );
+        setExistingTicket(found ?? null);
+      })
+      .catch(() => {})
+      .finally(() => setCheckingExisting(false));
+  }, [accessToken, event.id]);
 
   const selectedTicket = ticketTypes.find((t) => t.id === selectedTicketId) ?? null;
 
@@ -84,8 +101,26 @@ export function TicketCheckout({ event }: { event: EventDetail }) {
     }
   }
 
-  if (loadingTickets) {
+  if (loadingTickets || checkingExisting) {
     return <p className="text-muted-foreground text-sm">در حال بارگذاری بلیط‌ها...</p>;
+  }
+
+  if (existingTicket && !successCode) {
+    return (
+      <Card id="ticket-checkout" className="border-primary text-right">
+        <CardHeader>
+          <CardTitle>شما قبلاً این بلیط را خریده‌اید ✓</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <p className="text-muted-foreground text-sm">
+            کد بلیط: <span className="font-mono">{existingTicket.registration.ticket_code}</span>
+          </p>
+          <Link href="/tickets" className={buttonVariants({ className: "w-fit" })}>
+            مشاهده بلیط‌های من
+          </Link>
+        </CardContent>
+      </Card>
+    );
   }
 
   if (ticketTypes.length === 0) {

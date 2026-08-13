@@ -9,6 +9,7 @@ from app.models.event import Event, EventSession, EventStatus
 from app.models.instructor import Instructor
 from app.models.tag import Tag
 from app.schemas.event import CategoryOut, EventCreateIn, EventListItemOut, EventSessionIn, EventUpdateIn
+from app.search.indexer import sync_event_index
 
 
 class EventServiceError(ValueError):
@@ -175,6 +176,8 @@ def update_event(db: Session, event: Event, data: EventUpdateIn) -> Event:
 
     db.commit()
     db.refresh(event)
+    if event.status == EventStatus.PUBLISHED:
+        sync_event_index(event)
     return event
 
 
@@ -199,6 +202,7 @@ def publish_event(db: Session, event: Event) -> Event:
     event.published_at = utcnow()
     db.commit()
     db.refresh(event)
+    sync_event_index(event)
     return event
 
 
@@ -206,6 +210,7 @@ def cancel_event(db: Session, event: Event) -> Event:
     event.status = EventStatus.CANCELLED
     db.commit()
     db.refresh(event)
+    sync_event_index(event)
     return event
 
 
