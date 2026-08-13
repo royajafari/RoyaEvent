@@ -55,6 +55,9 @@ export function SiteHeader() {
           >
             بلیط‌های من
           </Link>
+          <Link href="/favorites" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+            علاقه‌مندی‌ها
+          </Link>
           <Link
             href="/events/create"
             id="tour-create"

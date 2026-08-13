@@ -16,7 +16,13 @@ async function get<T>(path: string): Promise<T | null> {
 }
 
 export const eventsServer = {
-  listPublic: () => get<EventListItem[]>("/events").then((r) => r ?? []),
+  listPublic: (params?: { categoryId?: number; format?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.categoryId) qs.set("category_id", String(params.categoryId));
+    if (params?.format) qs.set("format", params.format);
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return get<EventListItem[]>(`/events${suffix}`).then((r) => r ?? []);
+  },
   getBySlug: (slug: string) => get<EventDetail>(`/events/${slug}`),
   getRelated: (id: number) => get<EventListItem[]>(`/events/${id}/related`).then((r) => r ?? []),
   listCategories: () => get<CategoryOut[]>("/events/categories").then((r) => r ?? []),

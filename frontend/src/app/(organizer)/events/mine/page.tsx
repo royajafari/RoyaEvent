@@ -104,6 +104,18 @@ export default function MyEventsPage() {
                   انتشار
                 </Button>
               )}
+              <Link
+                href={`/organizer/events/${event.id}/tickets`}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                بلیط‌ها
+              </Link>
+              <Link
+                href={`/organizer/events/${event.id}/media`}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                بنر و کلیپ
+              </Link>
               <span className="text-muted-foreground text-xs">کد: {event.event_code}</span>
             </CardContent>
           </Card>

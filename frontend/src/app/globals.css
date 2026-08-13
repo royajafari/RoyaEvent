@@ -155,3 +155,31 @@
   margin-left: 0;
   margin-right: 4px;
 }
+
+/* تاریخ‌ساعت شمسی جلسه‌ها (react-multi-date-picker) — رنگ پیش‌فرض عدد
+   ساعت/دقیقه خیلی کم‌رنگه و روی پس‌زمینه‌ی روشن پاپ‌آپ به‌سختی دیده می‌شه. */
+.rmdp-time-picker div input {
+  color: #1f2937;
+  font-weight: 600;
+  width: 2.5em;
+}
+.rmdp-time-picker div .rmdp-am {
+  color: #1f2937;
+}
+
+/* عرض ثابت ۲۸-۳۴px پیش‌فرض کتابخونه برای اسم روزهای هفته (طراحی‌شده برای
+   حروف لاتین کوتاه) اسم کامل فارسی رو تنگ به هم می‌چسبونه. چون این ردیف
+   عرضش رو از ردیف اعداد روز (که خودش flex:1 با پهنای کوچیکه) به ارث می‌بره،
+   کل تقویم رو هم عریض‌تر می‌کنیم تا هفت اسم کامل واقعاً جا بشن. */
+.rmdp-day-picker,
+.rmdp-day-picker > div {
+  min-width: 360px;
+}
+.rmdp-week-day {
+  width: auto !important;
+  flex: 1;
+  white-space: nowrap;
+  overflow: visible;
+  font-size: 11px;
+  margin: 0 2px;
+}

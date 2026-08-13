@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { EventCard } from "@/components/EventCard";
+import { EventsFilter } from "@/components/EventsFilter";
 import { eventsServer } from "@/lib/events-server";
 
 export const metadata: Metadata = {
@@ -8,15 +9,26 @@ export const metadata: Metadata = {
   description: "لیست وبینارها و رویدادهای رویا ایونت",
 };
 
-export default async function EventsListPage() {
-  const events = await eventsServer.listPublic();
+type Props = { searchParams: Promise<{ category?: string; format?: string }> };
+
+export default async function EventsListPage({ searchParams }: Props) {
+  const { category, format } = await searchParams;
+  const categoryId = category ? Number(category) : undefined;
+
+  const [events, categories] = await Promise.all([
+    eventsServer.listPublic({ categoryId, format }),
+    eventsServer.listCategories(),
+  ]);
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8">
-      <h1 className="text-2xl font-bold">رویدادها</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">رویدادها</h1>
+        <EventsFilter categories={categories} />
+      </div>
 
       {events.length === 0 ? (
-        <p className="text-muted-foreground">فعلاً رویدادی منتشر نشده است.</p>
+        <p className="text-muted-foreground">رویدادی با این فیلتر پیدا نشد.</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
           {events.map((event) => (

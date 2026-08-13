@@ -13,6 +13,11 @@ import TimePicker from "react-multi-date-picker/plugins/time_picker";
 const INPUT_CLASS =
   "h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base text-right transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30";
 
+// لوکیل persian_fa برای هدر تقویم به‌صورت پیش‌فرض شکل خلاصه‌ی هر روز رو
+// نشون می‌ده (["شنبه","شن"] → "شن")، نه اسم کامل؛ با override این prop
+// اسم کامل اجباری می‌شه. ترتیب باید دقیقاً با شروع هفته از شنبه هماهنگ باشه.
+const FULL_WEEK_DAYS = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
+
 export function JalaliDateTimePicker({
   id,
   value,
@@ -31,6 +36,7 @@ export function JalaliDateTimePicker({
       onChange={(date: DateObject | null) => onChange(date ? date.toDate().toISOString() : "")}
       calendar={persian}
       locale={persian_fa}
+      weekDays={FULL_WEEK_DAYS}
       format="YYYY/MM/DD HH:mm"
       plugins={[<TimePicker key="time-picker" hideSeconds position="bottom" />]}
       inputClass={INPUT_CLASS}

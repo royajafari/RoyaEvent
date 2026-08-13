@@ -1,11 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Combobox,
   ComboboxCollection,
@@ -85,7 +92,10 @@ export default function CreateEventPage() {
   const [createdEvent, setCreatedEvent] = useState<EventDetail | null>(null);
   const [bannerProgress, setBannerProgress] = useState<number | null>(null);
   const [videoProgress, setVideoProgress] = useState<number | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [bannerFileName, setBannerFileName] = useState<string | null>(null);
+  const [videoFileName, setVideoFileName] = useState<string | null>(null);
+  const bannerInputRef = useRef<HTMLInputElement | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     eventsApi.listCategories().then(setCategories).catch(() => setError("خطا در دریافت دسته‌بندی‌ها"));
@@ -151,6 +161,7 @@ export default function CreateEventPage() {
   async function handleBannerUpload(file: File) {
     if (!accessToken || !createdEvent) return;
     setError(null);
+    setBannerFileName(file.name);
     setBannerProgress(0);
     try {
       const updated = await eventsApi.uploadBanner(
@@ -170,6 +181,7 @@ export default function CreateEventPage() {
   async function handlePromoVideoUpload(file: File) {
     if (!accessToken || !createdEvent) return;
     setError(null);
+    setVideoFileName(file.name);
     setVideoProgress(0);
     try {
       const updated = await eventsApi.uploadPromoVideo(
@@ -203,6 +215,12 @@ export default function CreateEventPage() {
         <Card className="text-right">
           <CardHeader>
             <CardTitle>رویداد ایجاد شد 🎉</CardTitle>
+            <CardDescription>
+              اطلاعات پایه ذخیره شد، ولی رویداد هنوز برای عموم منتشر نشده. اختیاری
+              می‌تونید همین‌جا یک بنر و یک کلیپ کوتاه تبلیغاتی برای معرفی بهتر رویداد
+              اضافه کنید — یا این مرحله رو رد کنید و مستقیم دکمه‌ی «انتشار رویداد» پایین
+              صفحه رو بزنید.
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <p>
@@ -211,12 +229,26 @@ export default function CreateEventPage() {
             <div className="flex flex-col gap-2">
               <Label htmlFor="banner">بنر رویداد (اختیاری)</Label>
               <input
-                ref={fileInputRef}
+                ref={bannerInputRef}
                 id="banner"
                 type="file"
+                className="hidden"
                 accept="image/png,image/jpeg,image/webp"
                 onChange={(e) => e.target.files?.[0] && handleBannerUpload(e.target.files[0])}
               />
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => bannerInputRef.current?.click()}
+                >
+                  انتخاب فایل بنر
+                </Button>
+                <span className="text-muted-foreground truncate text-sm">
+                  {bannerFileName ?? "هنوز فایلی انتخاب نشده"}
+                </span>
+              </div>
               {bannerProgress !== null && (
                 <div className="flex items-center gap-2">
                   <Progress value={bannerProgress} className="flex-1" />
@@ -236,11 +268,26 @@ export default function CreateEventPage() {
             <div className="flex flex-col gap-2">
               <Label htmlFor="promo-video">کلیپ کوتاه تبلیغاتی (اختیاری، کنار بنر — حداکثر ۳۰ مگابایت، MP4/WebM)</Label>
               <input
+                ref={videoInputRef}
                 id="promo-video"
                 type="file"
+                className="hidden"
                 accept="video/mp4,video/webm"
                 onChange={(e) => e.target.files?.[0] && handlePromoVideoUpload(e.target.files[0])}
               />
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => videoInputRef.current?.click()}
+                >
+                  انتخاب فایل کلیپ
+                </Button>
+                <span className="text-muted-foreground truncate text-sm">
+                  {videoFileName ?? "هنوز فایلی انتخاب نشده"}
+                </span>
+              </div>
               {videoProgress !== null && (
                 <div className="flex items-center gap-2">
                   <Progress value={videoProgress} className="flex-1" />
@@ -256,6 +303,19 @@ export default function CreateEventPage() {
                 />
               )}
             </div>
+            <div className="rounded-md border border-dashed p-3 text-sm">
+              <p className="mb-2">
+                ⚠️ قبل از انتشار، حتماً حداقل یک <b>نوع بلیط</b> (حتی رایگان) اضافه کنید — بدون
+                اون، خریداران هیچ گزینه‌ای برای ثبت‌نام نمی‌بینن.
+              </p>
+              <Link
+                href={`/organizer/events/${createdEvent.id}/tickets`}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                مدیریت انواع بلیط
+              </Link>
+            </div>
+
             {error && <p className="text-destructive text-sm">{error}</p>}
             <Button onClick={handlePublish}>انتشار رویداد</Button>
           </CardContent>

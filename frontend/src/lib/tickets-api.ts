@@ -19,8 +19,23 @@ export type DiscountValidateResult = {
   value: number;
 };
 
+export type TicketTypeInput = {
+  name: string;
+  pricing_model: "free" | "paid" | "donation";
+  price?: number;
+  quantity_total?: number | null;
+  is_early_bird?: boolean;
+};
+
 export const ticketsApi = {
   listByEvent: (eventId: number) => request<TicketType[]>(`/events/${eventId}/ticket-types`),
+
+  create: (eventId: number, data: TicketTypeInput, accessToken: string) =>
+    request<TicketType>(`/events/${eventId}/ticket-types`, {
+      method: "POST",
+      body: JSON.stringify(data),
+      accessToken,
+    }),
 
   validateDiscount: (code: string, eventId: number) =>
     request<DiscountValidateResult>("/discount-codes/validate", {
