@@ -5,7 +5,6 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiError } from "@/lib/api-client";
 import type { EventListItem } from "@/lib/events-api";
 import { eventsApi } from "@/lib/events-api";
@@ -78,64 +77,103 @@ export default function MyEventsPage() {
         <p className="text-muted-foreground">هنوز رویدادی نساخته‌اید.</p>
       )}
 
-      <div className="flex flex-col gap-3">
-        {events.map((event) => (
-          <Card key={event.id} className="text-right">
-            <CardHeader className="flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-base">{event.title}</CardTitle>
-              <Badge variant={event.status === "published" ? "default" : "secondary"}>
-                {STATUS_LABELS[event.status]}
-              </Badge>
-            </CardHeader>
-            <CardContent className="flex items-center gap-2">
-              {event.status === "published" && (
-                <>
-                  <Link
-                    href={`/events/${event.slug}`}
-                    className={buttonVariants({ variant: "outline", size: "sm" })}
-                  >
-                    مشاهده صفحه‌ی عمومی
-                  </Link>
-                  <Link
-                    href={`/organizer/events/${event.id}/attendees`}
-                    className={buttonVariants({ variant: "outline", size: "sm" })}
-                  >
-                    شرکت‌کنندگان
-                  </Link>
-                </>
-              )}
-              {event.status === "draft" && (
-                <Button
-                  size="sm"
-                  disabled={publishingId !== null}
-                  onClick={() => handlePublish(event.id)}
-                >
-                  {publishingId === event.id ? "در حال انتشار..." : "انتشار"}
-                </Button>
-              )}
-              <Link
-                href={`/organizer/events/${event.id}/tickets`}
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-              >
-                بلیط‌ها
-              </Link>
-              <Link
-                href={`/organizer/events/${event.id}/edit`}
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-              >
-                ویرایش
-              </Link>
-              <Link
-                href={`/organizer/events/${event.id}/media`}
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-              >
-                بنر و کلیپ
-              </Link>
-              <span className="text-muted-foreground text-xs">کد: {event.event_code}</span>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {events.length > 0 && (
+        <div className="bg-card overflow-x-auto rounded-lg ring-1 ring-foreground/10">
+          <table className="w-full text-right text-sm">
+            <thead className="bg-muted/50 text-muted-foreground text-xs">
+              <tr>
+                <th className="px-3 py-2 font-normal">عنوان</th>
+                <th className="px-3 py-2 font-normal">وضعیت</th>
+                <th className="px-3 py-2 font-normal">کد</th>
+                <th className="px-3 py-2 font-normal">عملیات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {events.map((event) => (
+                <tr key={event.id} className="border-border border-t">
+                  <td className="px-3 py-2 font-medium">{event.title}</td>
+                  <td className="px-3 py-2">
+                    <Badge variant={event.status === "published" ? "default" : "secondary"}>
+                      {STATUS_LABELS[event.status]}
+                    </Badge>
+                  </td>
+                  <td className="text-muted-foreground px-3 py-2 whitespace-nowrap">
+                    {event.event_code}
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="flex flex-nowrap gap-1.5">
+                      {event.status === "published" && (
+                        <>
+                          <Link
+                            href={`/events/${event.slug}`}
+                            className={buttonVariants({
+                              variant: "outline",
+                              size: "sm",
+                              className: "whitespace-nowrap",
+                            })}
+                          >
+                            مشاهده صفحه‌ی عمومی
+                          </Link>
+                          <Link
+                            href={`/organizer/events/${event.id}/attendees`}
+                            className={buttonVariants({
+                              variant: "outline",
+                              size: "sm",
+                              className: "whitespace-nowrap",
+                            })}
+                          >
+                            شرکت‌کنندگان
+                          </Link>
+                        </>
+                      )}
+                      {event.status === "draft" && (
+                        <Button
+                          size="sm"
+                          className="whitespace-nowrap"
+                          disabled={publishingId !== null}
+                          onClick={() => handlePublish(event.id)}
+                        >
+                          {publishingId === event.id ? "در حال انتشار..." : "انتشار"}
+                        </Button>
+                      )}
+                      <Link
+                        href={`/organizer/events/${event.id}/tickets`}
+                        className={buttonVariants({
+                          variant: "outline",
+                          size: "sm",
+                          className: "whitespace-nowrap",
+                        })}
+                      >
+                        بلیط‌ها
+                      </Link>
+                      <Link
+                        href={`/organizer/events/${event.id}/edit`}
+                        className={buttonVariants({
+                          variant: "outline",
+                          size: "sm",
+                          className: "whitespace-nowrap",
+                        })}
+                      >
+                        ویرایش
+                      </Link>
+                      <Link
+                        href={`/organizer/events/${event.id}/media`}
+                        className={buttonVariants({
+                          variant: "outline",
+                          size: "sm",
+                          className: "whitespace-nowrap",
+                        })}
+                      >
+                        بنر و کلیپ
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

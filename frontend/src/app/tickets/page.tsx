@@ -5,7 +5,6 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiError } from "@/lib/api-client";
 import { formatJalaliDateTime } from "@/lib/date";
 import type { MyTicket } from "@/lib/orders-api";
@@ -82,56 +81,71 @@ export default function MyTicketsPage() {
         <p className="text-muted-foreground">هنوز بلیطی ثبت نکرده‌اید.</p>
       )}
 
-      <div className="flex flex-col gap-3">
-        {tickets.map(({ registration, event_title, event_slug, session_starts_at }) => {
-          // eslint-disable-next-line react-hooks/purity -- مقایسه با «اکنون» است، نه باگ
-          const isPast = new Date(session_starts_at).getTime() < Date.now();
-          return (
-            <Card key={registration.id} className="text-right">
-              <CardHeader className="flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-base">
-                  <Link href={`/events/${event_slug}`} className="hover:underline">
-                    {event_title}
-                  </Link>
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  {isPast && <Badge variant="secondary">این رویداد منقضی شده</Badge>}
-                  <Badge variant={registration.status === "confirmed" ? "default" : "secondary"}>
-                    {STATUS_LABELS[registration.status]}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-2">
-                <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                  <span>زمان: {formatJalaliDateTime(session_starts_at)}</span>
-                  <span dir="ltr">کد بلیط: {registration.ticket_code}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {registration.status === "confirmed" && (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleCalendar(registration.id)}
-                      >
-                        افزودن به تقویم
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        disabled={busyId === registration.id}
-                        onClick={() => handleCancel(registration.id)}
-                      >
-                        لغو ثبت‌نام
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {tickets.length > 0 && (
+        <div className="bg-card overflow-x-auto rounded-lg ring-1 ring-foreground/10">
+          <table className="w-full text-right text-sm">
+            <thead className="bg-muted/50 text-muted-foreground text-xs">
+              <tr>
+                <th className="px-3 py-2 font-normal">رویداد</th>
+                <th className="px-3 py-2 font-normal">وضعیت</th>
+                <th className="px-3 py-2 font-normal">زمان</th>
+                <th className="px-3 py-2 font-normal">کد بلیط</th>
+                <th className="px-3 py-2 font-normal">عملیات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tickets.map(({ registration, event_title, event_slug, session_starts_at }) => {
+                // eslint-disable-next-line react-hooks/purity -- مقایسه با «اکنون» است، نه باگ
+                const isPast = new Date(session_starts_at).getTime() < Date.now();
+                return (
+                  <tr key={registration.id} className="border-border border-t">
+                    <td className="px-3 py-2">
+                      <Link href={`/events/${event_slug}`} className="font-medium hover:underline">
+                        {event_title}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge variant={registration.status === "confirmed" ? "default" : "secondary"}>
+                          {STATUS_LABELS[registration.status]}
+                        </Badge>
+                        {isPast && <Badge variant="secondary">منقضی‌شده</Badge>}
+                      </div>
+                    </td>
+                    <td className="text-muted-foreground px-3 py-2 whitespace-nowrap">
+                      {formatJalaliDateTime(session_starts_at)}
+                    </td>
+                    <td className="text-muted-foreground px-3 py-2" dir="ltr">
+                      {registration.ticket_code}
+                    </td>
+                    <td className="px-3 py-2">
+                      {registration.status === "confirmed" && (
+                        <div className="flex flex-nowrap gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCalendar(registration.id)}
+                          >
+                            افزودن به تقویم
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={busyId === registration.id}
+                            onClick={() => handleCancel(registration.id)}
+                          >
+                            لغو ثبت‌نام
+                          </Button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
