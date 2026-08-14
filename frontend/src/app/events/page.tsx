@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { EventCard } from "@/components/EventCard";
 import { EventsFilter } from "@/components/EventsFilter";
 import { eventsServer } from "@/lib/events-server";
@@ -27,6 +28,7 @@ export default async function EventsListPage({ searchParams }: Props) {
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8">
+      <Breadcrumbs items={[{ label: heading }]} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">{heading}</h1>
         <EventsFilter categories={categories} />

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { EventCard } from "@/components/EventCard";
 import { buttonVariants } from "@/components/ui/button";
 import { ApiError } from "@/lib/api-client";
@@ -38,6 +39,7 @@ export default function FavoritesPage() {
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10">
+      <Breadcrumbs items={[{ label: "علاقه‌مندی‌های من" }]} />
       <h1 className="text-2xl font-bold">علاقه‌مندی‌های من</h1>
 
       {error && <p className="text-destructive text-sm">{error}</p>}

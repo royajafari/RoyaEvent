@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiError } from "@/lib/api-client";
@@ -40,6 +41,7 @@ export default function FollowsPage() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10">
+      <Breadcrumbs items={[{ label: "دنبال‌کردن‌های من" }]} />
       <h1 className="text-2xl font-bold">دنبال‌کردن‌های من</h1>
 
       {error && <p className="text-destructive text-sm">{error}</p>}

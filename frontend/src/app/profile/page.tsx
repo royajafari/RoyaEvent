@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -85,6 +86,7 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10">
+      <Breadcrumbs items={[{ label: "پروفایل من" }]} />
       <h1 className="text-2xl font-bold">پروفایل من</h1>
 
       <div className="flex flex-col gap-6 md:flex-row md:items-start">

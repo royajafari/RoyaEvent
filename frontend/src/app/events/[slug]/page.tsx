@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import Link from "next/link";
 
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { EventCard } from "@/components/EventCard";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { FollowInstructorButton } from "@/components/FollowInstructorButton";
@@ -62,6 +63,8 @@ export default async function EventDetailPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+
+      <Breadcrumbs items={[{ label: "رویدادها", href: "/events" }, { label: event.title }]} />
 
       {event.promo_video_url ? (
         <video

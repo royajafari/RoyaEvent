@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -184,6 +185,7 @@ export default function AdminPage() {
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-10">
+      <Breadcrumbs items={[{ label: "پنل ادمین" }]} />
       <h1 className="text-2xl font-bold">پنل ادمین</h1>
 
       {error && <p className="text-destructive text-sm">{error}</p>}

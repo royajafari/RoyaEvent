@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ApiError } from "@/lib/api-client";
@@ -64,6 +65,7 @@ export default function MyEventsPage() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10">
+      <Breadcrumbs items={[{ label: "رویدادهای من" }]} />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">رویدادهای من</h1>
         <Link href="/events/create" className={buttonVariants({ variant: "outline", size: "sm" })}>
