@@ -31,6 +31,7 @@ export type EventListItem = {
   format: "online" | "in_person" | "hybrid";
   status: "draft" | "published" | "cancelled";
   is_featured: boolean;
+  is_instant_registration: boolean;
   rating_avg: number;
   rating_count: number;
   view_count: number;
@@ -54,6 +55,7 @@ export type EventDetail = {
   online_platform_name: string | null;
   status: "draft" | "published" | "cancelled";
   is_featured: boolean;
+  is_instant_registration: boolean;
   refund_policy: string | null;
   rating_avg: number;
   rating_count: number;
@@ -83,6 +85,7 @@ export type EventCreateInput = {
   refund_policy?: string | null;
   tag_names?: string[];
   instructor_names?: string[];
+  is_instant_registration?: boolean;
   sessions: EventSessionInput[];
 };
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { InstantRegisterButton } from "@/components/InstantRegisterButton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatJalaliShort } from "@/lib/date";
@@ -46,6 +47,11 @@ export function EventCard({ event }: { event: EventListItem }) {
           {event.is_featured && (
             <Badge className="absolute top-2 right-2">ویژه</Badge>
           )}
+          {event.is_instant_registration && (
+            <Badge variant="destructive" className="absolute top-2 left-2">
+              فوری
+            </Badge>
+          )}
         </div>
         <CardHeader>
           <CardTitle className="line-clamp-2 text-base">{event.title}</CardTitle>
@@ -54,12 +60,15 @@ export function EventCard({ event }: { event: EventListItem }) {
           {event.category && <span>{event.category.name}</span>}
           {event.next_session_at && <span>{formatJalaliShort(event.next_session_at)}</span>}
         </CardContent>
-        <CardFooter className="flex items-center justify-between">
+        <CardFooter className="flex items-center justify-between gap-2">
           <Badge variant="outline">{FORMAT_LABELS[event.format]}</Badge>
           {event.rating_count > 0 && (
             <span className="text-sm">
               ⭐ {event.rating_avg.toFixed(1)} ({event.rating_count})
             </span>
+          )}
+          {event.is_instant_registration && !isPast && event.status === "published" && (
+            <InstantRegisterButton event={event} />
           )}
         </CardFooter>
       </Card>

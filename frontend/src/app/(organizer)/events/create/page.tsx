@@ -26,6 +26,7 @@ import {
   ComboboxList,
   ComboboxTrigger,
 } from "@/components/ui/combobox";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { JalaliDateTimePicker } from "@/components/JalaliDateTimePicker";
 import { Label } from "@/components/ui/label";
@@ -88,6 +89,7 @@ export default function CreateEventPage() {
   const [visibility, setVisibility] = useState<"public" | "private">("public");
   const [tagNames, setTagNames] = useState("");
   const [instructorNames, setInstructorNames] = useState("");
+  const [isInstantRegistration, setIsInstantRegistration] = useState(false);
   const [sessions, setSessions] = useState<SessionRow[]>([{ starts_at: "", duration_minutes: 60 }]);
   const [error, setError] = useState<string | null>(null);
   const [needsProfile, setNeedsProfile] = useState(false);
@@ -153,6 +155,7 @@ export default function CreateEventPage() {
             .split(",")
             .map((t) => t.trim())
             .filter(Boolean),
+          is_instant_registration: isInstantRegistration,
           sessions: sessionInputs,
         },
         accessToken,
@@ -466,6 +469,20 @@ export default function CreateEventPage() {
           <p className="text-muted-foreground text-xs">
             اگه مدرس قبلاً تو سایت ثبت شده باشه دقیقاً همون اسم رو تایپ کنید تا به پروفایلش وصل بشه، وگرنه پروفایل مدرس جدید خودکار ساخته می‌شه.
           </p>
+        </div>
+
+        <div className="flex items-start gap-2">
+          <Checkbox
+            id="instant-registration"
+            checked={isInstantRegistration}
+            onCheckedChange={(checked) => setIsInstantRegistration(checked === true)}
+          />
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="instant-registration">ثبت‌نام فوری</Label>
+            <p className="text-muted-foreground text-xs">
+              کاربر می‌تونه مستقیم از روی کارت رویداد (بدون ورود به صفحه‌ی جزئیات) ثبت‌نام کنه — مناسب رویدادهایی که ثبت‌نامشون ساده و تک‌مرحله‌ایه.
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-col gap-3">
