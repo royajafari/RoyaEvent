@@ -7,6 +7,8 @@ export type MyFollowsDetail = {
   organizers: { id: number; name: string | null; avatar_url: string | null }[];
   instructors: { id: number; name: string; avatar_url: string | null }[];
 };
+export type FollowerUser = { id: number; name: string | null; avatar_url: string | null };
+export type MyFollowers = { as_organizer: FollowerUser[]; as_instructor: FollowerUser[] };
 
 export const socialApi = {
   addFavorite: (eventId: number, accessToken: string) =>
@@ -33,4 +35,6 @@ export const socialApi = {
 
   myFollowsDetail: (accessToken: string) =>
     request<MyFollowsDetail>("/me/follows/details", { accessToken }),
+
+  myFollowers: (accessToken: string) => request<MyFollowers>("/me/followers", { accessToken }),
 };

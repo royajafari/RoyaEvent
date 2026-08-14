@@ -87,7 +87,12 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10">
       <Breadcrumbs items={[{ label: "پروفایل من" }]} />
-      <h1 className="text-2xl font-bold">پروفایل من</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">پروفایل من</h1>
+        <Link href="/followers" className={buttonVariants({ variant: "outline", size: "sm" })}>
+          دنبال‌کنندگان من
+        </Link>
+      </div>
 
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
         <Card className="text-right md:w-72 md:shrink-0">

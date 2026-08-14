@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { ClaimInstructorButton } from "@/components/ClaimInstructorButton";
 import { EventCard } from "@/components/EventCard";
 import { FollowInstructorButton } from "@/components/FollowInstructorButton";
 import { Separator } from "@/components/ui/separator";
@@ -22,6 +24,8 @@ export default async function InstructorDetailPage({ params }: Props) {
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-8">
+      <Breadcrumbs items={[{ label: instructor.name }]} />
+
       <div className="flex flex-wrap items-center gap-4">
         <div className="bg-muted flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full">
           {instructor.avatar_url ? (
@@ -41,8 +45,9 @@ export default async function InstructorDetailPage({ params }: Props) {
             {instructor.follower_count.toLocaleString("fa-IR")} دنبال‌کننده
           </span>
         </div>
-        <div className="sm:mr-auto">
+        <div className="flex flex-col items-start gap-2 sm:mr-auto sm:items-end">
           <FollowInstructorButton instructorId={instructor.id} />
+          <ClaimInstructorButton instructorId={instructor.id} initialIsClaimed={instructor.is_claimed} />
         </div>
       </div>
 
