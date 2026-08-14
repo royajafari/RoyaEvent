@@ -69,3 +69,12 @@ def test_export_attendees_csv(
     # بدون BOM، اکسل روی ویندوز UTF-8 رو با codepage محلی می‌خونه و متن
     # فارسی رو illegible می‌کنه — این پیشوند اجباریه.
     assert body.startswith("﻿")
+    # بدون فرمول ="..."، اکسل شماره موبایل رو عدد فرض می‌کنه و صفر
+    # ابتدایی‌ش رو حذف/notation علمی نشون می‌ده. csv.reader استفاده می‌شه
+    # (نه substring خام) چون csv.writer نقل‌قول‌های داخل فرمول رو طبق
+    # قاعده‌ی استاندارد CSV دوبل می‌کنه.
+    import csv as csv_module
+    import io
+
+    rows = list(csv_module.reader(io.StringIO(body.removeprefix("﻿"))))
+    assert rows[1][1] == '="09351234567"'

@@ -92,10 +92,14 @@ def export_attendees_csv(
         ["نام", "موبایل", "ایمیل", "زمان جلسه", "نوع بلیط", "وضعیت", "کد بلیط", "تاریخ ثبت‌نام"]
     )
     for row in rows:
+        # اکسل مقدار خالص عددی شماره موبایل رو به‌صورت خودکار به عدد تبدیل
+        # می‌کنه (صفر ابتدایی حذف، نمایش نماد علمی مثل ۹.۱۳E+۰۹) — پیچیدنش
+        # تو فرمول ="..." اکسل رو مجبور می‌کنه به‌عنوان متن خام نگهش داره.
+        phone_cell = f'="{row.user_phone}"' if row.user_phone else ""
         writer.writerow(
             [
                 row.user_full_name or "",
-                row.user_phone or "",
+                phone_cell,
                 row.user_email or "",
                 row.session_starts_at.isoformat(),
                 row.ticket_type_name,
