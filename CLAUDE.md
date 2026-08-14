@@ -16,7 +16,7 @@
 | ۱ | Auth/OTP + JWT چرخشی | ✅ [`specs/spec1.md`](specs/spec1.md) |
 | ۲ | CRUD رویداد + دسته‌بندی/تگ/جلسه + آپلود بنر امن | ✅ [`specs/spec2.md`](specs/spec2.md) |
 | ۳ | بلیط/سفارش/تخفیف/علاقه‌مندی/دنبال‌کردن | ✅ [`specs/spec3.md`](specs/spec3.md) |
-| ۴ | جستجو (ChromaDB) + صفحه‌ی اصلی | ⏳ شروع نشده |
+| ۴ | جستجو (ChromaDB) + صفحه‌ی اصلی | ✅ [`specs/spec4.md`](specs/spec4.md) |
 | ۵ | پنل ادمین | ⏳ شروع نشده |
 | ۶ | اعلان‌ها + زمان‌بند + لینک تقویم | ⏳ شروع نشده |
 | ۷ | امتیاز/نظر ۴محوره + علاقه‌مندی تکمیلی | ⏳ شروع نشده |
@@ -25,7 +25,7 @@
 | ۱۰ | تقویت تست + مقاومت آفلاین/RTL | ⏳ شروع نشده |
 | ۱۱ | آماده‌سازی دیپلوی VPS (TLS/HTTPS اجباری — نگاه کن به بخش تصمیمات) | ⏳ باقی فاز نشده؛ بخش TLS/Nginx/Docker زودتر و مستقل انجام شد، نگاه کن به `docs/deployment_tls.md` و `specs/spec3.md` |
 
-بک‌اند در مجموع الان **۱۹۸ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
+بک‌اند در مجموع الان **۲۱۲ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
 
 ## استک فنی (تصمیم قطعی، تغییر نده مگر کاربر بخواد)
 
@@ -37,7 +37,7 @@
 | آنالیتیکس رفتاری | MongoDB (فاز ۸، هنوز کدی نیست) |
 | کش/Rate-limit | Redis |
 | فایل/بنر/ویدیو | S3-compatible Object Storage — **ArvanCloud Object Storage** فعال (production/dev اشتراکی، کلید در `.env`، هرگز commit نمی‌شه)؛ **MinIO خودمیزبان** (`infra/docker-compose.yml`) به‌عنوان سناریوی جایگزین همیشه در دسترس می‌مونه — کد (`app/core/storage.py`) با `minio-py` صحبت می‌کنه که با هر دو کار می‌کنه، سوییچ فقط تغییر ۴-۵ متغیر در `.env` است، بدون تغییر کد |
-| جستجوی محتوایی | ChromaDB embedded (فاز ۴، هنوز نیست) — `chromadb`/`sentence-transformers` عمداً در `requirements.txt` کامنت‌ان (سنگین، torch/CUDA می‌کشن) تا فاز ۴ واقعاً شروع بشه؛ موقع شروع فاز ۴ اول uncomment‌شون کن |
+| جستجوی محتوایی | ChromaDB embedded (`backend/app/search/`) + `sentence-transformers` (مدل `paraphrase-multilingual-MiniLM-L12-v2`، چندزبانه) — فعال از فاز ۴. **موقع نصب local/Docker از این پس، حتماً اول `pip install torch --index-url https://download.pytorch.org/whl/cpu` رو جدا بزن**، بعد `pip install -r requirements.txt` — وگرنه نصب `sentence-transformers` سراغ wheel غول‌پیکر CUDA torch می‌ره |
 | احراز هویت | OTP-only (بدون پسورد) + JWT (access کوتاه + refresh چرخشی) |
 | SMS | IPPanel (اصلی) / Kavenegar (جایگزین) |
 | Email | Brevo (اصلی) / Resend (جایگزین) |
@@ -50,7 +50,7 @@
 ```
 RoyaEvent/
   backend/app/
-    api/v1/routers/   # auth.py, events.py, tickets.py, orders.py, social.py, organizer.py, instructors.py
+    api/v1/routers/   # auth.py, events.py, tickets.py, orders.py, social.py, organizer.py, instructors.py, search.py, home.py
     api/deps.py        # get_db, get_current_user, get_current_user_optional, get_current_admin_user, get_redis, get_sms/email_provider, get_client_ip
     core/               # config, security (JWT+OTP hash), rate_limit (OTP), rate_limit_middleware (عمومی/slowapi)
                         # redis_client, storage (MinIO), slug, validators, calendar (لینک گوگل‌کلندر)
@@ -60,11 +60,13 @@ RoyaEvent/
                         # TicketType, DiscountCode, PlatformDiscountCode, Order, OrderItem, Payment, Registration,
                         # Favorite, OrganizerFollow, InstructorFollow
     providers/sms|email/ # base + console(dev) + ippanel/kavenegar/brevo/resend
-    schemas/            # auth.py, event.py, ticket.py, order.py, social.py, organizer.py, instructor.py (Pydantic)
+    schemas/            # auth.py, event.py, ticket.py, order.py, social.py, organizer.py, instructor.py, search.py, home.py (Pydantic)
     services/           # otp_service, auth_service, event_service (+event_query/to_list_item_out عمومی)،
                         # image_service, video_service, ticket_service, discount_service, order_service,
-                        # social_service, instructor_service (لیست/جزئیات مدرس، get-or-create در event_service)
-  backend/tests/unit|integration/   # pytest، fakeredis، بدون نیاز به Redis واقعی (+ test_auth_api.py، test_instructors_api.py)
+                        # social_service, instructor_service, search_service (جستجوی دوگانه: افراد+رویداد)،
+                        # home_service (بخش‌های صفحه‌ی اصلی، Redis-cached)
+    search/             # chroma_client.py, embeddings.py, indexer.py (sync_event_index)، reindex.py (بک‌فیل دستی)
+  backend/tests/unit|integration/   # pytest، fakeredis، بدون نیاز به Redis واقعی (+ test_search_api.py: embedding/Chroma قلابی)
   frontend/src/
     app/
       (auth)/login/page.tsx        # ورود OTP (client)
@@ -80,14 +82,17 @@ RoyaEvent/
       follows/page.tsx             # «دنبال‌کردن‌های من» — برگزارکننده‌ها + مدرس‌ها با اسم (client)
       instructors/[id]/page.tsx    # پروفایل عمومی مدرس — بیوگرافی/آواتار/رویدادهای منتشرشده (SSR/dynamic)
       profile/page.tsx             # فرم نام + آپلود آواتار کاربر (client)
-      page.tsx                     # خانه (async Server Component؛ بخش‌های وبینار/مدرس‌های محبوب)
+      search/page.tsx              # نتایج جستجو — بخش «افراد» + «رویدادها» (SSR/dynamic)
+      page.tsx                     # خانه (async Server Component، یک fetch به /home/sections)
     components/EventCard.tsx       # کارت رویداد (Server Component)
+    components/EventCarousel.tsx   # کاروسل بخش‌های صفحه‌ی اصلی — فلش‌ها + «مشاهده همه» (client)
+    components/BackToTopButton.tsx # دکمه‌ی شناور «برو بالا» بعد از اسکرول، در layout ریشه (client)
     components/EventsFilter.tsx    # Select دسته‌بندی/نوع‌برگزاری برای events/page.tsx، sync با URL
     components/TicketCheckout.tsx, StickyTicketFooter.tsx, FavoriteButton.tsx, FollowOrganizerButton.tsx  # فاز ۳ (client)
     components/FollowInstructorButton.tsx # دکمه‌ی دنبال‌کردن مدرس، کپی الگوی FollowOrganizerButton (client)
     components/RoyaEventLogo.tsx   # لوگوی متنی برند (سبز/سفید/قرمز)
     components/RoyaEventLoader.tsx # اسپلش‌اسکرین، وصل به app/loading.tsx (Suspense خودکار نکست‌جس)
-    components/SiteHeader.tsx      # هدر مشترک (لوگو+ناوبری+دکمه‌ی تور+آواتار کنار پروفایل)، در layout ریشه، client
+    components/SiteHeader.tsx      # هدر مشترک (لوگو+تگ‌لاین+نوار جستجو+ناوبری+آواتار کنار پروفایل)، در layout ریشه، client
     components/SiteFooter.tsx      # فوتر مشترک — کپی‌رایت با سال شمسی + لوگوی کوچک، در layout ریشه
     components/OnboardingTour.tsx  # اجرای خودکار تور بار اول (driver.js)، بدون UI خودش
     components/SessionBootstrap.tsx # بازیابی خودکار access token با کوکی refresh موقع لود صفحه، بدون UI
@@ -101,6 +106,8 @@ RoyaEvent/
       events-api.ts     # انواع TS + توابع کلاینت events/categories (نیاز به accessToken)
       events-server.ts  # فراخوانی سمت سرور برای RSC (cache:"no-store"، بدون کوکی)
       instructors-api.ts, instructors-server.ts  # کلاینت + SSR برای /instructors (مشابه events-api/events-server)
+      search-api.ts, search-server.ts  # کلاینت + SSR برای /search
+      home-server.ts     # SSR برای /home/sections (فقط سرور — صفحه‌ی اصلی چیزی سمت کلاینت لازم نداره)
       tickets-api.ts, orders-api.ts, social-api.ts, organizer-api.ts  # فاز ۳ (social-api.ts: +myFollowsDetail)
       date.ts            # formatJalali* — Intl بومی fa-IR-u-ca-persian، بدون کتابخانه‌ی جانبی
     store/auth-store.ts  # Zustand، accessToken فقط در حافظه + user (UserOut، برای نمایش‌های سبک مثل آواتار هدر)
@@ -124,6 +131,8 @@ RoyaEvent/
 2. ~~تور آموزشی سایت~~ ✅ **انجام شد** — با `driver.js`. `lib/onboarding-tour.ts` (تعریف مراحل + استارت)، `components/OnboardingTour.tsx` (فقط اجرای خودکار بار اول، چک با `localStorage`، بدون رندر UI)، دکمه‌ی «راهنمای سایت» (آیکون `CircleHelp`) در `SiteHeader` برای تکرار دستی هروقت کاربر خواست. مراحل تور روی `id`های `tour-logo/tour-events/tour-create/tour-mine/tour-tickets/tour-login` در هدر. RTL polish برای popover در `globals.css` (کلاس `.roya-tour-popover`). جزئیات کامل در `specs/spec3.md`.
 3. ~~TLS/HTTPS اجباری در production~~ ✅ **انجام شد** — `backend/Dockerfile`+`frontend/Dockerfile` (production images، تست build شد و موفق بود)، `infra/docker-compose.prod.yml` (nginx+certbot+backend+frontend+redis+mongo+minio اختیاری)، `infra/nginx/conf.d/royaevent.conf` (ریدایرکت اجباری HTTP→HTTPS + HSTS)، `infra/renew-certs.sh` (تمدید گواهی از کرون هاست). راهنمای کامل قدم‌به‌قدم در `docs/deployment_tls.md`. جزئیات/تصمیمات فنی (چرا certbot سرویس همیشه‌روشن نیست، مشکل apt-get و راه‌حلش) در `specs/spec3.md`.
 4. ~~لیست «دنبال‌کردن‌های من» + مدرس‌های محبوب/وبینارهای محبوب در صفحه‌ی اصلی + آپلود عکس پروفایل~~ ✅ **انجام شد** — سیستم «مدرس» (که فقط یه جدول خالی بود) از پایه ساخته شد: get-or-create با اسم موقع ایجاد رویداد، `GET /instructors`، `GET /instructors/{id}` (+رویدادهاش)، صفحه‌ی عمومی `instructors/[id]`. `GET /me/follows/details` (نسخه‌ی enrich‌شده‌ی `/me/follows`) + صفحه‌ی `follows/`. `avatar_url` روی `User` + `POST /auth/me/avatar` + صفحه‌ی `profile/`. `GET /events?sort=popular` (بر اساس `view_count`، چون فاز ۷ امتیازدهی هنوز نیست). جزئیات کامل در `specs/spec3.md`.
+5. **ثبت‌نام فوری** ⏳ **در صف، هنوز شروع نشده** — کاربر توضیح داد: بلیط‌های «فوری» باید امکان ثبت‌نام مستقیم از روی کارت رویداد (بدون رفتن به صفحه‌ی جزئیات) با یک modal لاگین+ثبت‌نام یک‌جا بدن؛ بلیط‌های غیرفوری طبق روال فعلی به صفحه‌ی جزئیات می‌رن و اونجا تصمیم می‌گیرن. این جدا از پولی/رایگان/حمایتی بودن بلیطه (یک محور کاملاً مستقل). فقط بلیط‌های فوری برچسب «فوری» می‌گیرن؛ بقیه بدون برچسب اضافه می‌مونن. نیاز به فیلد جدید روی `TicketType`/`Event` + یک فلوی ثبت‌نام modal-based جدا از `TicketCheckout` فعلی.
+6. **پذیرش قوانین/شرایط استفاده** ⏳ **در صف، منتظر متن از کاربر** — قبل از ایجاد رویداد یا خرید بلیط باید کاربر قوانین سایت رو تأیید کرده باشه؛ احتمالاً با همون الگوی `require_complete_profile` (گارد قبل از `POST /events`/`POST /orders`) پیاده می‌شه.
 
 ## قراردادهای API
 
@@ -137,6 +146,8 @@ RoyaEvent/
 - **آواتار کاربر:** `POST /auth/me/avatar` — همون `validate_and_reencode_image` امن بنر رویداد رو re-use می‌کنه، فقط `storage.upload_avatar_image()` جدا (namespace `avatars/{user_id}/...` تو MinIO/ArvanCloud).
 - **مدرس (get-or-create با اسم):** `instructor_names` روی `EventCreateIn`/`EventUpdateIn`، دقیقاً مثل `tag_names` — رشته‌ی دقیقاً یکسان = همون رکورد، وگرنه رکورد جدید (`event_service._get_or_create_instructors`). `GET /instructors` (مرتب بر اساس follower_count زنده)، `GET /instructors/{id}` (بیوگرافی+رویدادهای منتشرشده+`is_following`). برای auth اختیاری (کاربر لاگین‌کرده یا نه، رفتار endpoint کمی فرق می‌کنه) از `deps.py: get_current_user_optional` استفاده کن، نه `get_current_user` اجباری.
 - **محبوبیت (MVP):** `GET /events?sort=popular` بر اساس `view_count` (نه `rating_avg`، چون سیستم امتیازدهی فاز ۷ هنوز نیست). همین‌طور `GET /instructors` بر اساس `follower_count` زنده، نه رول‌آپ شبانه‌ی `popularity_score` (که در `architecture.md` برای آینده/مقیاس بزرگ‌تر پیش‌بینی شده).
+- **جستجو:** `GET /search?q=&category_id=&format=` — همیشه هم `search_people` (prefix match مدرس/برگزارکننده) هم `search_events` (embedding + ChromaDB) رو با هم اجرا می‌کنه، نه either/or. هر رویدادی که PUBLISHED+PUBLIC می‌شه (یا اسم/توضیحاتش عوض می‌شه) باید `app/search/indexer.py: sync_event_index(event)` صداش بزنه — این قلاب از قبل تو `event_service.py: publish_event/update_event/cancel_event` هست، برای هر تابع جدیدی که وضعیت/محتوای رویداد رو عوض می‌کنه هم باید صدا زده بشه. رویدادهای منتشرشده‌ی قبل از فاز ۴ باید یک‌بار دستی با `python -m app.search.reindex` بک‌فیل بشن.
+- **صفحه‌ی اصلی:** همه‌چیز از یک `GET /home/sections` میاد (Redis-cached، TTL ۵ دقیقه، کلید `home:sections`) — هیچ‌وقت مستقیم چند تا endpoint جدا برای بخش‌های صفحه‌ی اصلی صدا نزن، همه باید از `home_service.py` عبور کنن تا کش یک‌جا کار کنه.
 
 ## قراردادهای UI
 
@@ -206,6 +217,7 @@ npm run dev   # http://localhost:3000
 - تم سایت همیشه تیره (navy برند)، نه توگل روشن/تیره
 - TLS/HTTPS اجباری در production (فاز ۱۱)
 - OTP-only به‌عنوان روش اصلی لاگین می‌مونه (نه Google Sign-In — ریسک دسترسی/تحریم برای پلتفرم ایرانی)؛ ولی تکمیل نام و نام خانوادگی قبل از ایجاد رویداد یا خرید بلیط **اجباری**ه (`core/permissions.py: require_complete_profile`) — پیاده شد
+- Refresh token: ۱ روز (نه ۳۰ روز طرح اولیه‌ی architecture.md) — کاربر بعد از بحث گفت ۳۰ روز زیاده، مقایسه کرد با رفتار معمول JWT در سایت‌های دیگه («بعد یک روز لاگ‌اوت می‌شی»)؛ `settings.refresh_token_expire_days` در `config.py`/`.env.example`
 
 ## مرجع‌های بیرونی مهم
 
