@@ -1,3 +1,4 @@
+import time
 from datetime import datetime, timedelta
 
 import pytest
@@ -134,3 +135,22 @@ def test_set_banner_url(db_session, leaf_category, organizer):
     event = event_service.create_event(db_session, organizer.id, _create_in(leaf_category.id))
     updated = event_service.set_banner_url(db_session, event, "http://minio.local/bucket/x.jpg")
     assert updated.banner_url == "http://minio.local/bucket/x.jpg"
+
+
+def test_publish_does_not_block_on_slow_search_indexing(db_session, leaf_category, organizer, monkeypatch):
+    """اگه ایندکس جستجو گیر کنه (مثلاً دانلود مدل embedding کند/معلق بمونه)،
+    publish_event نباید منتظرش بمونه — باید ظرف _INDEX_TIMEOUT_SECONDS برگرده."""
+
+    def _slow_sync(event):
+        time.sleep(event_service._INDEX_TIMEOUT_SECONDS + 5)
+
+    monkeypatch.setattr(event_service, "sync_event_index", _slow_sync)
+
+    event = event_service.create_event(db_session, organizer.id, _create_in(leaf_category.id))
+
+    started = time.perf_counter()
+    published = event_service.publish_event(db_session, event)
+    elapsed = time.perf_counter() - started
+
+    assert published.status == EventStatus.PUBLISHED
+    assert elapsed < event_service._INDEX_TIMEOUT_SECONDS + 2

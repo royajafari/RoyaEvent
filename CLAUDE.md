@@ -25,7 +25,7 @@
 | ۱۰ | تقویت تست + مقاومت آفلاین/RTL | ⏳ شروع نشده |
 | ۱۱ | آماده‌سازی دیپلوی VPS (TLS/HTTPS اجباری — نگاه کن به بخش تصمیمات) | ⏳ باقی فاز نشده؛ بخش TLS/Nginx/Docker زودتر و مستقل انجام شد، نگاه کن به `docs/deployment_tls.md` و `specs/spec3.md` |
 
-بک‌اند در مجموع الان **۲۳۱ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
+بک‌اند در مجموع الان **۲۳۲ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
 
 ## استک فنی (تصمیم قطعی، تغییر نده مگر کاربر بخواد)
 
@@ -78,6 +78,7 @@ RoyaEvent/
       (organizer)/organizer/events/[id]/attendees/  # داشبورد شرکت‌کنندگان + export CSV (client)
       (organizer)/organizer/events/[id]/media/      # ویرایش بنر/کلیپ بعد از ایجاد یا حتی بعد از انتشار (client)
       (organizer)/organizer/events/[id]/tickets/    # مدیریت انواع بلیط رویداد — افزودن/لیست (client)
+      (organizer)/organizer/events/[id]/edit/       # ویرایش عنوان/توضیحات/دسته/جلسه‌ها و... — مالک رویداد یا ادمین (client)
       events/page.tsx              # لیستینگ عمومی (SSR/dynamic + فیلتر دسته‌بندی/نوع‌برگزاری با searchParams)
       events/[slug]/page.tsx       # جزئیات رویداد عمومی (SSR/dynamic + JSON-LD + چک‌اوت/فوتر چسبان/favorite/follow)
       tickets/page.tsx             # «بلیط‌های من» (client)
@@ -216,6 +217,7 @@ npm run dev   # http://localhost:3000
 18. **اضافه‌کردن یک router جدید (فایل تازه) به بک‌اند، یا هر import جدید در `main.py`، با uvicorn بدون `--reload` اصلاً پیک‌آپ نمی‌شه** — نه فقط تغییر کد endpoint موجود (که در نکته‌ی #۲ گفته شده)، بلکه خود endpointهای جدید تا restart دستی اصلاً تو `/openapi.json` ظاهر نمی‌شن؛ راحت‌ترین تشخیص: بعد از افزودن route جدید، `curl .../openapi.json` بزن و چک کن مسیر جدید توش هست یا نه، قبل از این‌که فکر کنی کد اشتباهه.
 19. **`react-hooks/set-state-in-effect` هر تابع محلی (تو همون کامپوننت تعریف‌شده) که مستقیم/غیرمستقیم setState صدا می‌زنه رو، اگه از دل یک effect صداش بزنی، فلگ می‌کنه — حتی اگه اون تابع `async` باشه و setState فقط بعد از `await` بیاد** (مثلاً `await Promise.resolve()` اول تابع، کاری نمی‌کنه؛ لینتر static-analysis می‌کنه نه runtime). این با `useEffect(() => { refreshAccessToken(); }, [])` تو `SessionBootstrap.tsx` فرق داره چون اونجا `refreshAccessToken` از یه ماژول **دیگه** import شده (`api-client.ts`)، نه تو خود کامپوننت تعریف نشده. راه‌حل واقعی، نه دور زدن قانون: کار رو از دل یک event handler واقعی صدا بزن (کلیک دکمه، بعد از تأیید OTP)، نه effect. برای «شروع خودکار وقتی از قبل یه پیش‌شرط برقراره» (مثلاً کاربر لاگین‌کرده)، به‌جای effect + reset، از یه initial state متفاوت (lazy `useState(() => ...)`) و یه قدم تأیید دستی کاربر استفاده کن — نمونه در `InstantRegisterModal.tsx` (مرحله‌ی «تأیید» قبل از ثبت‌نام خودکار). نکته‌ی مرتبط: اگه اون تابع فقط `setLoading(true)` می‌زنه و state پیش‌فرض `loading` از قبل `true`ه، ساده‌ترین فیکس حذف همون یک خط `setLoading(true)`ه، نه بازطراحی کل effect — نمونه در `app/admin/page.tsx: loadAll()`.
 20. **اضافه‌کردن یک مدل SQLAlchemy جدید (فایل تازه در `app/models/`) کافی نیست تا Alembic autogenerate ببینتش** — باید صریح به `app/models/__init__.py` (هم import هم `__all__`) اضافه بشه، وگرنه `alembic revision --autogenerate` بی‌صدا یه migration خالی (`pass`/`pass`) تولید می‌کنه، بدون هیچ خطا یا هشداری. علامت تشخیص: بعد از autogenerate، اگه پیام `Detected added table/column` تو خروجی نبود، migration خالیه — قبل از commit کردنش پاکش کن، مدل رو به `__init__.py` اضافه کن، و autogenerate رو دوباره بزن.
+21. **«try/except دور یه فراخوانی» کافی نیست تا یه side-effect جانبی (مثل ایندکس جستجو) کاربر رو معطل نکنه** — اگه اون فراخوانی هیچ‌وقت واقعاً exception نده (نه fail کنه نه موفق بشه)، فقط خیلی کند باشه، try/except هیچ کمکی نمی‌کنه چون اصلاً چیزی گیر نمی‌ندازه. دقیقاً این اتفاق افتاد: دانلود اولیه‌ی مدل embedding (فاز ۴) روی شبکه‌ی این محیط داده رو خیلی کند trickle می‌کرد بدون قطعی کامل، پس نه `HF_HUB_DOWNLOAD_TIMEOUT` کمک کرد نه try/except، و `PATCH /events/{id}` چند دقیقه معطل می‌موند. راه‌حل واقعی: خود عملیات رو تو یه `ThreadPoolExecutor` جدا اجرا کن و رو `future.result(timeout=N)` صبر کن — اگه ظرف N ثانیه تموم نشد، درخواست اصلی بدون اثر منفی ادامه بده (نمونه‌ی کامل: `event_service._safe_sync_event_index`). این الگو رو برای هر «بهبود جانبی که نباید بخش اصلی تراکنش رو بلاک کنه» به کار ببر، نه فقط جستجو.
 
 ## تصمیمات کلیدی کاربر (خلاصه‌ی فشرده — کامل در architecture.md)
 
