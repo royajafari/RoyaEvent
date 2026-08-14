@@ -15,4 +15,6 @@ class InstructorOut(BaseModel):
 
 class InstructorDetailOut(InstructorOut):
     is_following: bool
+    is_claimed: bool
+    is_owned_by_me: bool
     events: list[EventListItemOut]

@@ -27,3 +27,14 @@ class FollowedInstructorOut(BaseModel):
 class MyFollowsDetailOut(BaseModel):
     organizers: list[FollowedOrganizerOut]
     instructors: list[FollowedInstructorOut]
+
+
+class FollowerUserOut(BaseModel):
+    id: int
+    name: str | None
+    avatar_url: str | None
+
+
+class MyFollowersOut(BaseModel):
+    as_organizer: list[FollowerUserOut]
+    as_instructor: list[FollowerUserOut]

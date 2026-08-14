@@ -95,6 +95,43 @@ def list_my_follows_detail(db: Session, follower_user_id: int) -> dict:
     }
 
 
+def list_my_followers(db: Session, user_id: int) -> dict:
+    """برخلاف بقیه‌ی این ماژول (چه کسانی رو من دنبال می‌کنم)، این تابع
+    برعکسه: چه کسانی من رو دنبال می‌کنن — هم به‌عنوان برگزارکننده (چون
+    organizer خودِ User است، ارتباط مستقیمه) هم به‌عنوان مدرس (فقط برای
+    Instructorهایی که این کاربر claim کرده، instructor_service.claim_instructor)."""
+
+    def _serialize(users: list[User]) -> list[dict]:
+        return [
+            {"id": u.id, "name": u.full_name or u.phone or u.email, "avatar_url": u.avatar_url}
+            for u in users
+        ]
+
+    organizer_followers = (
+        db.query(User)
+        .join(OrganizerFollow, OrganizerFollow.follower_user_id == User.id)
+        .filter(OrganizerFollow.organizer_id == user_id)
+        .all()
+    )
+
+    my_instructor_ids = [
+        i.id for i in db.query(Instructor).filter(Instructor.linked_user_id == user_id).all()
+    ]
+    instructor_followers = (
+        db.query(User)
+        .join(InstructorFollow, InstructorFollow.follower_user_id == User.id)
+        .filter(InstructorFollow.instructor_id.in_(my_instructor_ids))
+        .all()
+        if my_instructor_ids
+        else []
+    )
+
+    return {
+        "as_organizer": _serialize(organizer_followers),
+        "as_instructor": _serialize(instructor_followers),
+    }
+
+
 def organizer_follower_count(db: Session, organizer_id: int) -> int:
     return db.query(OrganizerFollow).filter_by(organizer_id=organizer_id).count()
 

@@ -82,3 +82,66 @@ def test_get_instructor_detail_includes_events_and_follow_state(
 def test_get_instructor_not_found_404(client):
     resp = client.get("/api/v1/instructors/999999")
     assert resp.status_code == 404
+
+
+def test_instructor_starts_unclaimed(client, leaf_category, auth_headers):
+    create_resp = client.post(
+        "/api/v1/events", json=_event_payload(leaf_category.id), headers=auth_headers
+    )
+    instructor_id = create_resp.json()["instructors"][0]["id"]
+
+    resp = client.get(f"/api/v1/instructors/{instructor_id}")
+    assert resp.json()["is_claimed"] is False
+    assert resp.json()["is_owned_by_me"] is False
+
+
+def test_claim_instructor_succeeds(client, leaf_category, auth_headers, buyer_auth_headers):
+    create_resp = client.post(
+        "/api/v1/events", json=_event_payload(leaf_category.id), headers=auth_headers
+    )
+    instructor_id = create_resp.json()["instructors"][0]["id"]
+
+    resp = client.post(f"/api/v1/instructors/{instructor_id}/claim", headers=buyer_auth_headers)
+    assert resp.status_code == 200
+    assert resp.json()["is_claimed"] is True
+    assert resp.json()["is_owned_by_me"] is True
+
+    # از دید یه کاربر دیگه (یا ناشناس)، claim شده هست ولی owned_by_me نه
+    other_resp = client.get(f"/api/v1/instructors/{instructor_id}", headers=auth_headers)
+    assert other_resp.json()["is_claimed"] is True
+    assert other_resp.json()["is_owned_by_me"] is False
+
+
+def test_claim_already_claimed_instructor_rejected(
+    client, leaf_category, auth_headers, buyer_auth_headers
+):
+    create_resp = client.post(
+        "/api/v1/events", json=_event_payload(leaf_category.id), headers=auth_headers
+    )
+    instructor_id = create_resp.json()["instructors"][0]["id"]
+
+    client.post(f"/api/v1/instructors/{instructor_id}/claim", headers=buyer_auth_headers)
+    second_attempt = client.post(f"/api/v1/instructors/{instructor_id}/claim", headers=auth_headers)
+    assert second_attempt.status_code == 422
+
+
+def test_claim_instructor_requires_complete_profile(client, leaf_category, auth_headers, db_session):
+    from app.models.user import User
+
+    create_resp = client.post(
+        "/api/v1/events", json=_event_payload(leaf_category.id), headers=auth_headers
+    )
+    instructor_id = create_resp.json()["instructors"][0]["id"]
+
+    nameless = User(phone="09399999998")
+    db_session.add(nameless)
+    db_session.commit()
+    db_session.refresh(nameless)
+
+    from app.services.auth_service import AuthService
+
+    tokens = AuthService(db_session).issue_token_pair(nameless)
+    headers = {"Authorization": f"Bearer {tokens.access_token}"}
+
+    resp = client.post(f"/api/v1/instructors/{instructor_id}/claim", headers=headers)
+    assert resp.status_code == 422

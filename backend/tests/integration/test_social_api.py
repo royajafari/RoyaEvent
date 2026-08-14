@@ -89,3 +89,84 @@ def test_my_follows_detail_includes_organizer_avatar(
 
     resp = client.get("/api/v1/me/follows/details", headers=buyer_auth_headers)
     assert resp.json()["organizers"][0]["avatar_url"] == organizer.avatar_url
+
+
+def test_my_followers_includes_organizer_followers(
+    client, organizer, auth_headers, buyer_auth_headers, buyer
+):
+    client.post(f"/api/v1/follows/organizers/{organizer.id}", headers=buyer_auth_headers)
+
+    resp = client.get("/api/v1/me/followers", headers=auth_headers)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["as_organizer"] == [
+        {"id": buyer.id, "name": buyer.full_name, "avatar_url": buyer.avatar_url}
+    ]
+    assert body["as_instructor"] == []
+
+
+def test_my_followers_includes_claimed_instructor_followers(
+    client, leaf_category, organizer, auth_headers, buyer_auth_headers, buyer
+):
+    from datetime import datetime, timedelta
+
+    create_resp = client.post(
+        "/api/v1/events",
+        json={
+            "title": "کارگاه آموزشی هوش مصنوعی",
+            "description": "توضیحات کامل کارگاه",
+            "category_id": leaf_category.id,
+            "format": "online",
+            "online_platform_name": "SkyRoom",
+            "visibility": "public",
+            "instructor_names": ["استاد تست"],
+            "sessions": [
+                {
+                    "starts_at": (datetime.now() + timedelta(hours=48)).isoformat(),
+                    "duration_minutes": 90,
+                }
+            ],
+        },
+        headers=auth_headers,
+    )
+    instructor_id = create_resp.json()["instructors"][0]["id"]
+
+    client.post(f"/api/v1/instructors/{instructor_id}/claim", headers=buyer_auth_headers)
+    client.post(f"/api/v1/follows/instructors/{instructor_id}", headers=auth_headers)
+
+    resp = client.get("/api/v1/me/followers", headers=buyer_auth_headers)
+    assert resp.json()["as_instructor"] == [
+        {"id": organizer.id, "name": organizer.full_name, "avatar_url": organizer.avatar_url}
+    ]
+
+
+def test_my_followers_unclaimed_instructor_not_included(
+    client, leaf_category, auth_headers, buyer_auth_headers
+):
+    from datetime import datetime, timedelta
+
+    create_resp = client.post(
+        "/api/v1/events",
+        json={
+            "title": "کارگاه آموزشی هوش مصنوعی",
+            "description": "توضیحات کامل کارگاه",
+            "category_id": leaf_category.id,
+            "format": "online",
+            "online_platform_name": "SkyRoom",
+            "visibility": "public",
+            "instructor_names": ["استاد تست"],
+            "sessions": [
+                {
+                    "starts_at": (datetime.now() + timedelta(hours=48)).isoformat(),
+                    "duration_minutes": 90,
+                }
+            ],
+        },
+        headers=auth_headers,
+    )
+    instructor_id = create_resp.json()["instructors"][0]["id"]
+    client.post(f"/api/v1/follows/instructors/{instructor_id}", headers=buyer_auth_headers)
+
+    # هیچ‌کس این مدرس رو claim نکرده، پس هیچ کاربری نباید این follower رو ببینه
+    resp = client.get("/api/v1/me/followers", headers=auth_headers)
+    assert resp.json()["as_instructor"] == []

@@ -9,6 +9,23 @@ from app.models.instructor import Instructor
 from app.services.event_service import event_query
 
 
+class InstructorServiceError(ValueError):
+    pass
+
+
+def claim_instructor(db: Session, instructor: Instructor, user_id: int) -> Instructor:
+    """کاربر خودش پروفایل مدرس رو claim می‌کنه (تصمیم کاربر) — بدون این،
+    linked_user_id هیچ‌وقت پر نمی‌شد و سیستم راهی نداشت بفهمه کدوم کاربر
+    لاگین‌کرده معادل کدوم رکورد Instructor است (لازم برای دیدن
+    دنبال‌کننده‌های خودش، social_service.list_my_followers)."""
+    if instructor.linked_user_id is not None:
+        raise InstructorServiceError("این پروفایل مدرس قبلاً توسط یک کاربر claim شده است")
+    instructor.linked_user_id = user_id
+    db.commit()
+    db.refresh(instructor)
+    return instructor
+
+
 def list_popular_instructors(db: Session, limit: int = 12) -> list[tuple[Instructor, int]]:
     """مدرس‌های محبوب برای بخش صفحه‌ی اصلی — MVP: مرتب‌سازی زنده بر اساس
     follower_count (رول‌آپ شبانه‌ی popularity_score جزو فاز ۴/۸ آینده‌ست،
