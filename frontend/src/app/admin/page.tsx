@@ -180,10 +180,13 @@ export default function AdminPage() {
 
       {tab === "events" && (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {events.map((event) => (
+          {events.map((event, index) => (
             <Card key={event.id} className="text-right">
               <CardHeader className="flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-base">{event.title}</CardTitle>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-xs">ردیف {index + 1}</span>
+                  <CardTitle className="text-base">{event.title}</CardTitle>
+                </div>
                 <div className="flex items-center gap-2">
                   {event.is_featured && <Badge>ویژه</Badge>}
                   <Badge variant={event.status === "published" ? "default" : "secondary"}>
