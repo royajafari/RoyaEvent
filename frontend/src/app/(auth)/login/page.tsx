@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { ApiError, authApi } from "@/lib/api-client";
+import { toEnglishDigits } from "@/lib/digits";
 import { useAuthStore } from "@/store/auth-store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -122,7 +123,9 @@ export default function LoginPage() {
                   dir="ltr"
                   placeholder={channel === "sms" ? "09xxxxxxxxx" : "you@example.com"}
                   value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
+                  onChange={(e) =>
+                    setDestination(channel === "sms" ? toEnglishDigits(e.target.value) : e.target.value)
+                  }
                 />
               </div>
               {error && <p className="text-destructive text-sm">{error}</p>}
@@ -142,7 +145,7 @@ export default function LoginPage() {
                   inputMode="numeric"
                   maxLength={8}
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
+                  onChange={(e) => setOtp(toEnglishDigits(e.target.value))}
                 />
               </div>
               {error && <p className="text-destructive text-sm">{error}</p>}
