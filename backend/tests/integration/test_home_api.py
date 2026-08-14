@@ -45,9 +45,36 @@ def test_home_sections_includes_published_event_in_latest_and_popular(
     resp = client.get("/api/v1/home/sections")
     body = resp.json()
     assert event_id in [e["id"] for e in body["latest_events"]]
-    # طبق fallback بخش ۱۰ architecture.md: بدون هیچ رویداد is_featured،
-    # همین رویداد باید جای‌گزین بخش «ویژه» هم بشه
-    assert event_id in [e["id"] for e in body["featured_events"]]
+
+
+def test_home_sections_featured_excludes_events_from_unfollowed_organizers(
+    client, leaf_category, auth_headers
+):
+    """بدون is_featured دستی و بدون هیچ دنبال‌کننده‌ای برای برگزارکننده،
+    رویداد نباید صرفاً به‌خاطر جدید بودن وارد بخش «ویژه» بشه — طبق بازخورد
+    کاربر، «ویژه» نباید معادل «آخرین» باشه."""
+    create_resp = client.post(
+        "/api/v1/events", json=_event_payload(leaf_category.id), headers=auth_headers
+    )
+    event_id = create_resp.json()["id"]
+    client.post(f"/api/v1/events/{event_id}/publish", headers=auth_headers)
+
+    resp = client.get("/api/v1/home/sections")
+    assert event_id not in [e["id"] for e in resp.json()["featured_events"]]
+
+
+def test_home_sections_featured_includes_events_from_followed_organizer(
+    client, leaf_category, auth_headers, organizer, buyer_auth_headers
+):
+    create_resp = client.post(
+        "/api/v1/events", json=_event_payload(leaf_category.id), headers=auth_headers
+    )
+    event_id = create_resp.json()["id"]
+    client.post(f"/api/v1/events/{event_id}/publish", headers=auth_headers)
+    client.post(f"/api/v1/follows/organizers/{organizer.id}", headers=buyer_auth_headers)
+
+    resp = client.get("/api/v1/home/sections")
+    assert event_id in [e["id"] for e in resp.json()["featured_events"]]
 
 
 def test_home_sections_excludes_draft_event(client, leaf_category, auth_headers):

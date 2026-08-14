@@ -47,6 +47,13 @@ def _latest_events(db: Session) -> list:
 
 
 def _featured_events(db: Session) -> list:
+    """رویداد «ویژه» باید واقعاً از بقیه متمایز باشه، نه صرفاً جدیدترین‌ها
+    (که خودش بخش «آخرین وبینارها»ست) — طبق بازخورد کاربر. تا وقتی پنل ادمین
+    (فاز ۵) امکان `is_featured` دستی رو نداره، fallback بر اساس محبوبیتِ
+    واقعیِ برگزارکننده (تعداد دنبال‌کننده‌اش) انتخاب می‌شه، نه تاریخ انتشار.
+    اگه هیچ برگزارکننده‌ی دنبال‌شده‌ای نباشه، بخش می‌تونه کمتر از SECTION_LIMIT
+    (حتی خالی) بمونه — نشون‌دادن رویداد تصادفی به‌جای «ویژه» بدتر از خالی‌بودنه.
+    """
     featured = (
         _published_public_query(db)
         .filter(Event.is_featured.is_(True))
@@ -55,13 +62,29 @@ def _featured_events(db: Session) -> list:
         .all()
     )
     if len(featured) < SECTION_LIMIT:
-        # طبق بخش ۱۰ architecture.md: کمبود ویژه‌ها با تازه‌ترین رویدادهای
-        # دیگه پر می‌شه، نه این‌که بخش خالی نشون داده بشه
-        existing_ids = [e.id for e in featured]
-        fallback_query = _published_public_query(db).order_by(Event.published_at.desc())
-        if existing_ids:
-            fallback_query = fallback_query.filter(~Event.id.in_(existing_ids))
-        featured += fallback_query.limit(SECTION_LIMIT - len(featured)).all()
+        existing_ids = {e.id for e in featured}
+        popular_organizer_ids = [
+            organizer_id
+            for organizer_id, in db.query(OrganizerFollow.organizer_id)
+            .group_by(OrganizerFollow.organizer_id)
+            .order_by(func.count(OrganizerFollow.follower_user_id).desc())
+            .all()
+        ]
+        for organizer_id in popular_organizer_ids:
+            if len(featured) >= SECTION_LIMIT:
+                break
+            candidates = (
+                _published_public_query(db)
+                .filter(Event.organizer_id == organizer_id)
+                .order_by(Event.published_at.desc())
+                .all()
+            )
+            for candidate in candidates:
+                if len(featured) >= SECTION_LIMIT:
+                    break
+                if candidate.id not in existing_ids:
+                    featured.append(candidate)
+                    existing_ids.add(candidate.id)
     return [to_list_item_out(e) for e in featured]
 
 

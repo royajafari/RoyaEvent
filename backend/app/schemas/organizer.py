@@ -2,6 +2,17 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from app.schemas.event import EventListItemOut
+
+
+class OrganizerProfileOut(BaseModel):
+    id: int
+    name: str | None
+    avatar_url: str | None
+    follower_count: int
+    is_following: bool
+    events: list[EventListItemOut]
+
 
 class AttendeeOut(BaseModel):
     registration_id: int
