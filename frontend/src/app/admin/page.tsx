@@ -201,7 +201,7 @@ export default function AdminPage() {
           {trimmedEventSearch && filteredEvents.length === 0 && (
             <p className="text-muted-foreground text-sm">موردی یافت نشد.</p>
           )}
-          <div className="overflow-x-auto rounded-lg ring-1 ring-foreground/10">
+          <div className="bg-card overflow-x-auto rounded-lg ring-1 ring-foreground/10">
             <table className="w-full text-right text-sm">
               <thead className="bg-muted/50 text-muted-foreground text-xs">
                 <tr>
@@ -247,7 +247,7 @@ export default function AdminPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="whitespace-nowrap"
+                          className="w-[132px] shrink-0 whitespace-nowrap"
                           disabled={busyId === event.id}
                           onClick={() => handleToggleFeatured(event)}
                         >
