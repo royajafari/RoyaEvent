@@ -83,47 +83,54 @@ export default function MyTicketsPage() {
       )}
 
       <div className="flex flex-col gap-3">
-        {tickets.map(({ registration, event_title, event_slug, session_starts_at }) => (
-          <Card key={registration.id} className="text-right">
-            <CardHeader className="flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-base">
-                <Link href={`/events/${event_slug}`} className="hover:underline">
-                  {event_title}
-                </Link>
-              </CardTitle>
-              <Badge variant={registration.status === "confirmed" ? "default" : "secondary"}>
-                {STATUS_LABELS[registration.status]}
-              </Badge>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                <span>زمان: {formatJalaliDateTime(session_starts_at)}</span>
-                <span dir="ltr">کد بلیط: {registration.ticket_code}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                {registration.status === "confirmed" && (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleCalendar(registration.id)}
-                    >
-                      افزودن به تقویم
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      disabled={busyId === registration.id}
-                      onClick={() => handleCancel(registration.id)}
-                    >
-                      لغو ثبت‌نام
-                    </Button>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {tickets.map(({ registration, event_title, event_slug, session_starts_at }) => {
+          // eslint-disable-next-line react-hooks/purity -- مقایسه با «اکنون» است، نه باگ
+          const isPast = new Date(session_starts_at).getTime() < Date.now();
+          return (
+            <Card key={registration.id} className="text-right">
+              <CardHeader className="flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-base">
+                  <Link href={`/events/${event_slug}`} className="hover:underline">
+                    {event_title}
+                  </Link>
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  {isPast && <Badge variant="secondary">این رویداد منقضی شده</Badge>}
+                  <Badge variant={registration.status === "confirmed" ? "default" : "secondary"}>
+                    {STATUS_LABELS[registration.status]}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2">
+                <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                  <span>زمان: {formatJalaliDateTime(session_starts_at)}</span>
+                  <span dir="ltr">کد بلیط: {registration.ticket_code}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {registration.status === "confirmed" && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleCalendar(registration.id)}
+                      >
+                        افزودن به تقویم
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={busyId === registration.id}
+                        onClick={() => handleCancel(registration.id)}
+                      >
+                        لغو ثبت‌نام
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
