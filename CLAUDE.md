@@ -25,7 +25,7 @@
 | ۱۰ | تقویت تست + مقاومت آفلاین/RTL | ⏳ شروع نشده |
 | ۱۱ | آماده‌سازی دیپلوی VPS (TLS/HTTPS اجباری — نگاه کن به بخش تصمیمات) | ⏳ باقی فاز نشده؛ بخش TLS/Nginx/Docker زودتر و مستقل انجام شد، نگاه کن به `docs/deployment_tls.md` و `specs/spec3.md` |
 
-بک‌اند در مجموع الان **۲۱۲ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
+بک‌اند در مجموع الان **۲۲۰ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
 
 ## استک فنی (تصمیم قطعی، تغییر نده مگر کاربر بخواد)
 
@@ -50,7 +50,8 @@
 ```
 RoyaEvent/
   backend/app/
-    api/v1/routers/   # auth.py, events.py, tickets.py, orders.py, social.py, organizer.py, instructors.py, search.py, home.py
+    api/v1/routers/   # auth.py, events.py, tickets.py, orders.py, social.py, organizer.py (داشبورد خصوصی)،
+                      # organizers.py (پروفایل عمومی، پیچیده نکن با organizer.py)، instructors.py, search.py, home.py
     api/deps.py        # get_db, get_current_user, get_current_user_optional, get_current_admin_user, get_redis, get_sms/email_provider, get_client_ip
     core/               # config, security (JWT+OTP hash), rate_limit (OTP), rate_limit_middleware (عمومی/slowapi)
                         # redis_client, storage (MinIO), slug, validators, calendar (لینک گوگل‌کلندر)
@@ -60,11 +61,12 @@ RoyaEvent/
                         # TicketType, DiscountCode, PlatformDiscountCode, Order, OrderItem, Payment, Registration,
                         # Favorite, OrganizerFollow, InstructorFollow
     providers/sms|email/ # base + console(dev) + ippanel/kavenegar/brevo/resend
-    schemas/            # auth.py, event.py, ticket.py, order.py, social.py, organizer.py, instructor.py, search.py, home.py (Pydantic)
+    schemas/            # auth.py, event.py, ticket.py, order.py, social.py, organizer.py (AttendeeOut + OrganizerProfileOut)،
+                        # instructor.py, search.py, home.py (Pydantic)
     services/           # otp_service, auth_service, event_service (+event_query/to_list_item_out عمومی)،
                         # image_service, video_service, ticket_service, discount_service, order_service,
-                        # social_service, instructor_service, search_service (جستجوی دوگانه: افراد+رویداد)،
-                        # home_service (بخش‌های صفحه‌ی اصلی، Redis-cached)
+                        # social_service, instructor_service, organizer_service (پروفایل عمومی)،
+                        # search_service (جستجوی دوگانه: افراد+رویداد)، home_service (بخش‌های صفحه‌ی اصلی، Redis-cached)
     search/             # chroma_client.py, embeddings.py, indexer.py (sync_event_index)، reindex.py (بک‌فیل دستی)
   backend/tests/unit|integration/   # pytest، fakeredis، بدون نیاز به Redis واقعی (+ test_search_api.py: embedding/Chroma قلابی)
   frontend/src/
@@ -81,6 +83,7 @@ RoyaEvent/
       favorites/page.tsx           # «علاقه‌مندی‌های من» (client)
       follows/page.tsx             # «دنبال‌کردن‌های من» — برگزارکننده‌ها + مدرس‌ها با اسم (client)
       instructors/[id]/page.tsx    # پروفایل عمومی مدرس — بیوگرافی/آواتار/رویدادهای منتشرشده (SSR/dynamic)
+      organizers/[id]/page.tsx     # پروفایل عمومی برگزارکننده — مشابه instructors/[id] (SSR/dynamic)
       profile/page.tsx             # فرم نام + آپلود آواتار کاربر (client)
       search/page.tsx              # نتایج جستجو — بخش «افراد» + «رویدادها» (SSR/dynamic)
       page.tsx                     # خانه (async Server Component، یک fetch به /home/sections)
@@ -90,6 +93,7 @@ RoyaEvent/
     components/EventsFilter.tsx    # Select دسته‌بندی/نوع‌برگزاری برای events/page.tsx، sync با URL
     components/TicketCheckout.tsx, StickyTicketFooter.tsx, FavoriteButton.tsx, FollowOrganizerButton.tsx  # فاز ۳ (client)
     components/FollowInstructorButton.tsx # دکمه‌ی دنبال‌کردن مدرس، کپی الگوی FollowOrganizerButton (client)
+    components/InstantRegisterModal.tsx, InstantRegisterButton.tsx # ثبت‌نام فوری (OTP+ثبت‌نام یک‌جا از روی کارت رویداد)
     components/RoyaEventLogo.tsx   # لوگوی متنی برند (سبز/سفید/قرمز)
     components/RoyaEventLoader.tsx # اسپلش‌اسکرین، وصل به app/loading.tsx (Suspense خودکار نکست‌جس)
     components/SiteHeader.tsx      # هدر مشترک (لوگو+تگ‌لاین+نوار جستجو+ناوبری+آواتار کنار پروفایل)، در layout ریشه، client
@@ -99,13 +103,14 @@ RoyaEvent/
     components/CompleteProfilePrompt.tsx # فرم تکمیل نام، وقتی require_complete_profile خطای ۴۲۲ بده (داخل TicketCheckout/create-event)
     components/NewsletterSignup.tsx # کارت خبرنامه (فقط اعتبارسنجی/localStorage، بدون بک‌اند واقعی)
     components/JalaliDateTimePicker.tsx # تاریخ‌ساعت شمسی (react-multi-date-picker) برای فیلدهای جلسه
-    components/ui/                 # shadcn primitives (+ textarea, select, combobox, progress)
+    components/ui/                 # shadcn primitives (+ textarea, select, combobox, progress, checkbox, dialog)
     lib/
       api-client.ts    # fetch wrapper سمت کلاینت، credentials:include، پشتیبانی FormData،
                         # refreshAccessToken() (guard تک‌پرواز رفرش توکن) + retry خودکار روی ۴۰۱، authApi (+uploadAvatar)
       events-api.ts     # انواع TS + توابع کلاینت events/categories (نیاز به accessToken)
       events-server.ts  # فراخوانی سمت سرور برای RSC (cache:"no-store"، بدون کوکی)
       instructors-api.ts, instructors-server.ts  # کلاینت + SSR برای /instructors (مشابه events-api/events-server)
+      organizers-api.ts, organizers-server.ts    # کلاینت + SSR برای /organizers (پروفایل عمومی، نه داشبورد organizer-api.ts)
       search-api.ts, search-server.ts  # کلاینت + SSR برای /search
       home-server.ts     # SSR برای /home/sections (فقط سرور — صفحه‌ی اصلی چیزی سمت کلاینت لازم نداره)
       tickets-api.ts, orders-api.ts, social-api.ts, organizer-api.ts  # فاز ۳ (social-api.ts: +myFollowsDetail)
@@ -131,7 +136,8 @@ RoyaEvent/
 2. ~~تور آموزشی سایت~~ ✅ **انجام شد** — با `driver.js`. `lib/onboarding-tour.ts` (تعریف مراحل + استارت)، `components/OnboardingTour.tsx` (فقط اجرای خودکار بار اول، چک با `localStorage`، بدون رندر UI)، دکمه‌ی «راهنمای سایت» (آیکون `CircleHelp`) در `SiteHeader` برای تکرار دستی هروقت کاربر خواست. مراحل تور روی `id`های `tour-logo/tour-events/tour-create/tour-mine/tour-tickets/tour-login` در هدر. RTL polish برای popover در `globals.css` (کلاس `.roya-tour-popover`). جزئیات کامل در `specs/spec3.md`.
 3. ~~TLS/HTTPS اجباری در production~~ ✅ **انجام شد** — `backend/Dockerfile`+`frontend/Dockerfile` (production images، تست build شد و موفق بود)، `infra/docker-compose.prod.yml` (nginx+certbot+backend+frontend+redis+mongo+minio اختیاری)، `infra/nginx/conf.d/royaevent.conf` (ریدایرکت اجباری HTTP→HTTPS + HSTS)، `infra/renew-certs.sh` (تمدید گواهی از کرون هاست). راهنمای کامل قدم‌به‌قدم در `docs/deployment_tls.md`. جزئیات/تصمیمات فنی (چرا certbot سرویس همیشه‌روشن نیست، مشکل apt-get و راه‌حلش) در `specs/spec3.md`.
 4. ~~لیست «دنبال‌کردن‌های من» + مدرس‌های محبوب/وبینارهای محبوب در صفحه‌ی اصلی + آپلود عکس پروفایل~~ ✅ **انجام شد** — سیستم «مدرس» (که فقط یه جدول خالی بود) از پایه ساخته شد: get-or-create با اسم موقع ایجاد رویداد، `GET /instructors`، `GET /instructors/{id}` (+رویدادهاش)، صفحه‌ی عمومی `instructors/[id]`. `GET /me/follows/details` (نسخه‌ی enrich‌شده‌ی `/me/follows`) + صفحه‌ی `follows/`. `avatar_url` روی `User` + `POST /auth/me/avatar` + صفحه‌ی `profile/`. `GET /events?sort=popular` (بر اساس `view_count`، چون فاز ۷ امتیازدهی هنوز نیست). جزئیات کامل در `specs/spec3.md`.
-5. **ثبت‌نام فوری** ⏳ **در صف، هنوز شروع نشده** — کاربر توضیح داد: بلیط‌های «فوری» باید امکان ثبت‌نام مستقیم از روی کارت رویداد (بدون رفتن به صفحه‌ی جزئیات) با یک modal لاگین+ثبت‌نام یک‌جا بدن؛ بلیط‌های غیرفوری طبق روال فعلی به صفحه‌ی جزئیات می‌رن و اونجا تصمیم می‌گیرن. این جدا از پولی/رایگان/حمایتی بودن بلیطه (یک محور کاملاً مستقل). فقط بلیط‌های فوری برچسب «فوری» می‌گیرن؛ بقیه بدون برچسب اضافه می‌مونن. نیاز به فیلد جدید روی `TicketType`/`Event` + یک فلوی ثبت‌نام modal-based جدا از `TicketCheckout` فعلی.
+5. ~~ثبت‌نام فوری~~ ✅ **انجام شد** — `is_instant_registration` روی `Event` (جدا از پولی/رایگان/حمایتی بودن بلیط). `InstantRegisterModal.tsx` + `InstantRegisterButton.tsx` (داخل `EventCard`، با `stopPropagation`): اگه لاگین نباشه اول OTP می‌گیره، اگه لاگین باشه یه مرحله‌ی «تأیید» ساده قبل از ثبت‌نام واقعی نشون می‌ده (نه ثبت‌نام کاملاً بی‌اطلاع کاربر). فقط رویدادهای instant برچسب «فوری» می‌گیرن. جزئیات کامل و دام‌های react-hooks/set-state-in-effect که حین ساختش کشف شد در `specs/spec4.md`.
+6. ~~کلیک روی اسم برگزارکننده/مدرس باید به صفحه‌ی رویدادهاش بره~~ ✅ **انجام شد** — مدرس از قبل کار می‌کرد (فاز ۳ addendum)؛ برگزارکننده جدید بود: `GET /organizers/{id}` + صفحه‌ی `organizers/[id]` (مشابه صفحه‌ی مدرس)، اسم برگزارکننده تو `/follows` و صفحه‌ی جزئیات رویداد حالا لینکه.
 6. **پذیرش قوانین/شرایط استفاده** ⏳ **در صف، منتظر متن از کاربر** — قبل از ایجاد رویداد یا خرید بلیط باید کاربر قوانین سایت رو تأیید کرده باشه؛ احتمالاً با همون الگوی `require_complete_profile` (گارد قبل از `POST /events`/`POST /orders`) پیاده می‌شه.
 
 ## قراردادهای API
@@ -147,7 +153,9 @@ RoyaEvent/
 - **مدرس (get-or-create با اسم):** `instructor_names` روی `EventCreateIn`/`EventUpdateIn`، دقیقاً مثل `tag_names` — رشته‌ی دقیقاً یکسان = همون رکورد، وگرنه رکورد جدید (`event_service._get_or_create_instructors`). `GET /instructors` (مرتب بر اساس follower_count زنده)، `GET /instructors/{id}` (بیوگرافی+رویدادهای منتشرشده+`is_following`). برای auth اختیاری (کاربر لاگین‌کرده یا نه، رفتار endpoint کمی فرق می‌کنه) از `deps.py: get_current_user_optional` استفاده کن، نه `get_current_user` اجباری.
 - **محبوبیت (MVP):** `GET /events?sort=popular` بر اساس `view_count` (نه `rating_avg`، چون سیستم امتیازدهی فاز ۷ هنوز نیست). همین‌طور `GET /instructors` بر اساس `follower_count` زنده، نه رول‌آپ شبانه‌ی `popularity_score` (که در `architecture.md` برای آینده/مقیاس بزرگ‌تر پیش‌بینی شده).
 - **جستجو:** `GET /search?q=&category_id=&format=` — همیشه هم `search_people` (prefix match مدرس/برگزارکننده) هم `search_events` (embedding + ChromaDB) رو با هم اجرا می‌کنه، نه either/or. هر رویدادی که PUBLISHED+PUBLIC می‌شه (یا اسم/توضیحاتش عوض می‌شه) باید `app/search/indexer.py: sync_event_index(event)` صداش بزنه — این قلاب از قبل تو `event_service.py: publish_event/update_event/cancel_event` هست، برای هر تابع جدیدی که وضعیت/محتوای رویداد رو عوض می‌کنه هم باید صدا زده بشه. رویدادهای منتشرشده‌ی قبل از فاز ۴ باید یک‌بار دستی با `python -m app.search.reindex` بک‌فیل بشن.
-- **صفحه‌ی اصلی:** همه‌چیز از یک `GET /home/sections` میاد (Redis-cached، TTL ۵ دقیقه، کلید `home:sections`) — هیچ‌وقت مستقیم چند تا endpoint جدا برای بخش‌های صفحه‌ی اصلی صدا نزن، همه باید از `home_service.py` عبور کنن تا کش یک‌جا کار کنه.
+- **صفحه‌ی اصلی:** همه‌چیز از یک `GET /home/sections` میاد (Redis-cached، TTL ۵ دقیقه، کلید `home:sections`) — هیچ‌وقت مستقیم چند تا endpoint جدا برای بخش‌های صفحه‌ی اصلی صدا نزن، همه باید از `home_service.py` عبور کنن تا کش یک‌جا کار کنه. بخش «ویژه» تا وقتی پنل ادمین (فاز ۵) امکان ست‌کردن دستی `is_featured` رو نداره، fallback‌ش بر اساس محبوبیت واقعی برگزارکننده (تعداد دنبال‌کننده) انتخاب می‌کنه، **نه** صرفاً جدیدترین‌ها — وگرنه این بخش با «آخرین وبینارها» یکی به نظر می‌رسه (بازخورد مستقیم کاربر).
+- **پروفایل عمومی برگزارکننده/مدرس:** `GET /organizers/{id}` و `GET /instructors/{id}` — هر جا اسم برگزارکننده یا مدرس نمایش داده می‌شه (کارت رویداد، صفحه‌ی جزئیات، `/follows`)، باید لینک به این صفحات باشه، نه متن ساده.
+- **ثبت‌نام فوری:** `is_instant_registration` روی `Event`، مستقل از `pricing_model` بلیط. فقط برای نشون‌دادن UI متفاوت (modal به‌جای رفتن به صفحه‌ی جزئیات) استفاده می‌شه، منطق سفارش/بلیط پشت صحنه دقیقاً همون `POST /orders` + `POST /orders/{id}/complete` قبلیه.
 
 ## قراردادهای UI
 
@@ -201,6 +209,7 @@ npm run dev   # http://localhost:3000
 16. **در Docker build بک‌اند، `apt-get update`/`install` می‌تونه رو شبکه‌ی این محیط به‌طور کامل گیر کنه یا timeout بده** (بدون خطای واضح، فقط خیلی کند/بی‌نتیجه) — قبل از افزودن `build-essential` یا هر پکیج apt دیگه، اول چک کن آیا واقعاً لازمه: اکثر پکیج‌های pip (از جمله `cryptography`, `Pillow`, `pymongo`) برای `python:3.12-slim` روی `linux/amd64` از قبل wheel آماده دارن و کامپایلر نمی‌خوان. همچنین `pip install` گاهی با خطای `THESE PACKAGES DO NOT MATCH THE HASHES` روی دانلود پکیج‌های خیلی بزرگ (مثل wheelهای CUDA/nvidia که transitive dependency ی سنگین کتابخونه‌هایی مثل `sentence-transformers`ان) fail می‌کنه — این معمولاً یعنی دانلود ناقص/خراب روی شبکه‌ی ناپایدار این محیط بوده، نه واقعاً تهدید امنیتی؛ راه‌حل بهتر از retry صرف، حذف اون وابستگی سنگین از `requirements.txt` تا زمانی که واقعاً لازم بشه (نمونه: `chromadb`/`sentence-transformers` که فاز ۴ هنوز شروع نشده کامنت شدن).
 17. **اجرای `npm run build` برای تأیید نهایی، درحالی‌که `npm run dev` هم‌زمان روی همون پوشه‌ی `frontend/` در حال اجراست، `.next/` مشترک رو خراب می‌کنه** (build خروجی production می‌نویسه، dev سرور با webpack/HMR خودش گیج می‌شه — نشونه‌ی معمول: چانک‌های `/_next/static/...` با ۴۰۴ خام fail می‌شن، نه صفحه‌ی خطای Next.js). بعد از هر `npm run build` تأییدی، اگه `npm run dev` قراره ادامه بده، حتماً dev server رو kill کن، `rm -rf .next`، و دوباره `npm run dev` بزن — وگرنه تست بصری بعدی (خود کاربر یا خودت با curl) نتیجه‌ی خراب/قدیمی می‌بینه و به‌اشتباه فکر می‌کنی feature یا فیکس تازه باگ داره.
 18. **اضافه‌کردن یک router جدید (فایل تازه) به بک‌اند، یا هر import جدید در `main.py`، با uvicorn بدون `--reload` اصلاً پیک‌آپ نمی‌شه** — نه فقط تغییر کد endpoint موجود (که در نکته‌ی #۲ گفته شده)، بلکه خود endpointهای جدید تا restart دستی اصلاً تو `/openapi.json` ظاهر نمی‌شن؛ راحت‌ترین تشخیص: بعد از افزودن route جدید، `curl .../openapi.json` بزن و چک کن مسیر جدید توش هست یا نه، قبل از این‌که فکر کنی کد اشتباهه.
+19. **`react-hooks/set-state-in-effect` هر تابع محلی (تو همون کامپوننت تعریف‌شده) که مستقیم/غیرمستقیم setState صدا می‌زنه رو، اگه از دل یک effect صداش بزنی، فلگ می‌کنه — حتی اگه اون تابع `async` باشه و setState فقط بعد از `await` بیاد** (مثلاً `await Promise.resolve()` اول تابع، کاری نمی‌کنه؛ لینتر static-analysis می‌کنه نه runtime). این با `useEffect(() => { refreshAccessToken(); }, [])` تو `SessionBootstrap.tsx` فرق داره چون اونجا `refreshAccessToken` از یه ماژول **دیگه** import شده (`api-client.ts`)، نه تو خود کامپوننت تعریف نشده. راه‌حل واقعی، نه دور زدن قانون: کار رو از دل یک event handler واقعی صدا بزن (کلیک دکمه، بعد از تأیید OTP)، نه effect. برای «شروع خودکار وقتی از قبل یه پیش‌شرط برقراره» (مثلاً کاربر لاگین‌کرده)، به‌جای effect + reset، از یه initial state متفاوت (lazy `useState(() => ...)`) و یه قدم تأیید دستی کاربر استفاده کن — نمونه در `InstantRegisterModal.tsx` (مرحله‌ی «تأیید» قبل از ثبت‌نام خودکار).
 
 ## تصمیمات کلیدی کاربر (خلاصه‌ی فشرده — کامل در architecture.md)
 
