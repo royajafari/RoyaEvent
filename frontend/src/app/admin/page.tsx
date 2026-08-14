@@ -237,16 +237,17 @@ export default function AdminPage() {
                       {formatJalaliDateTime(event.created_at)}
                     </td>
                     <td className="px-3 py-2">
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="flex flex-nowrap gap-1.5">
                         <Link
                           href={`/organizer/events/${event.id}/edit`}
-                          className={buttonVariants({ variant: "outline", size: "sm" })}
+                          className={buttonVariants({ variant: "outline", size: "sm", className: "whitespace-nowrap" })}
                         >
                           ویرایش
                         </Link>
                         <Button
                           size="sm"
                           variant="outline"
+                          className="whitespace-nowrap"
                           disabled={busyId === event.id}
                           onClick={() => handleToggleFeatured(event)}
                         >
@@ -255,6 +256,7 @@ export default function AdminPage() {
                         <Button
                           size="sm"
                           variant="destructive"
+                          className="whitespace-nowrap"
                           disabled={busyId === event.id}
                           onClick={() => handleDeleteEvent(event.id)}
                         >
