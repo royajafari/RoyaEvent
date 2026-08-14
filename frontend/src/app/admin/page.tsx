@@ -179,7 +179,7 @@ export default function AdminPage() {
       </Tabs>
 
       {tab === "events" && (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="flex flex-col gap-3">
           {events.map((event, index) => (
             <Card key={event.id} className="text-right">
               <CardHeader className="flex-row items-center justify-between space-y-0">
