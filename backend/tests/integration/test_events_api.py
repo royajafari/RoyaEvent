@@ -130,6 +130,36 @@ def test_list_events_only_shows_published_public(client, leaf_category, auth_hea
     assert draft["id"] not in ids
 
 
+def test_create_event_with_instant_registration(client, leaf_category, auth_headers):
+    resp = client.post(
+        "/api/v1/events",
+        json=_event_payload(leaf_category.id, is_instant_registration=True),
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
+    assert resp.json()["is_instant_registration"] is True
+
+
+def test_create_event_defaults_instant_registration_to_false(client, leaf_category, auth_headers):
+    resp = client.post("/api/v1/events", json=_event_payload(leaf_category.id), headers=auth_headers)
+    assert resp.json()["is_instant_registration"] is False
+
+
+def test_update_event_instant_registration_flag(client, leaf_category, auth_headers):
+    create_resp = client.post(
+        "/api/v1/events", json=_event_payload(leaf_category.id), headers=auth_headers
+    )
+    event_id = create_resp.json()["id"]
+
+    resp = client.patch(
+        f"/api/v1/events/{event_id}",
+        json={"is_instant_registration": True},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["is_instant_registration"] is True
+
+
 def test_list_events_featured_filter(client, leaf_category, auth_headers, db_session):
     from app.models.event import Event
 

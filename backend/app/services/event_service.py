@@ -39,6 +39,7 @@ def to_list_item_out(event: Event) -> EventListItemOut:
         format=event.format.value,
         status=event.status.value,
         is_featured=event.is_featured,
+        is_instant_registration=event.is_instant_registration,
         rating_avg=event.rating_avg,
         rating_count=event.rating_count,
         view_count=event.view_count,
@@ -126,6 +127,7 @@ def create_event(db: Session, organizer_id: int, data: EventCreateIn) -> Event:
         online_platform_name=data.online_platform_name,
         refund_policy=data.refund_policy,
         status=EventStatus.DRAFT,
+        is_instant_registration=data.is_instant_registration,
     )
     event.tags = _get_or_create_tags(db, data.tag_names)
     event.instructors = _get_or_create_instructors(db, data.instructor_names)
@@ -173,6 +175,8 @@ def update_event(db: Session, event: Event, data: EventUpdateIn) -> Event:
         event.tags = _get_or_create_tags(db, data.tag_names)
     if data.instructor_names is not None:
         event.instructors = _get_or_create_instructors(db, data.instructor_names)
+    if data.is_instant_registration is not None:
+        event.is_instant_registration = data.is_instant_registration
 
     db.commit()
     db.refresh(event)

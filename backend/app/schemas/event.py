@@ -62,6 +62,7 @@ class EventCreateIn(BaseModel):
     refund_policy: str | None = None
     tag_names: list[str] = Field(default_factory=list, max_length=10)
     instructor_names: list[str] = Field(default_factory=list, max_length=10)
+    is_instant_registration: bool = False
     sessions: list[EventSessionIn] = Field(min_length=1)
 
     @field_validator("sessions")
@@ -90,6 +91,7 @@ class EventUpdateIn(BaseModel):
     refund_policy: str | None = None
     tag_names: list[str] | None = Field(default=None, max_length=10)
     instructor_names: list[str] | None = Field(default=None, max_length=10)
+    is_instant_registration: bool | None = None
 
 
 class EventListItemOut(BaseModel):
@@ -102,6 +104,7 @@ class EventListItemOut(BaseModel):
     format: str
     status: str
     is_featured: bool
+    is_instant_registration: bool
     rating_avg: float
     rating_count: int
     view_count: int
@@ -127,6 +130,7 @@ class EventDetailOut(BaseModel):
     online_platform_name: str | None
     status: str
     is_featured: bool
+    is_instant_registration: bool
     refund_policy: str | None
     rating_avg: float
     rating_count: int

@@ -70,6 +70,7 @@ class Event(Base, TimestampMixin):
 
     status: Mapped[EventStatus] = mapped_column(Enum(EventStatus), default=EventStatus.DRAFT, nullable=False)
     is_featured: Mapped[bool] = mapped_column(default=False, nullable=False)
+    is_instant_registration: Mapped[bool] = mapped_column(default=False, nullable=False)
     refund_policy: Mapped[str | None] = mapped_column(Text, nullable=True)
     sales_open_at: Mapped[datetime | None] = mapped_column(DateTime(), nullable=True)
 
