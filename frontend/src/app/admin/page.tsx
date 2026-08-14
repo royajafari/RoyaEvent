@@ -258,7 +258,7 @@ export default function AdminPage() {
                             variant: "outline",
                             size: "sm",
                             className:
-                              "whitespace-nowrap border border-cyan-500 bg-cyan-200 text-cyan-900 hover:bg-cyan-300",
+                              "whitespace-nowrap border border-zinc-300 bg-[whitesmoke] text-zinc-900 hover:bg-zinc-200",
                           })}
                         >
                           ویرایش
