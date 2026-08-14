@@ -15,7 +15,88 @@ function markTourSeen(): void {
   window.localStorage.setItem(STORAGE_KEY, "1");
 }
 
+// همه‌ی مراحل ممکن — بعضی عنصرها (مثل #tour-profile) فقط وقتی کاربر
+// لاگین‌کرده تو DOM هستن، برای همین موقع اجرای واقعی تور فیلتر می‌شن
+// (checkAvailability پایین)، نه این‌که لیست ثابت اینجا نگه داشته بشه.
+const ALL_STEPS = [
+  {
+    element: "#tour-logo",
+    popover: {
+      title: "به رویا ایونت خوش آمدید 👋",
+      description:
+        "پلتفرم مدیریت و کشف رویداد/وبینار. این تور کوتاه امکانات اصلی سایت رو نشونتون می‌ده.",
+    },
+  },
+  {
+    element: "#tour-search",
+    popover: {
+      title: "جستجو",
+      description:
+        "اسم رویداد، مدرس یا برگزارکننده رو تایپ کنید — نتایج شامل بخش «افراد» هم می‌شه.",
+    },
+  },
+  {
+    element: "#tour-events",
+    popover: {
+      title: "رویدادها",
+      description: "لیست همه‌ی وبینارها و رویدادهای منتشرشده — می‌تونید ببینید و ثبت‌نام کنید.",
+    },
+  },
+  {
+    element: "#tour-mine",
+    popover: {
+      title: "رویدادهای من",
+      description: "رویدادهایی که ساختید رو این‌جا مدیریت، منتشر و شرکت‌کنندگانشون رو ببینید.",
+    },
+  },
+  {
+    element: "#tour-tickets",
+    popover: {
+      title: "بلیط‌های من",
+      description: "بلیط‌هایی که خریدید، لغو ثبت‌نام و افزودن به تقویم گوگل از همین‌جا.",
+    },
+  },
+  {
+    element: "#tour-favorites",
+    popover: {
+      title: "علاقه‌مندی‌ها",
+      description: "رویدادهایی که با دکمه‌ی قلب نشون کردید، همه‌شون این‌جا جمع می‌شن.",
+    },
+  },
+  {
+    element: "#tour-follows",
+    popover: {
+      title: "دنبال‌کردن‌ها",
+      description: "لیست برگزارکننده‌ها و مدرس‌هایی که دنبال می‌کنید.",
+    },
+  },
+  {
+    element: "#tour-create",
+    popover: {
+      title: "ایجاد رویداد",
+      description:
+        "برگزارکننده‌اید؟ از این‌جا رویداد چندجلسه‌ای خودتون رو با بنر و کلیپ تبلیغاتی بسازید.",
+    },
+  },
+  {
+    element: "#tour-profile",
+    popover: {
+      title: "پروفایل",
+      description: "نام و عکس پروفایل خودتون رو از همین‌جا تنظیم کنید.",
+    },
+  },
+  {
+    element: "#tour-login",
+    popover: {
+      title: "ورود",
+      description: "ورود فقط با کد یک‌بارمصرف پیامکی یا ایمیلی — بدون نیاز به پسورد.",
+    },
+  },
+];
+
 export function startOnboardingTour(): void {
+  const steps = ALL_STEPS.filter((step) => document.querySelector(step.element) !== null);
+
   const tour = driver({
     showProgress: true,
     popoverClass: "roya-tour-popover",
@@ -24,53 +105,7 @@ export function startOnboardingTour(): void {
     doneBtnText: "پایان",
     progressText: "{{current}} از {{total}}",
     onDestroyed: () => markTourSeen(),
-    steps: [
-      {
-        element: "#tour-logo",
-        popover: {
-          title: "به رویا ایونت خوش آمدید 👋",
-          description:
-            "پلتفرم مدیریت و کشف رویداد/وبینار. این تور کوتاه امکانات اصلی سایت رو نشونتون می‌ده.",
-        },
-      },
-      {
-        element: "#tour-events",
-        popover: {
-          title: "رویدادها",
-          description:
-            "لیست همه‌ی وبینارها و رویدادهای منتشرشده — می‌تونید ببینید و ثبت‌نام کنید.",
-        },
-      },
-      {
-        element: "#tour-create",
-        popover: {
-          title: "ایجاد رویداد",
-          description:
-            "برگزارکننده‌اید؟ از این‌جا رویداد چندجلسه‌ای خودتون رو با بنر و کلیپ تبلیغاتی بسازید.",
-        },
-      },
-      {
-        element: "#tour-mine",
-        popover: {
-          title: "رویدادهای من",
-          description: "رویدادهایی که ساختید رو این‌جا مدیریت، منتشر و شرکت‌کنندگانشون رو ببینید.",
-        },
-      },
-      {
-        element: "#tour-tickets",
-        popover: {
-          title: "بلیط‌های من",
-          description: "بلیط‌هایی که خریدید، لغو ثبت‌نام و افزودن به تقویم گوگل از همین‌جا.",
-        },
-      },
-      {
-        element: "#tour-login",
-        popover: {
-          title: "ورود",
-          description: "ورود فقط با کد یک‌بارمصرف پیامکی یا ایمیلی — بدون نیاز به پسورد.",
-        },
-      },
-    ],
+    steps,
   });
 
   tour.drive();

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiError } from "@/lib/api-client";
 import type { MyFollowsDetail } from "@/lib/social-api";
 import { socialApi } from "@/lib/social-api";
@@ -72,9 +72,13 @@ export default function FollowsPage() {
           <h2 className="text-lg font-semibold">برگزارکننده‌ها</h2>
           <div className="flex flex-col gap-2">
             {follows.organizers.map((organizer) => (
-              <Card key={organizer.id} className="text-right">
-                <CardContent className="py-4">{organizer.name ?? "بدون نام"}</CardContent>
-              </Card>
+              <Link key={organizer.id} href={`/organizers/${organizer.id}`}>
+                <Card className="text-right transition-shadow hover:shadow-md">
+                  <CardHeader>
+                    <CardTitle className="text-base">{organizer.name ?? "بدون نام"}</CardTitle>
+                  </CardHeader>
+                </Card>
+              </Link>
             ))}
           </div>
         </section>

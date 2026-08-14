@@ -22,6 +22,7 @@ export default function MyEventsPage() {
   const [events, setEvents] = useState<EventListItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [publishingId, setPublishingId] = useState<number | null>(null);
 
   useEffect(() => {
     // بدون accessToken، برنچ رندر پایین (پیام «باید وارد شوید») نمایش داده
@@ -37,13 +38,17 @@ export default function MyEventsPage() {
   }, [accessToken]);
 
   async function handlePublish(id: number) {
-    if (!accessToken) return;
+    if (!accessToken || publishingId !== null) return;
+    setPublishingId(id);
+    setError(null);
     try {
       await eventsApi.publish(id, accessToken);
       const refreshed = await eventsApi.listMine(accessToken);
       setEvents(refreshed);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "خطا در انتشار رویداد");
+    } finally {
+      setPublishingId(null);
     }
   }
 
@@ -100,8 +105,12 @@ export default function MyEventsPage() {
                 </>
               )}
               {event.status === "draft" && (
-                <Button size="sm" onClick={() => handlePublish(event.id)}>
-                  انتشار
+                <Button
+                  size="sm"
+                  disabled={publishingId !== null}
+                  onClick={() => handlePublish(event.id)}
+                >
+                  {publishingId === event.id ? "در حال انتشار..." : "انتشار"}
                 </Button>
               )}
               <Link

@@ -108,7 +108,9 @@ export default async function EventDetailPage({ params }: Props) {
         <div className="flex items-center justify-between gap-3 rounded-md border p-3">
           <div className="flex flex-col">
             <span className="text-muted-foreground text-xs">برگزارکننده</span>
-            <span className="font-medium">{event.organizer_name}</span>
+            <Link href={`/organizers/${event.organizer_id}`} className="font-medium hover:underline">
+              {event.organizer_name}
+            </Link>
           </div>
           <FollowOrganizerButton organizerId={event.organizer_id} />
         </div>

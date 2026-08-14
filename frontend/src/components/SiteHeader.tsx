@@ -63,6 +63,7 @@ export function SiteHeader() {
           </span>
         </Link>
         <form
+          id="tour-search"
           onSubmit={handleSearchSubmit}
           className="order-3 flex w-full items-center gap-1.5 sm:order-none sm:w-auto sm:max-w-xs sm:flex-1"
         >
@@ -101,12 +102,14 @@ export function SiteHeader() {
           </Link>
           <Link
             href="/favorites"
+            id="tour-favorites"
             className={buttonVariants({ variant: "ghost", size: "sm", className: "text-base" })}
           >
             علاقه‌مندی‌ها
           </Link>
           <Link
             href="/follows"
+            id="tour-follows"
             className={buttonVariants({ variant: "ghost", size: "sm", className: "text-base" })}
           >
             دنبال‌کردن‌ها
@@ -122,6 +125,7 @@ export function SiteHeader() {
             <>
               <Link
                 href="/profile"
+                id="tour-profile"
                 className={buttonVariants({
                   variant: "ghost",
                   size: "sm",
