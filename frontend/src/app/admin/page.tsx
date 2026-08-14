@@ -240,14 +240,18 @@ export default function AdminPage() {
                       <div className="flex flex-nowrap gap-1.5">
                         <Link
                           href={`/organizer/events/${event.id}/edit`}
-                          className={buttonVariants({ variant: "outline", size: "sm", className: "whitespace-nowrap" })}
+                          className={buttonVariants({
+                            variant: "outline",
+                            size: "sm",
+                            className: "whitespace-nowrap text-black",
+                          })}
                         >
                           ویرایش
                         </Link>
                         <Button
                           size="sm"
                           variant="outline"
-                          className="w-[132px] shrink-0 whitespace-nowrap"
+                          className="w-[132px] shrink-0 whitespace-nowrap text-black"
                           disabled={busyId === event.id}
                           onClick={() => handleToggleFeatured(event)}
                         >
