@@ -4,7 +4,12 @@
 import type { EventListItem } from "@/lib/events-api";
 import type { InstructorOut } from "@/lib/instructors-api";
 
-export type OrganizerSummary = { id: number; name: string; follower_count: number };
+export type OrganizerSummary = {
+  id: number;
+  name: string;
+  avatar_url: string | null;
+  follower_count: number;
+};
 
 export type HomeSections = {
   popular_events: EventListItem[];

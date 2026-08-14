@@ -73,11 +73,29 @@ export default async function Home() {
       {sections.popular_organizers.length > 0 && (
         <section className="flex w-full max-w-4xl flex-col gap-4 px-4">
           <h2 className="text-lg font-semibold">برگزارکننده‌های محبوب</h2>
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="flex flex-wrap justify-center gap-6">
             {sections.popular_organizers.map((organizer) => (
-              <Badge key={organizer.id} variant="outline" className="px-3 py-1.5 text-sm">
-                {organizer.name}
-              </Badge>
+              <Link
+                key={organizer.id}
+                href={`/organizers/${organizer.id}`}
+                className="flex w-24 flex-col items-center gap-2 text-center"
+              >
+                <div className="bg-muted flex h-20 w-20 items-center justify-center overflow-hidden rounded-full transition-opacity hover:opacity-80">
+                  {organizer.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={organizer.avatar_url}
+                      alt={organizer.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-muted-foreground text-xl">
+                      {organizer.name.charAt(0)}
+                    </span>
+                  )}
+                </div>
+                <span className="line-clamp-2 text-sm font-medium">{organizer.name}</span>
+              </Link>
             ))}
           </div>
         </section>

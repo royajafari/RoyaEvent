@@ -7,6 +7,7 @@ from app.schemas.instructor import InstructorOut
 class OrganizerSummaryOut(BaseModel):
     id: int
     name: str
+    avatar_url: str | None = None
     follower_count: int
 
 

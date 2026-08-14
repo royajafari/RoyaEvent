@@ -91,13 +91,19 @@ def test_home_sections_excludes_draft_event(client, leaf_category, auth_headers)
 
 
 def test_home_sections_includes_popular_organizer(
-    client, leaf_category, auth_headers, organizer, buyer_auth_headers
+    client, leaf_category, auth_headers, organizer, buyer_auth_headers, db_session
 ):
+    organizer.avatar_url = "http://minio.local/avatars/1/pic.jpg"
+    db_session.commit()
+
     client.post(f"/api/v1/follows/organizers/{organizer.id}", headers=buyer_auth_headers)
 
     resp = client.get("/api/v1/home/sections")
     organizers = resp.json()["popular_organizers"]
-    assert any(o["id"] == organizer.id and o["follower_count"] == 1 for o in organizers)
+    assert any(
+        o["id"] == organizer.id and o["follower_count"] == 1 and o["avatar_url"] == organizer.avatar_url
+        for o in organizers
+    )
 
 
 def test_home_sections_is_cached(client, leaf_category, auth_headers):

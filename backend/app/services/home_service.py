@@ -98,7 +98,9 @@ def _popular_organizers(db: Session) -> list[OrganizerSummaryOut]:
         .all()
     )
     return [
-        OrganizerSummaryOut(id=user.id, name=user.full_name or "", follower_count=count)
+        OrganizerSummaryOut(
+            id=user.id, name=user.full_name or "", avatar_url=user.avatar_url, follower_count=count
+        )
         for user, count in rows
     ]
 
