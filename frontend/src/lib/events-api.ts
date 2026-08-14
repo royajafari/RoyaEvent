@@ -127,6 +127,13 @@ export const eventsApi = {
   publish: (id: number, accessToken: string) =>
     request<EventDetail>(`/events/${id}/publish`, { method: "POST", accessToken }),
 
+  replaceSessions: (id: number, sessions: EventSessionInput[], accessToken: string) =>
+    request<EventDetail>(`/events/${id}/sessions`, {
+      method: "PUT",
+      body: JSON.stringify(sessions),
+      accessToken,
+    }),
+
   cancel: (id: number, accessToken: string) =>
     request<EventDetail>(`/events/${id}`, { method: "DELETE", accessToken }),
 

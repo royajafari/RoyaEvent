@@ -196,6 +196,12 @@ export default function AdminPage() {
                   برگزارکننده: {event.organizer_name ?? "بدون نام"} — کد: {event.event_code}
                 </span>
                 <div className="mr-auto flex gap-2">
+                  <Link
+                    href={`/organizer/events/${event.id}/edit`}
+                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                  >
+                    ویرایش
+                  </Link>
                   <Button
                     size="sm"
                     variant="outline"

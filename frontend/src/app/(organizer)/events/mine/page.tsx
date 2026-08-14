@@ -120,6 +120,12 @@ export default function MyEventsPage() {
                 بلیط‌ها
               </Link>
               <Link
+                href={`/organizer/events/${event.id}/edit`}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                ویرایش
+              </Link>
+              <Link
                 href={`/organizer/events/${event.id}/media`}
                 className={buttonVariants({ variant: "outline", size: "sm" })}
               >
