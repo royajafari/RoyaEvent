@@ -41,6 +41,7 @@ export default function AdminPage() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryParentId, setNewCategoryParentId] = useState<string | null>(null);
   const [eventSearchQuery, setEventSearchQuery] = useState("");
+  const [eventPage, setEventPage] = useState(1);
 
   function loadAll(token: string) {
     Promise.all([
@@ -173,6 +174,14 @@ export default function AdminPage() {
       )
     : events;
 
+  const EVENTS_PAGE_SIZE = 10;
+  const totalEventPages = Math.max(1, Math.ceil(filteredEvents.length / EVENTS_PAGE_SIZE));
+  const currentEventPage = Math.min(eventPage, totalEventPages);
+  const pagedEvents = filteredEvents.slice(
+    (currentEventPage - 1) * EVENTS_PAGE_SIZE,
+    currentEventPage * EVENTS_PAGE_SIZE,
+  );
+
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-10">
       <h1 className="text-2xl font-bold">پنل ادمین</h1>
@@ -195,7 +204,10 @@ export default function AdminPage() {
             type="search"
             placeholder="جستجو بر اساس عنوان، کد رویداد یا برگزارکننده..."
             value={eventSearchQuery}
-            onChange={(e) => setEventSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setEventSearchQuery(e.target.value);
+              setEventPage(1);
+            }}
             className="max-w-sm"
           />
           {trimmedEventSearch && filteredEvents.length === 0 && (
@@ -215,9 +227,11 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredEvents.map((event, index) => (
+                {pagedEvents.map((event, index) => (
                   <tr key={event.id} className="border-t border-zinc-400">
-                    <td className="px-3 py-2 text-zinc-700">{index + 1}</td>
+                    <td className="px-3 py-2 text-zinc-700">
+                      {(currentEventPage - 1) * EVENTS_PAGE_SIZE + index + 1}
+                    </td>
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-1.5">
                         <span className="text-zinc-900">{event.title}</span>
@@ -243,7 +257,7 @@ export default function AdminPage() {
                           className={buttonVariants({
                             variant: "outline",
                             size: "sm",
-                            className: "whitespace-nowrap text-black",
+                            className: "whitespace-nowrap bg-zinc-800 text-white hover:bg-zinc-700",
                           })}
                         >
                           ویرایش
@@ -251,7 +265,7 @@ export default function AdminPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="w-[132px] shrink-0 whitespace-nowrap text-black"
+                          className="w-[132px] shrink-0 whitespace-nowrap bg-zinc-800 text-white hover:bg-zinc-700"
                           disabled={busyId === event.id}
                           onClick={() => handleToggleFeatured(event)}
                         >
@@ -273,6 +287,29 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
+          {totalEventPages > 1 && (
+            <div className="flex items-center justify-center gap-3">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={currentEventPage <= 1}
+                onClick={() => setEventPage(currentEventPage - 1)}
+              >
+                قبلی
+              </Button>
+              <span className="text-muted-foreground text-xs">
+                صفحه {currentEventPage} از {totalEventPages}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={currentEventPage >= totalEventPages}
+                onClick={() => setEventPage(currentEventPage + 1)}
+              >
+                بعدی
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
