@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { CircleHelp, Search } from "lucide-react";
 
 import { RoyaEventLogo } from "@/components/RoyaEventLogo";
@@ -14,6 +14,7 @@ import { useAuthStore } from "@/store/auth-store";
 
 export function SiteHeader() {
   const router = useRouter();
+  const pathname = usePathname();
   const accessToken = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
@@ -29,6 +30,15 @@ export function SiteHeader() {
     e.preventDefault();
     const q = searchQuery.trim();
     if (q) router.push(`/search?q=${encodeURIComponent(q)}`);
+  }
+
+  function handleSearchChange(value: string) {
+    setSearchQuery(value);
+    // وقتی از خود صفحه‌ی نتایج، کاربر متن جستجو رو کامل پاک می‌کنه، انتظار
+    // داره به‌جای موندن رو یه صفحه‌ی نتیجه‌ی خالی، لیست کامل رویدادها رو ببینه
+    if (value === "" && pathname === "/search") {
+      router.push("/events");
+    }
   }
 
   async function handleLogout() {
@@ -60,7 +70,7 @@ export function SiteHeader() {
             type="search"
             placeholder="جستجوی رویداد، مدرس، برگزارکننده..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="h-8"
           />
           <Button type="submit" size="icon" variant="outline" aria-label="جستجو" className="shrink-0">
