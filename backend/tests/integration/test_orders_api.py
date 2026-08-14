@@ -116,6 +116,8 @@ def test_my_tickets_lists_completed_registration(
     tickets = resp.json()
     assert len(tickets) == 1
     assert tickets[0]["event_title"] == published_event.title
+    assert tickets[0]["event_format"] == published_event.format.value
+    assert tickets[0]["session_online_join_url"] == published_event.sessions[0].online_join_url
 
 
 def test_cancel_registration_flow(client, published_event, free_ticket_type, buyer_auth_headers):

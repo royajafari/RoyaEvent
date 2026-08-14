@@ -38,6 +38,9 @@ class MyTicketOut(BaseModel):
     registration: RegistrationOut
     event_title: str
     event_slug: str
+    event_format: str
     session_starts_at: datetime
+    session_online_join_url: str | None
+    session_venue_address: str | None
 
     model_config = {"from_attributes": True}

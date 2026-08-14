@@ -71,7 +71,10 @@ def list_my_tickets(current_user: User = Depends(get_current_user), db: Session 
                 registration=RegistrationOut.model_validate(reg),
                 event_title=event.title,
                 event_slug=event.slug,
+                event_format=event.format.value,
                 session_starts_at=session.starts_at,
+                session_online_join_url=session.online_join_url,
+                session_venue_address=session.venue_address or event.venue_address,
             )
         )
     return result
