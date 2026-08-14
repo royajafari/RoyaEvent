@@ -256,3 +256,31 @@ def test_cancel_registration_twice_raises(db_session, published_event, buyer, fr
 
 def test_utcnow_naive_for_order_timestamps():
     assert utcnow().tzinfo is None
+
+
+def test_complete_order_free_enqueues_registration_complete_notification(
+    db_session, published_event, buyer, free_ticket_type
+):
+    from app.models.notification import NotificationOutbox, NotificationTemplateKey
+
+    session = published_event.sessions[0]
+    order = create_order(db_session, buyer.id, _order_in(free_ticket_type, session))
+    complete_order(db_session, order)
+
+    rows = db_session.query(NotificationOutbox).filter_by(user_id=buyer.id).all()
+    assert len(rows) == 1
+    assert rows[0].template_key == NotificationTemplateKey.REGISTRATION_COMPLETE
+
+
+def test_complete_order_paid_enqueues_purchase_complete_notification(
+    db_session, published_event, buyer, paid_ticket_type
+):
+    from app.models.notification import NotificationOutbox, NotificationTemplateKey
+
+    session = published_event.sessions[0]
+    order = create_order(db_session, buyer.id, _order_in(paid_ticket_type, session))
+    complete_order(db_session, order)
+
+    rows = db_session.query(NotificationOutbox).filter_by(user_id=buyer.id).all()
+    assert len(rows) == 1
+    assert rows[0].template_key == NotificationTemplateKey.TICKET_PURCHASE_COMPLETE

@@ -117,6 +117,7 @@ class EventDetailOut(BaseModel):
     id: int
     organizer_id: int
     organizer_name: str | None = None
+    organizer_avatar_url: str | None = None
     title: str
     slug: str
     event_code: str

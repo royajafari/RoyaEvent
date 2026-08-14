@@ -43,16 +43,21 @@ def test_admin_list_events_includes_draft(client, leaf_category, auth_headers, a
     assert next(e for e in resp.json() if e["id"] == event_id)["status"] == "draft"
 
 
-def test_admin_delete_event_removes_it_and_logs_action(
+def test_admin_delete_event_soft_deletes_and_logs_action(
     client, published_event, admin_auth_headers, db_session
 ):
+    """تصمیم کاربر: «حذف کامل» ادمین یه soft delete است، نه حذف واقعی ردیف —
+    برای این‌که هم دیتا برای بازیابی/بررسی بمونه هم لاگ اقدام بی‌معنی نشه."""
     from app.models.admin_audit_log import AdminAuditLog
     from app.models.event import Event
 
     resp = client.delete(f"/api/v1/admin/events/{published_event.id}", headers=admin_auth_headers)
     assert resp.status_code == 200
 
-    assert db_session.get(Event, published_event.id) is None
+    db_session.refresh(published_event)
+    assert db_session.get(Event, published_event.id) is not None
+    assert published_event.deleted_at is not None
+
     log_entry = (
         db_session.query(AdminAuditLog)
         .filter_by(action="delete_event", target_id=published_event.id)
@@ -61,10 +66,26 @@ def test_admin_delete_event_removes_it_and_logs_action(
     assert log_entry is not None
 
 
-def test_admin_delete_event_with_orders_cascades(
+def test_admin_delete_event_hides_it_from_public_and_admin_listings(
+    client, published_event, admin_auth_headers
+):
+    resp = client.delete(f"/api/v1/admin/events/{published_event.id}", headers=admin_auth_headers)
+    assert resp.status_code == 200
+
+    public_resp = client.get(f"/api/v1/events/{published_event.slug}")
+    assert public_resp.status_code == 404
+
+    admin_list_resp = client.get("/api/v1/admin/events", headers=admin_auth_headers)
+    ids = [e["id"] for e in admin_list_resp.json()]
+    assert published_event.id not in ids
+
+
+def test_admin_delete_event_with_orders_keeps_orders_intact(
     client, published_event, free_ticket_type, buyer_auth_headers, admin_auth_headers, db_session
 ):
-    from app.models.event import Event
+    """برخلاف رفتار قبلی (حذف واقعی + cascade)، الان سفارش/ثبت‌نام مرتبط
+    نباید دست بخورن — چون خود رویداد هم واقعاً حذف نمی‌شه."""
+    from app.models.order import Registration
 
     order_resp = client.post(
         "/api/v1/orders",
@@ -76,7 +97,9 @@ def test_admin_delete_event_with_orders_cascades(
 
     resp = client.delete(f"/api/v1/admin/events/{published_event.id}", headers=admin_auth_headers)
     assert resp.status_code == 200
-    assert db_session.get(Event, published_event.id) is None
+
+    registrations = db_session.query(Registration).filter_by(event_id=published_event.id).all()
+    assert len(registrations) == 1
 
 
 def test_admin_toggle_event_featured(client, published_event, admin_auth_headers):

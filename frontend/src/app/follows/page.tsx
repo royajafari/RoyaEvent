@@ -57,7 +57,21 @@ export default function FollowsPage() {
             {follows.instructors.map((instructor) => (
               <Link key={instructor.id} href={`/instructors/${instructor.id}`}>
                 <Card className="text-right transition-shadow hover:shadow-md">
-                  <CardHeader>
+                  <CardHeader className="flex-row items-center gap-3 space-y-0">
+                    <div className="bg-muted flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full">
+                      {instructor.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={instructor.avatar_url}
+                          alt={instructor.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-muted-foreground text-sm">
+                          {instructor.name.charAt(0)}
+                        </span>
+                      )}
+                    </div>
                     <CardTitle className="text-base">{instructor.name}</CardTitle>
                   </CardHeader>
                 </Card>
@@ -74,7 +88,21 @@ export default function FollowsPage() {
             {follows.organizers.map((organizer) => (
               <Link key={organizer.id} href={`/organizers/${organizer.id}`}>
                 <Card className="text-right transition-shadow hover:shadow-md">
-                  <CardHeader>
+                  <CardHeader className="flex-row items-center gap-3 space-y-0">
+                    <div className="bg-muted flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full">
+                      {organizer.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={organizer.avatar_url}
+                          alt={organizer.name ?? "بدون نام"}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-muted-foreground text-sm">
+                          {(organizer.name ?? "؟").charAt(0)}
+                        </span>
+                      )}
+                    </div>
                     <CardTitle className="text-base">{organizer.name ?? "بدون نام"}</CardTitle>
                   </CardHeader>
                 </Card>

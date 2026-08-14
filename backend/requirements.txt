@@ -16,6 +16,13 @@ httpx==0.28.1
 python-multipart==0.0.20
 Pillow==12.3.0
 
+# اعلان‌ها (فاز ۶) — تبدیل UTC به تقویم/ساعت جلالی تهران برای متن پیامک/ایمیل
+# (نمایش شمسی در فرانت با Intl بومی مرورگر انجام می‌شه، ولی اینجا سرور خودش
+# باید تبدیل کنه، مرورگری در کار نیست). tzdata لازمه چون ویندوز و ایمیج‌های
+# داکر slim دیتابیس IANA سیستمی رو با خودشون ندارن، zoneinfo بدونش fail می‌ده.
+jdatetime==6.1.0
+tzdata==2026.3
+
 # جستجوی محتوایی (فاز ۴) — sentence-transformers خودش torch رو transitive
 # می‌کشه؛ حتماً قبل از نصب این دو خط، torch نسخه‌ی CPU-only رو جدا نصب کن
 # (pip install torch --index-url https://download.pytorch.org/whl/cpu) تا

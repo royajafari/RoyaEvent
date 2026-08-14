@@ -106,11 +106,27 @@ export default async function EventDetailPage({ params }: Props) {
 
       {event.organizer_name && (
         <div className="flex items-center justify-between gap-3 rounded-md border p-3">
-          <div className="flex flex-col">
-            <span className="text-muted-foreground text-xs">برگزارکننده</span>
-            <Link href={`/organizers/${event.organizer_id}`} className="font-medium hover:underline">
-              {event.organizer_name}
-            </Link>
+          <div className="flex items-center gap-3">
+            <div className="bg-muted flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full">
+              {event.organizer_avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={event.organizer_avatar_url}
+                  alt={event.organizer_name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-muted-foreground text-sm">
+                  {event.organizer_name.charAt(0)}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-muted-foreground text-xs">برگزارکننده</span>
+              <Link href={`/organizers/${event.organizer_id}`} className="font-medium hover:underline">
+                {event.organizer_name}
+              </Link>
+            </div>
           </div>
           <FollowOrganizerButton organizerId={event.organizer_id} />
         </div>
@@ -125,9 +141,25 @@ export default async function EventDetailPage({ params }: Props) {
                 key={instructor.id}
                 className="flex items-center justify-between gap-3 rounded-md border p-3"
               >
-                <Link href={`/instructors/${instructor.id}`} className="font-medium hover:underline">
-                  {instructor.name}
-                </Link>
+                <div className="flex items-center gap-3">
+                  <div className="bg-muted flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full">
+                    {instructor.avatar_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={instructor.avatar_url}
+                        alt={instructor.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground text-sm">
+                        {instructor.name.charAt(0)}
+                      </span>
+                    )}
+                  </div>
+                  <Link href={`/instructors/${instructor.id}`} className="font-medium hover:underline">
+                    {instructor.name}
+                  </Link>
+                </div>
                 <FollowInstructorButton instructorId={instructor.id} />
               </div>
             ))}

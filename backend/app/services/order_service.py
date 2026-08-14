@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from sqlalchemy.orm import Session
 
 from app.core.slug import generate_alnum_code
@@ -7,9 +9,13 @@ from app.models.base import utcnow
 from app.models.event import Event, EventSession, EventStatus
 from app.models.order import Order, OrderItem, OrderStatus, PaymentStatus, Registration, RegistrationStatus
 from app.models.ticket import DiscountCode, PlatformDiscountCode, PricingModel, TicketType
+from app.models.user import User
 from app.schemas.order import OrderCreateIn
+from app.services import notification_service
 from app.services.discount_service import compute_discount_amount, find_valid_discount
 from app.services.ticket_service import is_early_bird_active
+
+logger = logging.getLogger(__name__)
 
 
 class OrderServiceError(ValueError):
@@ -130,6 +136,17 @@ def complete_order(db: Session, order: Order) -> Order:
     db.add(registration)
     db.commit()
     db.refresh(order)
+
+    try:
+        event = db.get(Event, order.event_id)
+        session = db.get(EventSession, order_item.session_id)
+        user = db.get(User, order.user_id)
+        notification_service.notify_registration_complete(
+            db, user=user, event=event, session=session, ticket_type=ticket_type, registration=registration
+        )
+    except Exception:
+        logger.warning("enqueue registration notification failed for order %s", order.id, exc_info=True)
+
     return order
 
 

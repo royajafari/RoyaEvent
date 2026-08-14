@@ -18,14 +18,14 @@
 | ۳ | بلیط/سفارش/تخفیف/علاقه‌مندی/دنبال‌کردن | ✅ [`specs/spec3.md`](specs/spec3.md) |
 | ۴ | جستجو (ChromaDB) + صفحه‌ی اصلی | ✅ [`specs/spec4.md`](specs/spec4.md) |
 | ۵ | پنل ادمین | ✅ [`specs/spec5.md`](specs/spec5.md) |
-| ۶ | اعلان‌ها + زمان‌بند + لینک تقویم | ⏳ شروع نشده |
+| ۶ | اعلان‌ها + زمان‌بند + لینک تقویم | ✅ [`specs/spec6.md`](specs/spec6.md) |
 | ۷ | امتیاز/نظر ۴محوره + علاقه‌مندی تکمیلی | ⏳ شروع نشده |
 | ۸ | آنالیتیکس/KPI | ⏳ شروع نشده |
 | ۹ | استک مانیتورینگ | ⏳ شروع نشده |
 | ۱۰ | تقویت تست + مقاومت آفلاین/RTL | ⏳ شروع نشده |
 | ۱۱ | آماده‌سازی دیپلوی VPS (TLS/HTTPS اجباری — نگاه کن به بخش تصمیمات) | ⏳ باقی فاز نشده؛ بخش TLS/Nginx/Docker زودتر و مستقل انجام شد، نگاه کن به `docs/deployment_tls.md` و `specs/spec3.md` |
 
-بک‌اند در مجموع الان **۲۳۲ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
+بک‌اند در مجموع الان **۲۵۵ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
 
 ## استک فنی (تصمیم قطعی، تغییر نده مگر کاربر بخواد)
 
@@ -55,11 +55,11 @@ RoyaEvent/
     api/deps.py        # get_db, get_current_user, get_current_user_optional, get_current_admin_user, get_redis, get_sms/email_provider, get_client_ip
     core/               # config, security (JWT+OTP hash), rate_limit (OTP), rate_limit_middleware (عمومی/slowapi)
                         # redis_client, storage (MinIO), slug, validators, calendar (لینک گوگل‌کلندر)
-                        # permissions (require_event_owner, require_complete_profile)
+                        # permissions (require_event_owner, require_complete_profile)، persian_date (UTC→جلالی تهران، برای متن پیامک/ایمیل)
     db/                 # session.py (engine/Base/get_db)، migrations/ (Alembic)، seed_categories.py
     models/             # User, OTPChallenge, RefreshToken, Category, Tag, Instructor, Event, EventSession,
                         # TicketType, DiscountCode, PlatformDiscountCode, Order, OrderItem, Payment, Registration,
-                        # Favorite, OrganizerFollow, InstructorFollow, AdminAuditLog
+                        # Favorite, OrganizerFollow, InstructorFollow, AdminAuditLog, NotificationOutbox
     providers/sms|email/ # base + console(dev) + ippanel/kavenegar/brevo/resend
     schemas/            # auth.py, event.py, ticket.py, order.py, social.py, organizer.py (AttendeeOut + OrganizerProfileOut)،
                         # instructor.py, search.py, home.py, admin.py (Pydantic)
@@ -67,8 +67,10 @@ RoyaEvent/
                         # image_service, video_service, ticket_service, discount_service, order_service,
                         # social_service, instructor_service, organizer_service (پروفایل عمومی)،
                         # search_service (جستجوی دوگانه: افراد+رویداد)، home_service (بخش‌های صفحه‌ی اصلی، Redis-cached)،
-                        # admin_service (حذف کامل رویداد، تعلیق کاربر، CRUD دسته‌بندی، لاگ اقدامات)
+                        # admin_service (soft-delete رویداد، تعلیق کاربر، CRUD دسته‌بندی، لاگ اقدامات)،
+                        # notification_service (enqueue صف اعلان)، notification_templates (رندر Jinja2 هر قالب×کانال)
     search/             # chroma_client.py, embeddings.py, indexer.py (sync_event_index)، reindex.py (بک‌فیل دستی)
+    workers/            # scheduler.py — پردازه‌ی جدا (python -m app.workers.scheduler)، دیسپچر صف اعلان + اسکنر یادآوری ۱ساعته
   backend/tests/unit|integration/   # pytest، fakeredis، بدون نیاز به Redis واقعی (+ test_search_api.py: embedding/Chroma قلابی)
   frontend/src/
     app/
@@ -161,7 +163,9 @@ RoyaEvent/
 - **پروفایل عمومی برگزارکننده/مدرس:** `GET /organizers/{id}` و `GET /instructors/{id}` — هر جا اسم برگزارکننده یا مدرس نمایش داده می‌شه (کارت رویداد، صفحه‌ی جزئیات، `/follows`)، باید لینک به این صفحات باشه، نه متن ساده.
 - **ثبت‌نام فوری:** `is_instant_registration` روی `Event`، مستقل از `pricing_model` بلیط. فقط برای نشون‌دادن UI متفاوت (modal به‌جای رفتن به صفحه‌ی جزئیات) استفاده می‌شه، منطق سفارش/بلیط پشت صحنه دقیقاً همون `POST /orders` + `POST /orders/{id}/complete` قبلیه.
 - **پنل ادمین:** همه‌چیز زیر `/admin`، گارد `get_current_admin_user`. هر endpoint نوشتنی جدید زیر `/admin` باید `admin_service.log_action(...)` رو صدا بزنه، وگرنه لاگ اقدامات ناقصه. **تعلیق کاربر (`UserStatus.SUSPENDED`) باید تو سه جای auth flow چک بشه**، نه فقط یکی: `verify_otp` (رد لاگین جدید با پیام روشن)، `AuthService.get_user_from_access_token` (باطل‌کردن access tokenهای از قبل صادرشده)، و `AuthService.refresh` (جلوگیری از گرفتن access token تازه با refresh token چرخشی قدیمی) — این سه جدان چون مسیرهای متفاوتی برای رسیدن کاربر تعلیق‌شده به سرورن.
-- **حذف کامل رویداد (ادمین):** برخلاف `cancel_event` (لغو نرم، خودِ organizer هم می‌تونه)، `admin_service.delete_event_completely` واقعاً ردیف رو از DB پاک می‌کنه — برگشت‌ناپذیره. چون `orders/registrations/ticket_types/discount_codes/favorites` بدون `ON DELETE CASCADE` سطح DB به `events` وصل‌ان، قبل از حذف خود event باید صریح و به ترتیب حذف بشن (نمونه‌ی کامل در `admin_service.py`)، وگرنه یا خطای FK می‌گیری یا رکورد یتیم می‌مونه.
+- **حذف کامل رویداد (ادمین):** برخلاف تصمیم اولیه‌ی فاز ۵ (حذف واقعی و برگشت‌ناپذیر)، از فاز ۶ به بعد **soft delete** است — تصمیم صریح کاربر تا هم دیتا برای بازیابی/بررسی بمونه هم `admin_audit_log` بی‌معنی نشه. `admin_service.soft_delete_event` فقط `event.deleted_at = utcnow()` می‌زنه (+ حذف از ایندکس جستجو)، هیچ ردیفی واقعاً پاک نمی‌شه. `event_service.event_query()` (نقطه‌ی مشترک همه‌ی لیستینگ/جزئیات عمومی) و `admin_service.list_all_events` هر دو `Event.deleted_at.is_(None)` رو فیلتر می‌کنن، پس رویداد soft-delete شده خودکار از همه‌جای عمومی و از لیست خود پنل ادمین هم ناپدید می‌شه، بدون این‌که واقعاً از DB بره. هر FK جدیدی که به `events.id` اضافه می‌کنی (مثل `NotificationOutbox.event_id`) نیازی به دستکاری این منطق نداره چون دیگه هیچ حذف واقعی‌ای در کار نیست.
+- **صف اعلان‌ها (فاز ۶):** `NotificationOutbox` (channel=sms/email، template_key، payload_json، status، next_attempt_at) صف مشترک هر ۳ قالب (`REGISTRATION_COMPLETE`/`TICKET_PURCHASE_COMPLETE`/`EVENT_REMINDER_1H`) است. کد سرویس هرگز مستقیم provider رو صدا نمی‌زنه؛ فقط `notification_service.enqueue(...)` یه سطر می‌سازه. ارسال واقعی فقط تو `app/workers/scheduler.py` (پردازه‌ی جدا، `python -m app.workers.scheduler`، دو job: دیسپچر صف هر ۱۵ ثانیه + اسکنر یادآوری ۱ساعته هر ۶۰ ثانیه) اتفاق می‌افته. `complete_order` (سفارش رایگان یا پولی، فرقی نداره) قلاب `notify_registration_complete` رو صدا می‌زنه — چون این پروژه «ثبت‌نام» جدا از «خرید» نداره. برخلاف ایندکس جستجو (دام #۲۱)، این enqueue فقط یه INSERT محلیه نه I/O شبکه‌ای، پس try/except ساده (بدون thread/timeout) کافیه.
+- **تاریخ/ساعت جلالی سمت سرور:** برای متن پیامک/ایمیل (که مرورگری در کار نیست تا خودش timezone/calendar رو حدس بزنه، برخلاف `lib/date.ts` فرانت که از `Intl` مرورگر استفاده می‌کنه) از `app/core/persian_date.py: format_jalali_datetime(dt)` استفاده کن، نه یه تبدیل دستی جدید. وابسته به `jdatetime` + `tzdata` (این یکی روی ویندوز/Docker slim اجباریه، `zoneinfo` بدونش fail می‌ده).
 
 ## قراردادهای UI
 
@@ -184,6 +188,10 @@ cd backend
 pip install -r requirements.txt
 alembic upgrade head
 uvicorn app.main:app --reload   # http://localhost:8000/health
+
+# ورکر اعلان‌ها (فاز ۶) — پردازه‌ی کاملاً جدا، اختیاری برای توسعه‌ی محلی
+# (بدون این، سفارش‌ها/ثبت‌نام‌ها هنوز کامل می‌شن، فقط چیزی از notification_outbox خارج نمی‌شه)
+python -m app.workers.scheduler
 
 # فرانت‌اند
 cd frontend

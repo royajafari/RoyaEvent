@@ -104,6 +104,23 @@ def test_publish_then_public_slug_works(client, leaf_category, auth_headers):
     assert public_resp.json()["status"] == "published"
 
 
+def test_event_detail_includes_organizer_avatar_url(
+    client, leaf_category, auth_headers, organizer, db_session
+):
+    organizer.avatar_url = "http://minio.local/avatars/1/pic.jpg"
+    db_session.commit()
+
+    create_resp = client.post(
+        "/api/v1/events", json=_event_payload(leaf_category.id), headers=auth_headers
+    )
+    slug = create_resp.json()["slug"]
+    event_id = create_resp.json()["id"]
+    client.post(f"/api/v1/events/{event_id}/publish", headers=auth_headers)
+
+    resp = client.get(f"/api/v1/events/{slug}")
+    assert resp.json()["organizer_avatar_url"] == organizer.avatar_url
+
+
 def test_publish_twice_fails(client, leaf_category, auth_headers):
     create_resp = client.post(
         "/api/v1/events", json=_event_payload(leaf_category.id), headers=auth_headers

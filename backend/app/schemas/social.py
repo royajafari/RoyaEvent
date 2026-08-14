@@ -15,6 +15,7 @@ class FollowStatusOut(BaseModel):
 class FollowedOrganizerOut(BaseModel):
     id: int
     name: str | None
+    avatar_url: str | None
 
 
 class FollowedInstructorOut(BaseModel):

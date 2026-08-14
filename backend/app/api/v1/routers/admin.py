@@ -63,7 +63,7 @@ def delete_event(
     event = db.get(Event, event_id)
     if event is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "رویداد یافت نشد")
-    admin_service.delete_event_completely(db, event)
+    admin_service.soft_delete_event(db, event)
     admin_service.log_action(db, admin.id, "delete_event", "event", event_id, body.reason)
     return {"success": True}
 

@@ -45,7 +45,7 @@ class EventServiceError(ValueError):
 
 
 def event_query(db: Session):
-    return db.query(Event).options(
+    return db.query(Event).filter(Event.deleted_at.is_(None)).options(
         selectinload(Event.sessions),
         selectinload(Event.tags),
         selectinload(Event.instructors),

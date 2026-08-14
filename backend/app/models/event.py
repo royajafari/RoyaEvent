@@ -79,6 +79,12 @@ class Event(Base, TimestampMixin):
     view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(), nullable=True)
 
+    # حذف «کامل» ادمین (admin_service.soft_delete_event) واقعاً ردیف رو از
+    # DB پاک نمی‌کنه — فقط این ستون رو پر می‌کنه (soft delete) تا هم دیتا
+    # برای لاگ/بازیابی احتمالی بمونه، هم از همه‌ی جاهای عمومی (event_query)
+    # ناپدید بشه. تصمیم کاربر: به‌جای حذف واقعی سطر، فقط لاگ اقدام کافیه.
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(), nullable=True)
+
     category = relationship("Category")
     organizer = relationship("User")
     sessions: Mapped[list[EventSession]] = relationship(
@@ -92,6 +98,10 @@ class Event(Base, TimestampMixin):
         if self.organizer is None:
             return None
         return self.organizer.full_name or self.organizer.phone or self.organizer.email
+
+    @property
+    def organizer_avatar_url(self) -> str | None:
+        return self.organizer.avatar_url if self.organizer else None
 
 
 class EventSession(Base, TimestampMixin):

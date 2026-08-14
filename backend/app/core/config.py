@@ -56,6 +56,11 @@ class Settings(BaseSettings):
     brevo_sender_name: str = "رویا ایونت"
     resend_api_key: str = ""
 
+    # اعلان‌ها (فاز ۶) — پردازه‌ی جدا app/workers/scheduler.py
+    notification_dispatch_interval_seconds: int = 15
+    reminder_scan_interval_seconds: int = 60
+    notification_max_attempts: int = 5
+
     # Vector search
     chroma_persist_dir: str = "./chroma_data"
 

@@ -7,11 +7,9 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core.slug import slugify_ascii
 from app.models.admin_audit_log import AdminAuditLog
+from app.models.base import utcnow
 from app.models.category import Category
 from app.models.event import Event
-from app.models.favorite import Favorite
-from app.models.order import Order, OrderItem, Payment, Registration
-from app.models.ticket import DiscountCode, TicketType
 from app.models.user import User, UserStatus
 from app.search.indexer import remove_event
 
@@ -42,9 +40,11 @@ def log_action(
 
 def list_all_events(db: Session, status: str | None = None) -> list[Event]:
     """برخلاف event_service.event_query که فقط PUBLISHED+PUBLIC رو نشون
-    می‌ده، ادمین باید همه‌چیز رو ببینه — شامل DRAFT/CANCELLED/PRIVATE."""
+    می‌ده، ادمین باید همه‌چیز رو ببینه — شامل DRAFT/CANCELLED/PRIVATE (ولی نه
+    رویدادهای soft-delete شده؛ اون‌ها فقط از طریق لاگ اقدامات قابل ردیابی‌ان)."""
     query = (
         db.query(Event)
+        .filter(Event.deleted_at.is_(None))
         .options(selectinload(Event.organizer), selectinload(Event.category))
         .order_by(Event.created_at.desc())
     )
@@ -53,23 +53,15 @@ def list_all_events(db: Session, status: str | None = None) -> list[Event]:
     return query.all()
 
 
-def delete_event_completely(db: Session, event: Event) -> None:
-    """حذف کامل و برگشت‌ناپذیر — نه فقط لغو (که organizer خودش هم می‌تونه).
-    چون چند جدول (ثبت‌نام/سفارش/بلیط/تخفیف) بدون cascade در سطح DB به
-    events وصل‌ان، ترتیب حذف صریح رعایت می‌شه تا رکورد یتیم نمونه."""
-    order_ids = [row[0] for row in db.query(Order.id).filter(Order.event_id == event.id).all()]
-
-    db.query(Registration).filter(Registration.event_id == event.id).delete(synchronize_session=False)
-    if order_ids:
-        db.query(Payment).filter(Payment.order_id.in_(order_ids)).delete(synchronize_session=False)
-        db.query(OrderItem).filter(OrderItem.order_id.in_(order_ids)).delete(synchronize_session=False)
-        db.query(Order).filter(Order.id.in_(order_ids)).delete(synchronize_session=False)
-    db.query(Favorite).filter(Favorite.event_id == event.id).delete(synchronize_session=False)
-    db.query(TicketType).filter(TicketType.event_id == event.id).delete(synchronize_session=False)
-    db.query(DiscountCode).filter(DiscountCode.event_id == event.id).delete(synchronize_session=False)
-
+def soft_delete_event(db: Session, event: Event) -> None:
+    """تصمیم صریح کاربر: «حذف کامل» نباید واقعاً ردیف رو از DB پاک کنه —
+    فقط باید از همه‌جای عمومی (event_query) و لیست ادمین ناپدید بشه، در حالی
+    که خود رکورد و همه‌ی داده‌های مرتبطش (سفارش/ثبت‌نام/...) دست‌نخورده
+    می‌مونه، هم برای امکان بازیابی دستی هم چون admin_audit_log (که همین
+    الان هم برای این اکشن نوشته می‌شه) به target_id همین رویداد اشاره
+    می‌کنه — اگه رکورد واقعاً پاک بشه، اون لاگ بی‌معنی می‌شه."""
+    event.deleted_at = utcnow()
     remove_event(event.id)
-    db.delete(event)  # sessions (delete-orphan) و ردیف‌های event_tags/event_instructors خودکار پاک می‌شن
     db.commit()
 
 

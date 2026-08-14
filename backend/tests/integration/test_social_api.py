@@ -73,5 +73,19 @@ def test_my_follows_detail_includes_names(client, db_session, organizer, buyer_a
     resp = client.get("/api/v1/me/follows/details", headers=buyer_auth_headers)
     assert resp.status_code == 200
     body = resp.json()
-    assert body["organizers"] == [{"id": organizer.id, "name": organizer.full_name}]
+    assert body["organizers"] == [
+        {"id": organizer.id, "name": organizer.full_name, "avatar_url": None}
+    ]
     assert body["instructors"] == [{"id": instructor.id, "name": instructor.name, "avatar_url": None}]
+
+
+def test_my_follows_detail_includes_organizer_avatar(
+    client, db_session, organizer, buyer_auth_headers
+):
+    organizer.avatar_url = "http://minio.local/avatars/1/pic.jpg"
+    db_session.commit()
+
+    client.post(f"/api/v1/follows/organizers/{organizer.id}", headers=buyer_auth_headers)
+
+    resp = client.get("/api/v1/me/follows/details", headers=buyer_auth_headers)
+    assert resp.json()["organizers"][0]["avatar_url"] == organizer.avatar_url

@@ -42,6 +42,7 @@ export type EventDetail = {
   id: number;
   organizer_id: number;
   organizer_name: string | null;
+  organizer_avatar_url: string | null;
   title: string;
   slug: string;
   event_code: string;

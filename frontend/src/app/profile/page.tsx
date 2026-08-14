@@ -84,78 +84,80 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-6 px-4 py-10">
+    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10">
       <h1 className="text-2xl font-bold">پروفایل من</h1>
 
-      <Card className="text-right">
-        <CardHeader>
-          <CardTitle>عکس پروفایل</CardTitle>
-        </CardHeader>
-        <CardContent className="flex items-center gap-4">
-          <div className="bg-muted flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full">
-            {user?.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={user.avatar_url} alt="عکس پروفایل" className="h-full w-full object-cover" />
-            ) : (
-              <span className="text-muted-foreground text-2xl">
-                {(user?.full_name || user?.phone || "?").charAt(0)}
-              </span>
-            )}
-          </div>
-          <div className="flex flex-col gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              accept="image/png,image/jpeg,image/webp"
-              onChange={(e) => e.target.files?.[0] && handleAvatarUpload(e.target.files[0])}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-fit"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={avatarProgress !== null}
-            >
-              {avatarProgress !== null ? `در حال آپلود... ${avatarProgress}%` : "تغییر عکس پروفایل"}
-            </Button>
-            {avatarError && <p className="text-destructive text-sm">{avatarError}</p>}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="text-right">
-        <CardHeader>
-          <CardTitle>اطلاعات حساب</CardTitle>
-          <CardDescription>
-            {user?.phone ? `شماره موبایل: ${user.phone}` : user?.email ? `ایمیل: ${user.email}` : null}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSaveName} className="flex flex-col gap-3">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="full-name">نام و نام خانوادگی</Label>
-              <Input
-                id="full-name"
-                value={fullName}
-                onChange={(e) => {
-                  setFullName(e.target.value);
-                  setNameSaved(false);
-                }}
-                required
-              />
+      <div className="flex flex-col gap-6 md:flex-row md:items-start">
+        <Card className="text-right md:w-72 md:shrink-0">
+          <CardHeader>
+            <CardTitle>عکس پروفایل</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-4">
+            <div className="bg-muted flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full">
+              {user?.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={user.avatar_url} alt="عکس پروفایل" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-muted-foreground text-2xl">
+                  {(user?.full_name || user?.phone || "?").charAt(0)}
+                </span>
+              )}
             </div>
-            {nameError && <p className="text-destructive text-sm">{nameError}</p>}
-            {nameSaved && !nameError && (
-              <p className="text-sm text-green-600 dark:text-green-500">تغییرات شما ذخیره شد ✓</p>
-            )}
-            <Button type="submit" className="w-fit" disabled={savingName || !fullName.trim()}>
-              {savingName ? "در حال ذخیره..." : "ذخیره"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+            <div className="flex flex-col items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(e) => e.target.files?.[0] && handleAvatarUpload(e.target.files[0])}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-fit"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={avatarProgress !== null}
+              >
+                {avatarProgress !== null ? `در حال آپلود... ${avatarProgress}%` : "تغییر عکس پروفایل"}
+              </Button>
+              {avatarError && <p className="text-destructive text-sm">{avatarError}</p>}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="text-right flex-1">
+          <CardHeader>
+            <CardTitle>اطلاعات حساب</CardTitle>
+            <CardDescription>
+              {user?.phone ? `شماره موبایل: ${user.phone}` : user?.email ? `ایمیل: ${user.email}` : null}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSaveName} className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="full-name">نام و نام خانوادگی</Label>
+                <Input
+                  id="full-name"
+                  value={fullName}
+                  onChange={(e) => {
+                    setFullName(e.target.value);
+                    setNameSaved(false);
+                  }}
+                  required
+                />
+              </div>
+              {nameError && <p className="text-destructive text-sm">{nameError}</p>}
+              {nameSaved && !nameError && (
+                <p className="text-sm text-green-600 dark:text-green-500">تغییرات شما ذخیره شد ✓</p>
+              )}
+              <Button type="submit" className="w-fit" disabled={savingName || !fullName.trim()}>
+                {savingName ? "در حال ذخیره..." : "ذخیره"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

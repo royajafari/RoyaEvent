@@ -3,6 +3,12 @@ from app.models.category import Category
 from app.models.event import Event, EventSession, event_instructors, event_tags
 from app.models.favorite import Favorite, InstructorFollow, OrganizerFollow
 from app.models.instructor import Instructor
+from app.models.notification import (
+    NotificationChannel,
+    NotificationOutbox,
+    NotificationStatus,
+    NotificationTemplateKey,
+)
 from app.models.order import Order, OrderItem, Payment, Registration
 from app.models.otp_challenge import OTPChallenge
 from app.models.refresh_token import RefreshToken
@@ -19,6 +25,10 @@ __all__ = [
     "Favorite",
     "Instructor",
     "InstructorFollow",
+    "NotificationChannel",
+    "NotificationOutbox",
+    "NotificationStatus",
+    "NotificationTemplateKey",
     "OTPChallenge",
     "Order",
     "OrderItem",

@@ -86,7 +86,8 @@ def list_my_follows_detail(db: Session, follower_user_id: int) -> dict:
 
     return {
         "organizers": [
-            {"id": u.id, "name": u.full_name or u.phone or u.email} for u in organizers
+            {"id": u.id, "name": u.full_name or u.phone or u.email, "avatar_url": u.avatar_url}
+            for u in organizers
         ],
         "instructors": [
             {"id": i.id, "name": i.name, "avatar_url": i.avatar_url} for i in instructors

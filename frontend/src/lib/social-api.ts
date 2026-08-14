@@ -4,7 +4,7 @@ import type { EventListItem } from "@/lib/events-api";
 export type FollowStatus = { following: boolean; follower_count: number };
 export type MyFollows = { organizer_ids: number[]; instructor_ids: number[] };
 export type MyFollowsDetail = {
-  organizers: { id: number; name: string | null }[];
+  organizers: { id: number; name: string | null; avatar_url: string | null }[];
   instructors: { id: number; name: string; avatar_url: string | null }[];
 };
 
