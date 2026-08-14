@@ -121,6 +121,14 @@ export function SiteHeader() {
           >
             ایجاد رویداد
           </Link>
+          {user?.role === "admin" && (
+            <Link
+              href="/admin"
+              className={buttonVariants({ variant: "ghost", size: "sm", className: "text-base" })}
+            >
+              پنل ادمین
+            </Link>
+          )}
           {accessToken ? (
             <>
               <Link
