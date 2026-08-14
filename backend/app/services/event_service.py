@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import logging
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
+
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.slug import generate_event_code, slugify_ascii
@@ -10,6 +14,30 @@ from app.models.instructor import Instructor
 from app.models.tag import Tag
 from app.schemas.event import CategoryOut, EventCreateIn, EventListItemOut, EventSessionIn, EventUpdateIn
 from app.search.indexer import sync_event_index
+
+logger = logging.getLogger(__name__)
+
+# ایندکس جستجو یه بهبود جانبیه، نه بخشی از تراکنش اصلی. اجراش تو یه thread
+# جدا با timeout کوتاه انجام می‌شه چون فقط «try/except دور خطا» کافی نیست —
+# روی شبکه‌ی ناپایدار این محیط، دانلود مدل embedding (بار اول که هنوز کش
+# نشده) می‌تونه داده رو خیلی کند trickle کنه بدون قطعی کامل، پس هیچ‌وقت
+# استثنا/timeout سطح‌شبکه رو تریگر نمی‌کنه و درخواست publish/update رویداد
+# رو دقیقه‌ها معطل نگه می‌داره. با اجرا تو thread جدا، اگه ظرف چند ثانیه
+# تموم نشد، درخواست اصلی ادامه می‌ده (thread پس‌زمینه هرچقدر لازمه صبر
+# می‌کنه، بی‌ضرره چون فقط property های اسکالر از قبل لود‌شده‌ی event رو
+# می‌خونه، نه رابطه‌ای که نیاز به session زنده داشته باشه).
+_INDEX_EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="search-index")
+_INDEX_TIMEOUT_SECONDS = 3
+
+
+def _safe_sync_event_index(event: Event) -> None:
+    future = _INDEX_EXECUTOR.submit(sync_event_index, event)
+    try:
+        future.result(timeout=_INDEX_TIMEOUT_SECONDS)
+    except FutureTimeoutError:
+        logger.warning("sync_event_index timed out for event %s (continuing in background)", event.id)
+    except Exception:
+        logger.warning("sync_event_index failed for event %s", event.id, exc_info=True)
 
 
 class EventServiceError(ValueError):
@@ -181,7 +209,7 @@ def update_event(db: Session, event: Event, data: EventUpdateIn) -> Event:
     db.commit()
     db.refresh(event)
     if event.status == EventStatus.PUBLISHED:
-        sync_event_index(event)
+        _safe_sync_event_index(event)
     return event
 
 
@@ -206,7 +234,7 @@ def publish_event(db: Session, event: Event) -> Event:
     event.published_at = utcnow()
     db.commit()
     db.refresh(event)
-    sync_event_index(event)
+    _safe_sync_event_index(event)
     return event
 
 
@@ -214,7 +242,7 @@ def cancel_event(db: Session, event: Event) -> Event:
     event.status = EventStatus.CANCELLED
     db.commit()
     db.refresh(event)
-    sync_event_index(event)
+    _safe_sync_event_index(event)
     return event
 
 
