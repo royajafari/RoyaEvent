@@ -201,9 +201,9 @@ export default function AdminPage() {
           {trimmedEventSearch && filteredEvents.length === 0 && (
             <p className="text-muted-foreground text-sm">موردی یافت نشد.</p>
           )}
-          <div className="bg-card overflow-x-auto rounded-lg ring-1 ring-foreground/10">
+          <div className="overflow-x-auto rounded-lg bg-[#EDE0D1] ring-1 ring-foreground/10">
             <table className="w-full text-right text-sm">
-              <thead className="bg-muted/50 text-muted-foreground text-xs">
+              <thead className="bg-[#E4D2B8] text-xs text-stone-600">
                 <tr>
                   <th className="px-3 py-2 font-normal">ردیف</th>
                   <th className="px-3 py-2 font-normal">عنوان</th>
@@ -216,11 +216,11 @@ export default function AdminPage() {
               </thead>
               <tbody>
                 {filteredEvents.map((event, index) => (
-                  <tr key={event.id} className="border-border border-t">
-                    <td className="text-muted-foreground px-3 py-2">{index + 1}</td>
+                  <tr key={event.id} className="border-t border-stone-300">
+                    <td className="px-3 py-2 text-stone-600">{index + 1}</td>
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-1.5">
-                        <span>{event.title}</span>
+                        <span className="text-stone-900">{event.title}</span>
                         {event.is_featured && <Badge className="text-[10px]">ویژه</Badge>}
                       </div>
                     </td>
@@ -229,11 +229,11 @@ export default function AdminPage() {
                         {EVENT_STATUS_LABELS[event.status]}
                       </Badge>
                     </td>
-                    <td className="text-muted-foreground px-3 py-2">
+                    <td className="px-3 py-2 text-stone-600">
                       {event.organizer_name ?? "بدون نام"}
                     </td>
-                    <td className="text-muted-foreground px-3 py-2">{event.event_code}</td>
-                    <td className="text-muted-foreground px-3 py-2 whitespace-nowrap">
+                    <td className="px-3 py-2 text-stone-600">{event.event_code}</td>
+                    <td className="px-3 py-2 text-stone-600 whitespace-nowrap">
                       {formatJalaliDateTime(event.created_at)}
                     </td>
                     <td className="px-3 py-2">
