@@ -7,6 +7,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
+from app.api.v1.routers.admin import router as admin_router
 from app.api.v1.routers.auth import router as auth_router
 from app.api.v1.routers.events import router as events_router
 from app.api.v1.routers.home import router as home_router
@@ -62,6 +63,7 @@ app.include_router(organizers_router, prefix=settings.api_v1_prefix)
 app.include_router(instructors_router, prefix=settings.api_v1_prefix)
 app.include_router(search_router, prefix=settings.api_v1_prefix)
 app.include_router(home_router, prefix=settings.api_v1_prefix)
+app.include_router(admin_router, prefix=settings.api_v1_prefix)
 
 
 @app.get("/health")

@@ -19,7 +19,7 @@ from app.core.security import (
 from app.models.base import utcnow
 from app.models.otp_challenge import OTPChannel
 from app.models.refresh_token import RefreshToken
-from app.models.user import User
+from app.models.user import User, UserStatus
 
 
 class AuthError(Exception):
@@ -95,6 +95,8 @@ class AuthService:
             raise AuthError("نشست منقضی شده است؛ دوباره وارد شوید")
 
         user = self.db.get(User, row.user_id)
+        if user is None or user.status == UserStatus.SUSPENDED:
+            raise AuthError("حساب شما تعلیق شده است")
         new_pair = self.issue_token_pair(user, user_agent=user_agent, ip=ip)
 
         new_row = (
@@ -136,4 +138,8 @@ class AuthService:
         user = self.db.get(User, int(payload["sub"]))
         if user is None:
             raise AuthError("کاربر یافت نشد")
+        if user.status == UserStatus.SUSPENDED:
+            # دفاع در عمق: اگه کاربر بعد از صدور این access token (که تا
+            # ۱۵ دقیقه معتبره) تعلیق بشه، همون توکن قدیمی نباید کار کنه
+            raise AuthError("حساب شما تعلیق شده است")
         return user

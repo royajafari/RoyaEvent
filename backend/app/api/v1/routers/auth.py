@@ -15,7 +15,7 @@ from app.core.rate_limit_middleware import limiter
 from app.core.storage import upload_avatar_image
 from app.core.validators import InvalidEmail, InvalidPhoneNumber
 from app.models.otp_challenge import OTPPurpose
-from app.models.user import User
+from app.models.user import User, UserStatus
 from app.providers.email.base import EmailProvider
 from app.providers.sms.base import SmsProvider
 from app.schemas.auth import (
@@ -144,6 +144,10 @@ def verify_otp(
 
     auth_service = AuthService(db)
     user = auth_service.get_or_create_user(challenge.destination, challenge.channel.value)
+    if user.status == UserStatus.SUSPENDED:
+        return OTPVerifyOut(
+            success=False, verified=True, message="حساب شما تعلیق شده است؛ با پشتیبانی تماس بگیرید"
+        )
     tokens = auth_service.issue_token_pair(
         user, user_agent=request.headers.get("user-agent"), ip=get_client_ip(request)
     )
