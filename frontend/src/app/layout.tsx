@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BackToTopButton } from "@/components/BackToTopButton";
 import { OnboardingTour } from "@/components/OnboardingTour";
 import { SessionBootstrap } from "@/components/SessionBootstrap";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SiteHeader />
         {children}
         <SiteFooter />
+        <BackToTopButton />
         <OnboardingTour />
       </body>
     </html>

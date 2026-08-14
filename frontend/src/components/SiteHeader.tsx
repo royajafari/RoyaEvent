@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CircleHelp } from "lucide-react";
+import { CircleHelp, Search } from "lucide-react";
 
 import { RoyaEventLogo } from "@/components/RoyaEventLogo";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { authApi } from "@/lib/api-client";
 import { startOnboardingTour } from "@/lib/onboarding-tour";
 import { useAuthStore } from "@/store/auth-store";
@@ -17,11 +18,18 @@ export function SiteHeader() {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const clearAuth = useAuthStore((s) => s.clear);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (!accessToken) return;
     authApi.me(accessToken).then(setUser).catch(() => {});
   }, [accessToken, setUser]);
+
+  function handleSearchSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (q) router.push(`/search?q=${encodeURIComponent(q)}`);
+  }
 
   async function handleLogout() {
     clearAuth();
@@ -44,6 +52,21 @@ export function SiteHeader() {
             رویا ایونت: تجربه رویداد و وبینار متفاوت
           </span>
         </Link>
+        <form
+          onSubmit={handleSearchSubmit}
+          className="order-3 flex w-full items-center gap-1.5 sm:order-none sm:w-auto sm:max-w-xs sm:flex-1"
+        >
+          <Input
+            type="search"
+            placeholder="جستجوی رویداد، مدرس، برگزارکننده..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-8"
+          />
+          <Button type="submit" size="icon" variant="outline" aria-label="جستجو" className="shrink-0">
+            <Search className="size-4" />
+          </Button>
+        </form>
         <nav className="flex flex-wrap items-center gap-1 sm:gap-2">
           <Link
             href="/events"

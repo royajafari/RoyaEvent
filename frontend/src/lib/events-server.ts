@@ -16,11 +16,17 @@ async function get<T>(path: string): Promise<T | null> {
 }
 
 export const eventsServer = {
-  listPublic: (params?: { categoryId?: number; format?: string; sort?: string }) => {
+  listPublic: (params?: {
+    categoryId?: number;
+    format?: string;
+    sort?: string;
+    featured?: boolean;
+  }) => {
     const qs = new URLSearchParams();
     if (params?.categoryId) qs.set("category_id", String(params.categoryId));
     if (params?.format) qs.set("format", params.format);
     if (params?.sort) qs.set("sort", params.sort);
+    if (params?.featured) qs.set("featured", "true");
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
     return get<EventListItem[]>(`/events${suffix}`).then((r) => r ?? []);
   },
