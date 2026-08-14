@@ -190,7 +190,7 @@ export default function AdminPage() {
       </Tabs>
 
       {tab === "events" && (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           <Input
             type="search"
             placeholder="جستجو بر اساس عنوان، کد رویداد یا برگزارکننده..."
@@ -201,54 +201,72 @@ export default function AdminPage() {
           {trimmedEventSearch && filteredEvents.length === 0 && (
             <p className="text-muted-foreground text-sm">موردی یافت نشد.</p>
           )}
-          {filteredEvents.map((event, index) => (
-            <Card key={event.id} className="text-right">
-              <CardHeader className="flex-row items-center justify-between space-y-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground text-xs">ردیف {index + 1}</span>
-                  <CardTitle className="text-base">{event.title}</CardTitle>
-                </div>
-                <div className="flex items-center gap-2">
-                  {event.is_featured && <Badge>ویژه</Badge>}
-                  <Badge variant={event.status === "published" ? "default" : "secondary"}>
-                    {EVENT_STATUS_LABELS[event.status]}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-2">
-                <span className="text-muted-foreground text-xs">
-                  برگزارکننده: {event.organizer_name ?? "بدون نام"} — کد: {event.event_code}
-                </span>
-                <span className="text-muted-foreground text-xs">
-                  تاریخ ایجاد: {formatJalaliDateTime(event.created_at)}
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  <Link
-                    href={`/organizer/events/${event.id}/edit`}
-                    className={buttonVariants({ variant: "outline", size: "sm" })}
-                  >
-                    ویرایش
-                  </Link>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={busyId === event.id}
-                    onClick={() => handleToggleFeatured(event)}
-                  >
-                    {event.is_featured ? "حذف از ویژه‌ها" : "افزودن به ویژه‌ها"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    disabled={busyId === event.id}
-                    onClick={() => handleDeleteEvent(event.id)}
-                  >
-                    حذف کامل
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          <div className="overflow-x-auto rounded-lg ring-1 ring-foreground/10">
+            <table className="w-full text-right text-sm">
+              <thead className="bg-muted/50 text-muted-foreground text-xs">
+                <tr>
+                  <th className="px-3 py-2 font-normal">ردیف</th>
+                  <th className="px-3 py-2 font-normal">عنوان</th>
+                  <th className="px-3 py-2 font-normal">وضعیت</th>
+                  <th className="px-3 py-2 font-normal">برگزارکننده</th>
+                  <th className="px-3 py-2 font-normal">کد</th>
+                  <th className="px-3 py-2 font-normal">تاریخ ایجاد</th>
+                  <th className="px-3 py-2 font-normal">عملیات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredEvents.map((event, index) => (
+                  <tr key={event.id} className="border-border border-t">
+                    <td className="text-muted-foreground px-3 py-2">{index + 1}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-1.5">
+                        <span>{event.title}</span>
+                        {event.is_featured && <Badge className="text-[10px]">ویژه</Badge>}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2">
+                      <Badge variant={event.status === "published" ? "default" : "secondary"}>
+                        {EVENT_STATUS_LABELS[event.status]}
+                      </Badge>
+                    </td>
+                    <td className="text-muted-foreground px-3 py-2">
+                      {event.organizer_name ?? "بدون نام"}
+                    </td>
+                    <td className="text-muted-foreground px-3 py-2">{event.event_code}</td>
+                    <td className="text-muted-foreground px-3 py-2 whitespace-nowrap">
+                      {formatJalaliDateTime(event.created_at)}
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        <Link
+                          href={`/organizer/events/${event.id}/edit`}
+                          className={buttonVariants({ variant: "outline", size: "sm" })}
+                        >
+                          ویرایش
+                        </Link>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={busyId === event.id}
+                          onClick={() => handleToggleFeatured(event)}
+                        >
+                          {event.is_featured ? "حذف از ویژه‌ها" : "افزودن به ویژه‌ها"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          disabled={busyId === event.id}
+                          onClick={() => handleDeleteEvent(event.id)}
+                        >
+                          حذف کامل
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
