@@ -257,7 +257,8 @@ export default function AdminPage() {
                           className={buttonVariants({
                             variant: "outline",
                             size: "sm",
-                            className: "whitespace-nowrap bg-zinc-800 text-white hover:bg-zinc-700",
+                            className:
+                              "whitespace-nowrap bg-[#26619C]/10 text-[#26619C] hover:bg-[#26619C]/20",
                           })}
                         >
                           ویرایش
@@ -265,7 +266,7 @@ export default function AdminPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="w-[132px] shrink-0 whitespace-nowrap bg-zinc-800 text-white hover:bg-zinc-700"
+                          className="w-[132px] shrink-0 whitespace-nowrap bg-[#26619C]/10 text-[#26619C] hover:bg-[#26619C]/20"
                           disabled={busyId === event.id}
                           onClick={() => handleToggleFeatured(event)}
                         >
