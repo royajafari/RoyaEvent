@@ -258,7 +258,7 @@ export default function AdminPage() {
                             variant: "outline",
                             size: "sm",
                             className:
-                              "whitespace-nowrap border border-blue-500 bg-blue-500/15 text-blue-700 hover:bg-blue-500/25",
+                              "whitespace-nowrap border border-cyan-500 bg-cyan-200 text-cyan-900 hover:bg-cyan-300",
                           })}
                         >
                           ویرایش
@@ -266,7 +266,7 @@ export default function AdminPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="w-[132px] shrink-0 whitespace-nowrap border border-blue-500 bg-blue-500/15 text-blue-700 hover:bg-blue-500/25"
+                          className="w-[132px] shrink-0 whitespace-nowrap border border-cyan-500 bg-cyan-200 text-cyan-900 hover:bg-cyan-300"
                           disabled={busyId === event.id}
                           onClick={() => handleToggleFeatured(event)}
                         >
