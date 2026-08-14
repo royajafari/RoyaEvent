@@ -40,6 +40,7 @@ export default function AdminPage() {
 
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryParentId, setNewCategoryParentId] = useState<string | null>(null);
+  const [eventSearchQuery, setEventSearchQuery] = useState("");
 
   function loadAll(token: string) {
     Promise.all([
@@ -162,6 +163,16 @@ export default function AdminPage() {
   const categoryParentName = (parentId: number | null) =>
     parentId ? categories.find((c) => c.id === parentId)?.name : null;
 
+  const trimmedEventSearch = eventSearchQuery.trim();
+  const filteredEvents = trimmedEventSearch
+    ? events.filter(
+        (event) =>
+          event.title.includes(trimmedEventSearch) ||
+          event.event_code.includes(trimmedEventSearch) ||
+          (event.organizer_name ?? "").includes(trimmedEventSearch),
+      )
+    : events;
+
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-10">
       <h1 className="text-2xl font-bold">پنل ادمین</h1>
@@ -180,7 +191,17 @@ export default function AdminPage() {
 
       {tab === "events" && (
         <div className="flex flex-col gap-3">
-          {events.map((event, index) => (
+          <Input
+            type="search"
+            placeholder="جستجو بر اساس عنوان، کد رویداد یا برگزارکننده..."
+            value={eventSearchQuery}
+            onChange={(e) => setEventSearchQuery(e.target.value)}
+            className="max-w-sm"
+          />
+          {trimmedEventSearch && filteredEvents.length === 0 && (
+            <p className="text-muted-foreground text-sm">موردی یافت نشد.</p>
+          )}
+          {filteredEvents.map((event, index) => (
             <Card key={event.id} className="text-right">
               <CardHeader className="flex-row items-center justify-between space-y-0">
                 <div className="flex items-center gap-2">
