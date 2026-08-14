@@ -66,3 +66,6 @@ def test_export_attendees_csv(
     body = resp.text
     assert "نام" in body
     assert free_ticket_type.name in body
+    # بدون BOM، اکسل روی ویندوز UTF-8 رو با codepage محلی می‌خونه و متن
+    # فارسی رو illegible می‌کنه — این پیشوند اجباریه.
+    assert body.startswith("﻿")

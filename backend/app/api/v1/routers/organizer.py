@@ -107,8 +107,12 @@ def export_attendees_csv(
 
     buffer.seek(0)
     filename = f"attendees-{event.event_code}.csv"
+    # اکسل روی ویندوز بدون BOM فایل UTF-8 رو با codepage محلی سیستم می‌خونه،
+    # نه UTF-8 — نتیجه‌ش برای متن فارسی کاملاً illegible می‌شه (mojibake).
+    # پیشوند BOM (U+FEFF) اکسل رو مجبور می‌کنه درست UTF-8 تشخیص بده.
+    content = "﻿" + buffer.getvalue()
     return StreamingResponse(
-        iter([buffer.getvalue()]),
+        iter([content]),
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
