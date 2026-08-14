@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     jwt_secret_key: str = "CHANGE_ME_IN_PRODUCTION"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
-    refresh_token_expire_days: int = 30
+    refresh_token_expire_days: int = 1
 
     # OTP — طبق event_otp_email_sms_plan_fa.md، بخش ۲۰
     otp_hash_secret: str = "CHANGE_ME_OTP_SECRET"

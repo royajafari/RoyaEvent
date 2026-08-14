@@ -9,9 +9,11 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.v1.routers.auth import router as auth_router
 from app.api.v1.routers.events import router as events_router
+from app.api.v1.routers.home import router as home_router
 from app.api.v1.routers.instructors import router as instructors_router
 from app.api.v1.routers.orders import router as orders_router
 from app.api.v1.routers.organizer import router as organizer_router
+from app.api.v1.routers.search import router as search_router
 from app.api.v1.routers.social import router as social_router
 from app.api.v1.routers.tickets import router as tickets_router
 from app.core.config import get_settings
@@ -56,6 +58,8 @@ app.include_router(orders_router, prefix=settings.api_v1_prefix)
 app.include_router(social_router, prefix=settings.api_v1_prefix)
 app.include_router(organizer_router, prefix=settings.api_v1_prefix)
 app.include_router(instructors_router, prefix=settings.api_v1_prefix)
+app.include_router(search_router, prefix=settings.api_v1_prefix)
+app.include_router(home_router, prefix=settings.api_v1_prefix)
 
 
 @app.get("/health")

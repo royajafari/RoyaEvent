@@ -130,6 +130,26 @@ def test_list_events_only_shows_published_public(client, leaf_category, auth_hea
     assert draft["id"] not in ids
 
 
+def test_list_events_featured_filter(client, leaf_category, auth_headers, db_session):
+    from app.models.event import Event
+
+    plain = client.post(
+        "/api/v1/events", json=_event_payload(leaf_category.id, title="رویداد عادی"), headers=auth_headers
+    ).json()
+    featured = client.post(
+        "/api/v1/events", json=_event_payload(leaf_category.id, title="رویداد ویژه"), headers=auth_headers
+    ).json()
+    client.post(f"/api/v1/events/{plain['id']}/publish", headers=auth_headers)
+    client.post(f"/api/v1/events/{featured['id']}/publish", headers=auth_headers)
+    db_session.query(Event).filter(Event.id == featured["id"]).update({"is_featured": True})
+    db_session.commit()
+
+    resp = client.get("/api/v1/events?featured=true")
+    ids = [e["id"] for e in resp.json()]
+    assert featured["id"] in ids
+    assert plain["id"] not in ids
+
+
 def test_list_events_sort_popular_orders_by_view_count(client, leaf_category, auth_headers, db_session):
     from app.models.event import Event
 

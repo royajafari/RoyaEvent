@@ -43,6 +43,7 @@ def list_events(
     category_id: int | None = None,
     format: str | None = None,
     sort: str | None = None,
+    featured: bool | None = None,
     db: Session = Depends(get_db),
 ):
     query = _event_query(db).filter(
@@ -52,6 +53,8 @@ def list_events(
         query = query.filter(Event.category_id == category_id)
     if format is not None:
         query = query.filter(Event.format == format)
+    if featured is not None:
+        query = query.filter(Event.is_featured == featured)
 
     # sort=popular: بازدید تنها معیار محبوبیت واقعیه که الان داریم — سیستم
     # امتیازدهی هنوز پیاده نشده (فاز ۷)، پس rating_avg برای همه صفره
