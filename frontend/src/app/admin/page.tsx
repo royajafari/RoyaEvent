@@ -179,7 +179,7 @@ export default function AdminPage() {
       </Tabs>
 
       {tab === "events" && (
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {events.map((event) => (
             <Card key={event.id} className="text-right">
               <CardHeader className="flex-row items-center justify-between space-y-0">
@@ -191,11 +191,14 @@ export default function AdminPage() {
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="flex flex-wrap items-center gap-2">
+              <CardContent className="flex flex-col gap-2">
                 <span className="text-muted-foreground text-xs">
                   برگزارکننده: {event.organizer_name ?? "بدون نام"} — کد: {event.event_code}
                 </span>
-                <div className="mr-auto flex gap-2">
+                <span className="text-muted-foreground text-xs">
+                  تاریخ ایجاد: {formatJalaliDateTime(event.created_at)}
+                </span>
+                <div className="flex flex-wrap gap-2">
                   <Link
                     href={`/organizer/events/${event.id}/edit`}
                     className={buttonVariants({ variant: "outline", size: "sm" })}
