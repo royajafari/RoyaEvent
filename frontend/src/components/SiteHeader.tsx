@@ -65,7 +65,7 @@ export function SiteHeader() {
         <form
           id="tour-search"
           onSubmit={handleSearchSubmit}
-          className="order-3 flex w-full items-center gap-1.5 sm:order-none sm:w-auto sm:max-w-xs sm:flex-1"
+          className="order-3 flex w-full items-center gap-1.5 sm:order-none sm:w-auto sm:min-w-[220px] sm:max-w-xs sm:flex-1"
         >
           <Input
             type="search"

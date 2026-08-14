@@ -372,7 +372,7 @@ export default function CreateEventPage() {
             itemToStringLabel={(item: CategoryComboboxItem) => item.label}
             itemToStringValue={(item: CategoryComboboxItem) => item.value}
           >
-            <ComboboxInputGroup>
+            <ComboboxInputGroup required>
               <ComboboxInput placeholder="جستجو یا انتخاب زیردسته..." />
               <ComboboxTrigger />
             </ComboboxInputGroup>
@@ -399,7 +399,7 @@ export default function CreateEventPage() {
         <div className="flex flex-col gap-2">
           <Label>نوع برگزاری</Label>
           <Select value={format} onValueChange={(v) => v && setFormat(v as typeof format)}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger required className="w-full">
               <SelectValue>{(value: string) => FORMAT_LABELS[value] ?? value}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -429,6 +429,7 @@ export default function CreateEventPage() {
               id="platform"
               value={onlinePlatform}
               onChange={(e) => setOnlinePlatform(e.target.value)}
+              required
             />
           </div>
         )}

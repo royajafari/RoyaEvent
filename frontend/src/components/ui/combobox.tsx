@@ -8,16 +8,31 @@ import { ChevronDownIcon, CheckIcon } from "lucide-react"
 
 const Combobox = ComboboxPrimitive.Root
 
-function ComboboxInputGroup({ className, ...props }: ComboboxPrimitive.InputGroup.Props) {
+function ComboboxInputGroup({
+  className,
+  required,
+  children,
+  ...props
+}: ComboboxPrimitive.InputGroup.Props & { required?: boolean }) {
   return (
     <ComboboxPrimitive.InputGroup
       data-slot="combobox-input-group"
       className={cn(
-        "flex h-8 w-full items-center gap-1.5 rounded-lg border border-input bg-transparent pr-2 pl-2.5 text-sm transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:bg-input/30",
+        "relative flex h-8 w-full items-center gap-1.5 rounded-lg border border-input bg-transparent pr-2 pl-2.5 text-sm transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:bg-input/30",
         className
       )}
       {...props}
-    />
+    >
+      {children}
+      {required && (
+        <span
+          aria-hidden="true"
+          title="اجباری"
+          className="pointer-events-none absolute top-0 right-0 h-2.5 w-2.5 bg-destructive"
+          style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }}
+        />
+      )}
+    </ComboboxPrimitive.InputGroup>
   )
 }
 

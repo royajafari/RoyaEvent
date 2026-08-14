@@ -30,20 +30,30 @@ export function JalaliDateTimePicker({
   required?: boolean;
 }) {
   return (
-    <DatePicker
-      id={id}
-      value={value ? new Date(value) : null}
-      onChange={(date: DateObject | null) => onChange(date ? date.toDate().toISOString() : "")}
-      calendar={persian}
-      locale={persian_fa}
-      weekDays={FULL_WEEK_DAYS}
-      format="YYYY/MM/DD HH:mm"
-      plugins={[<TimePicker key="time-picker" hideSeconds position="bottom" />]}
-      inputClass={INPUT_CLASS}
-      containerClassName="w-full"
-      calendarPosition="bottom-right"
-      required={required}
-    />
+    <span className="relative block w-full">
+      <DatePicker
+        id={id}
+        value={value ? new Date(value) : null}
+        onChange={(date: DateObject | null) => onChange(date ? date.toDate().toISOString() : "")}
+        calendar={persian}
+        locale={persian_fa}
+        weekDays={FULL_WEEK_DAYS}
+        format="YYYY/MM/DD HH:mm"
+        plugins={[<TimePicker key="time-picker" hideSeconds position="bottom" />]}
+        inputClass={INPUT_CLASS}
+        containerClassName="w-full"
+        calendarPosition="bottom-right"
+        required={required}
+      />
+      {required && (
+        <span
+          aria-hidden="true"
+          title="اجباری"
+          className="pointer-events-none absolute top-0 right-0 z-10 h-2.5 w-2.5 bg-destructive"
+          style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }}
+        />
+      )}
+    </span>
   );
 }
 

@@ -210,7 +210,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                   itemToStringLabel={(item: CategoryComboboxItem) => item.label}
                   itemToStringValue={(item: CategoryComboboxItem) => item.value}
                 >
-                  <ComboboxInputGroup>
+                  <ComboboxInputGroup required>
                     <ComboboxInput placeholder="جستجو یا انتخاب زیردسته..." />
                     <ComboboxTrigger />
                   </ComboboxInputGroup>
@@ -237,7 +237,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
               <div className="flex flex-col gap-2">
                 <Label>نوع برگزاری</Label>
                 <Select value={format} onValueChange={(v) => v && setFormat(v as typeof format)}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger required className="w-full">
                     <SelectValue>{(value: string) => FORMAT_LABELS[value] ?? value}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
@@ -267,6 +267,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                     id="platform"
                     value={onlinePlatform}
                     onChange={(e) => setOnlinePlatform(e.target.value)}
+                    required
                   />
                 </div>
               )}
