@@ -27,7 +27,11 @@ export type MyTicket = {
   registration: Registration;
   event_title: string;
   event_slug: string;
+  event_format: "online" | "in_person" | "hybrid";
   session_starts_at: string;
+  session_duration_minutes: number;
+  session_online_join_url: string | null;
+  session_venue_address: string | null;
 };
 
 export const ordersApi = {

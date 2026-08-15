@@ -7,7 +7,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ApiError } from "@/lib/api-client";
-import { formatJalaliDateTime } from "@/lib/date";
+import { formatJalaliDateTime, isSessionLive } from "@/lib/date";
 import type { MyTicket } from "@/lib/orders-api";
 import { ordersApi } from "@/lib/orders-api";
 import { useAuthStore } from "@/store/auth-store";
@@ -91,14 +91,30 @@ export default function MyTicketsPage() {
                 <th className="px-3 py-2 font-normal">رویداد</th>
                 <th className="px-3 py-2 font-normal">وضعیت</th>
                 <th className="px-3 py-2 font-normal">زمان</th>
+                <th className="px-3 py-2 font-normal">محل/لینک</th>
                 <th className="px-3 py-2 font-normal">کد بلیط</th>
                 <th className="px-3 py-2 font-normal">عملیات</th>
               </tr>
             </thead>
             <tbody>
-              {tickets.map(({ registration, event_title, event_slug, session_starts_at }) => {
+              {tickets.map(
+                ({
+                  registration,
+                  event_title,
+                  event_slug,
+                  event_format,
+                  session_starts_at,
+                  session_duration_minutes,
+                  session_online_join_url,
+                  session_venue_address,
+                }) => {
                 // eslint-disable-next-line react-hooks/purity -- مقایسه با «اکنون» است، نه باگ
-                const isPast = new Date(session_starts_at).getTime() < Date.now();
+                const sessionEnd =
+                  new Date(session_starts_at).getTime() + session_duration_minutes * 60 * 1000;
+                // eslint-disable-next-line react-hooks/purity -- مقایسه با «اکنون» است، نه باگ
+                const isEnded = Date.now() > sessionEnd;
+                // eslint-disable-next-line react-hooks/purity -- مقایسه با «اکنون» است، نه باگ
+                const isLive = isSessionLive(session_starts_at, session_duration_minutes);
                 return (
                   <tr key={registration.id} className="border-border border-t">
                     <td className="px-3 py-2">
@@ -111,11 +127,30 @@ export default function MyTicketsPage() {
                         <Badge variant={registration.status === "confirmed" ? "default" : "secondary"}>
                           {STATUS_LABELS[registration.status]}
                         </Badge>
-                        {isPast && <Badge variant="secondary">منقضی‌شده</Badge>}
+                        {isLive && <Badge variant="destructive">در حال ارائه</Badge>}
+                        {!isLive && isEnded && <Badge variant="secondary">منقضی‌شده</Badge>}
                       </div>
                     </td>
                     <td className="text-muted-foreground px-3 py-2 whitespace-nowrap">
                       {formatJalaliDateTime(session_starts_at)}
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      {event_format !== "in_person" && session_online_join_url ? (
+                        <a
+                          href={session_online_join_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          ورود به جلسه
+                        </a>
+                      ) : event_format !== "in_person" ? (
+                        <span className="text-muted-foreground text-xs">لینک هنوز اعلام نشده</span>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">
+                          {session_venue_address ?? "—"}
+                        </span>
+                      )}
                     </td>
                     <td className="text-muted-foreground px-3 py-2" dir="ltr">
                       {registration.ticket_code}

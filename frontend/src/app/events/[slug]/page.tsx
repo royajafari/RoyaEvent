@@ -12,7 +12,7 @@ import { StickyTicketFooter } from "@/components/StickyTicketFooter";
 import { TicketCheckout } from "@/components/TicketCheckout";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { formatJalaliDateTime } from "@/lib/date";
+import { formatJalaliDateTime, isSessionLive } from "@/lib/date";
 import { eventsServer } from "@/lib/events-server";
 
 const FORMAT_LABELS = { online: "آنلاین", in_person: "حضوری", hybrid: "ترکیبی" } as const;
@@ -197,8 +197,11 @@ export default async function EventDetailPage({ params }: Props) {
         <ul className="flex flex-col gap-2">
           {event.sessions.map((session, index) => (
             <li key={session.id} className="rounded-md border p-3 text-sm">
-              <div className="font-medium">
+              <div className="flex items-center gap-2 font-medium">
                 {isMultiSession ? `جلسه ${index + 1}` : "زمان برگزاری"}
+                {isSessionLive(session.starts_at, session.duration_minutes) && (
+                  <Badge variant="destructive">در حال ارائه</Badge>
+                )}
               </div>
               <div className="text-muted-foreground">
                 {formatJalaliDateTime(session.starts_at)} — {session.duration_minutes} دقیقه

@@ -40,6 +40,7 @@ class MyTicketOut(BaseModel):
     event_slug: str
     event_format: str
     session_starts_at: datetime
+    session_duration_minutes: int
     session_online_join_url: str | None
     session_venue_address: str | None
 

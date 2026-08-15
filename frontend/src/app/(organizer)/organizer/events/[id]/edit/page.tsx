@@ -30,7 +30,7 @@ import type { CategoryOut, EventDetail, EventSessionInput } from "@/lib/events-a
 import { eventsApi } from "@/lib/events-api";
 import { useAuthStore } from "@/store/auth-store";
 
-type SessionRow = { starts_at: string; duration_minutes: number };
+type SessionRow = { starts_at: string; duration_minutes: number; online_join_url: string };
 
 const FORMAT_LABELS: Record<string, string> = {
   online: "آنلاین",
@@ -72,7 +72,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   const [tagNames, setTagNames] = useState("");
   const [instructorNames, setInstructorNames] = useState("");
   const [isInstantRegistration, setIsInstantRegistration] = useState(false);
-  const [sessions, setSessions] = useState<SessionRow[]>([{ starts_at: "", duration_minutes: 60 }]);
+  const [sessions, setSessions] = useState<SessionRow[]>([{ starts_at: "", duration_minutes: 60, online_join_url: "" }]);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -90,7 +90,11 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         setInstructorNames(event.instructors.map((i) => i.name).join(", "));
         setIsInstantRegistration(event.is_instant_registration);
         setSessions(
-          event.sessions.map((s) => ({ starts_at: s.starts_at, duration_minutes: s.duration_minutes })),
+          event.sessions.map((s) => ({
+            starts_at: s.starts_at,
+            duration_minutes: s.duration_minutes,
+            online_join_url: s.online_join_url ?? "",
+          })),
         );
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در دریافت رویداد"))
@@ -106,7 +110,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
   }
 
   function addSession() {
-    setSessions((prev) => [...prev, { starts_at: "", duration_minutes: 60 }]);
+    setSessions((prev) => [...prev, { starts_at: "", duration_minutes: 60, online_join_url: "" }]);
   }
 
   function removeSession(index: number) {
@@ -148,6 +152,7 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
         .map((s) => ({
           starts_at: new Date(s.starts_at).toISOString(),
           duration_minutes: s.duration_minutes,
+          online_join_url: format !== "in_person" && s.online_join_url ? s.online_join_url : undefined,
         }));
       await eventsApi.replaceSessions(eventId, sessionInputs, accessToken);
 
@@ -338,6 +343,21 @@ export default function EditEventPage({ params }: { params: Promise<{ id: string
                         required
                       />
                     </div>
+                    {format !== "in_person" && (
+                      <div className="flex min-w-48 flex-1 flex-col gap-1">
+                        <Label htmlFor={`session-join-url-${index}`}>لینک ورود آنلاین</Label>
+                        <Input
+                          id={`session-join-url-${index}`}
+                          dir="ltr"
+                          type="url"
+                          placeholder="https://..."
+                          value={session.online_join_url}
+                          onChange={(e) =>
+                            updateSession(index, { online_join_url: e.target.value })
+                          }
+                        />
+                      </div>
+                    )}
                     {sessions.length > 1 && (
                       <Button
                         type="button"
