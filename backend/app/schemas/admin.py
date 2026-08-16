@@ -56,3 +56,21 @@ class AuditLogEntryOut(BaseModel):
     target_id: int
     reason: str | None
     created_at: datetime
+
+
+class AdminReviewOut(BaseModel):
+    id: int
+    event_id: int
+    event_title: str
+    user_id: int
+    user_name: str | None
+    overall_computed: float
+    comment_text: str | None
+    status: str
+    hidden_reason: str | None
+    created_at: datetime
+
+
+class HideReviewIn(BaseModel):
+    hidden: bool
+    reason: str | None = None

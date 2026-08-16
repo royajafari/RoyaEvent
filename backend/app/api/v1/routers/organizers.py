@@ -5,7 +5,7 @@ from app.api.deps import get_current_user_optional, get_db
 from app.models.favorite import OrganizerFollow
 from app.models.user import User
 from app.schemas.organizer import OrganizerProfileOut
-from app.services import organizer_service
+from app.services import organizer_service, rating_service
 from app.services.event_service import to_list_item_out
 from app.services.social_service import organizer_follower_count
 
@@ -32,11 +32,20 @@ def get_organizer_profile(
         )
 
     events = organizer_service.organizer_published_events(db, organizer_id)
+    rating_avg, rating_count = rating_service.organizer_rating_stats(db, organizer_id)
+    my_rating = (
+        rating_service.my_organizer_rating(db, current_user.id, organizer_id)
+        if current_user is not None
+        else None
+    )
     return OrganizerProfileOut(
         id=organizer.id,
         name=organizer.full_name or organizer.phone or organizer.email,
         avatar_url=organizer.avatar_url,
         follower_count=organizer_follower_count(db, organizer_id),
         is_following=is_following,
+        rating_avg=rating_avg,
+        rating_count=rating_count,
+        my_rating=my_rating,
         events=[to_list_item_out(e) for e in events],
     )

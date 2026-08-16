@@ -17,4 +17,7 @@ class InstructorDetailOut(InstructorOut):
     is_following: bool
     is_claimed: bool
     is_owned_by_me: bool
+    rating_avg: float
+    rating_count: int
+    my_rating: int | None
     events: list[EventListItemOut]

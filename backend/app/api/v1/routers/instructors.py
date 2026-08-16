@@ -7,7 +7,7 @@ from app.models.favorite import InstructorFollow
 from app.models.instructor import Instructor
 from app.models.user import User
 from app.schemas.instructor import InstructorDetailOut, InstructorOut
-from app.services import instructor_service
+from app.services import instructor_service, rating_service
 from app.services.event_service import to_list_item_out
 from app.services.instructor_service import InstructorServiceError
 
@@ -25,6 +25,12 @@ def _build_detail_out(db: Session, instructor: Instructor, current_user: User | 
         )
 
     events = instructor_service.instructor_published_events(db, instructor.id)
+    rating_avg, rating_count = rating_service.instructor_rating_stats(db, instructor.id)
+    my_rating = (
+        rating_service.my_instructor_rating(db, current_user.id, instructor.id)
+        if current_user is not None
+        else None
+    )
     return InstructorDetailOut(
         id=instructor.id,
         name=instructor.name,
@@ -34,6 +40,9 @@ def _build_detail_out(db: Session, instructor: Instructor, current_user: User | 
         is_following=is_following,
         is_claimed=instructor.linked_user_id is not None,
         is_owned_by_me=current_user is not None and instructor.linked_user_id == current_user.id,
+        rating_avg=rating_avg,
+        rating_count=rating_count,
+        my_rating=my_rating,
         events=[to_list_item_out(e) for e in events],
     )
 

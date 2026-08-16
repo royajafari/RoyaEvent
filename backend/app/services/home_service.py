@@ -1,12 +1,13 @@
 """بخش‌های الگوریتمی صفحه‌ی اصلی — بخش ۱۰ پلن معماری، هرکدوم در Redis کش
 می‌شن (TTL ۵ دقیقه) تا هر لود صفحه‌ی اصلی چند کوئری سنگین اجرا نکنه.
 
-دو بخش از پلن اصلی (برترین وبینارها بر اساس امتیاز، محبوب‌ترین ویدیوهای
-ضبط‌شده) عمداً اینجا نیستن چون داده‌ی واقعی پشتشون نیست: سیستم امتیازدهی
-فاز ۷ هنوز پیاده نشده (rating_avg همه صفره) و مفهوم «ضبط رویداد گذشته»
-(recording_url) اصلاً تو مدل داده نیست (promo_video_url چیز دیگه‌ایه —
-کلیپ تبلیغاتی قبل از رویداد). ساختن این بخش‌ها با داده‌ی فیک/خالی به‌جای
-واقعی، بدتر از نبودشونه.
+«محبوب‌ترین ویدیوهای ضبط‌شده» عمداً اینجا نیست چون داده‌ی واقعی پشتش نیست:
+مفهوم «ضبط رویداد گذشته» (recording_url) اصلاً تو مدل داده نیست
+(promo_video_url چیز دیگه‌ایه — کلیپ تبلیغاتی قبل از رویداد). ساختن این
+بخش با داده‌ی فیک/خالی به‌جای واقعی، بدتر از نبودشه.
+
+«برترین وبینارها» (بر اساس rating_avg) از فاز ۷ به بعد فعاله — قبلش
+rating_avg همه صفر بود چون سیستم امتیازدهی نبود.
 """
 
 from __future__ import annotations
@@ -26,6 +27,9 @@ from app.services.event_service import event_query, to_list_item_out
 CACHE_KEY = "home:sections"
 CACHE_TTL_SECONDS = 300
 SECTION_LIMIT = 6
+# طبق بخش ۱۰ پلن معماری: کف rating_count برای «برترین وبینارها» تا یه
+# رویداد با یه امتیاز ۵ تنها بالای لیست ننشینه.
+MIN_RATING_COUNT_FOR_TOP_RATED = 3
 
 
 def _published_public_query(db: Session):
@@ -36,6 +40,17 @@ def _published_public_query(db: Session):
 
 def _popular_events(db: Session) -> list:
     events = _published_public_query(db).order_by(Event.view_count.desc()).limit(SECTION_LIMIT).all()
+    return [to_list_item_out(e) for e in events]
+
+
+def _top_rated_events(db: Session) -> list:
+    events = (
+        _published_public_query(db)
+        .filter(Event.rating_count >= MIN_RATING_COUNT_FOR_TOP_RATED)
+        .order_by(Event.rating_avg.desc())
+        .limit(SECTION_LIMIT)
+        .all()
+    )
     return [to_list_item_out(e) for e in events]
 
 
@@ -122,6 +137,7 @@ def get_home_sections(db: Session, redis_client: Redis) -> HomeSectionsOut:
         popular_events=_popular_events(db),
         latest_events=_latest_events(db),
         featured_events=_featured_events(db),
+        top_rated_events=_top_rated_events(db),
         popular_instructors=_popular_instructors(db),
         popular_organizers=_popular_organizers(db),
     )

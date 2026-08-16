@@ -11,6 +11,9 @@ class OrganizerProfileOut(BaseModel):
     avatar_url: str | None
     follower_count: int
     is_following: bool
+    rating_avg: float
+    rating_count: int
+    my_rating: int | None
     events: list[EventListItemOut]
 
 

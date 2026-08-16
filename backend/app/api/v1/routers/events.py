@@ -18,9 +18,11 @@ from app.schemas.event import (
     EventSessionIn,
     EventUpdateIn,
 )
-from app.services import event_service
+from app.schemas.review import EventReviewIn, EventReviewOut
+from app.services import event_service, review_service
 from app.services.event_service import EventServiceError, event_query, to_list_item_out
 from app.services.image_service import InvalidImageError, validate_and_reencode_image
+from app.services.review_service import ReviewServiceError
 from app.services.video_service import InvalidVideoError, validate_video_file
 
 router = APIRouter(prefix="/events", tags=["events"])
@@ -284,3 +286,47 @@ async def upload_event_promo_video(
 
     promo_video_url = upload_promo_video(event.id, raw, content_type)
     return event_service.set_promo_video_url(db, event, promo_video_url)
+
+
+def _to_review_out(db: Session, review) -> EventReviewOut:
+    reviewer = db.get(User, review.user_id)
+    return EventReviewOut(
+        id=review.id,
+        user_id=review.user_id,
+        user_name=reviewer.full_name if reviewer else None,
+        event_id=review.event_id,
+        axis_content_uptodate=review.axis_content_uptodate,
+        axis_instructor_mastery=review.axis_instructor_mastery,
+        axis_value_for_price=review.axis_value_for_price,
+        axis_experience_driven=review.axis_experience_driven,
+        overall_computed=review.overall_computed,
+        comment_text=review.comment_text,
+        status=review.status.value,
+        created_at=review.created_at,
+    )
+
+
+@router.post("/{event_id}/reviews", response_model=EventReviewOut)
+@limiter.limit("5/minute")
+def submit_event_review(
+    request: Request,
+    event_id: int,
+    body: EventReviewIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if db.get(Event, event_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "رویداد یافت نشد")
+    try:
+        review = review_service.submit_review(db, current_user.id, event_id, body)
+    except ReviewServiceError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    return _to_review_out(db, review)
+
+
+@router.get("/{event_id}/reviews", response_model=list[EventReviewOut])
+def list_event_reviews(event_id: int, db: Session = Depends(get_db)):
+    if db.get(Event, event_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "رویداد یافت نشد")
+    reviews = review_service.list_event_reviews(db, event_id)
+    return [_to_review_out(db, r) for r in reviews]

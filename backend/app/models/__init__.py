@@ -11,7 +11,9 @@ from app.models.notification import (
 )
 from app.models.order import Order, OrderItem, Payment, Registration
 from app.models.otp_challenge import OTPChallenge
+from app.models.rating import InstructorRating, OrganizerRating, PlatformRating
 from app.models.refresh_token import RefreshToken
+from app.models.review import EventReview, ReviewStatus
 from app.models.tag import Tag
 from app.models.ticket import DiscountCode, PlatformDiscountCode, TicketType
 from app.models.user import User
@@ -21,10 +23,12 @@ __all__ = [
     "Category",
     "DiscountCode",
     "Event",
+    "EventReview",
     "EventSession",
     "Favorite",
     "Instructor",
     "InstructorFollow",
+    "InstructorRating",
     "NotificationChannel",
     "NotificationOutbox",
     "NotificationStatus",
@@ -33,10 +37,13 @@ __all__ = [
     "Order",
     "OrderItem",
     "OrganizerFollow",
+    "OrganizerRating",
     "Payment",
     "PlatformDiscountCode",
+    "PlatformRating",
     "RefreshToken",
     "Registration",
+    "ReviewStatus",
     "Tag",
     "TicketType",
     "User",

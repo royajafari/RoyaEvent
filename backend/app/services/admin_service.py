@@ -10,6 +10,7 @@ from app.models.admin_audit_log import AdminAuditLog
 from app.models.base import utcnow
 from app.models.category import Category
 from app.models.event import Event
+from app.models.review import EventReview
 from app.models.user import User, UserStatus
 from app.search.indexer import remove_event
 
@@ -114,3 +115,10 @@ def delete_category(db: Session, category: Category) -> None:
 
 def list_audit_log(db: Session, limit: int = 100) -> list[AdminAuditLog]:
     return db.query(AdminAuditLog).order_by(AdminAuditLog.created_at.desc()).limit(limit).all()
+
+
+def list_all_reviews(db: Session, limit: int = 100) -> list[EventReview]:
+    """برخلاف review_service.list_event_reviews (فقط PUBLISHED، برای یک
+    رویداد خاص)، ادمین باید همه‌چیز رو ببینه — شامل نظرهای hidden، از همه‌ی
+    رویدادها — تا بتونه تصمیم بگیره چی رو hide/unhide کنه."""
+    return db.query(EventReview).order_by(EventReview.created_at.desc()).limit(limit).all()

@@ -5,18 +5,21 @@ from app.api.deps import get_current_admin_user, get_db
 from app.core.rate_limit_middleware import limiter
 from app.models.category import Category
 from app.models.event import Event
+from app.models.review import EventReview
 from app.models.user import User
 from app.schemas.admin import (
     AdminEventOut,
+    AdminReviewOut,
     AdminUserOut,
     AuditLogEntryOut,
     CategoryIn,
     DeleteEventIn,
     FeatureToggleIn,
+    HideReviewIn,
     SuspendUserIn,
 )
 from app.schemas.event import CategoryOut
-from app.services import admin_service
+from app.services import admin_service, review_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -202,3 +205,49 @@ def get_audit_log(
         )
         for e in entries
     ]
+
+
+def _to_admin_review_out(db: Session, review: EventReview) -> AdminReviewOut:
+    event = db.get(Event, review.event_id)
+    reviewer = db.get(User, review.user_id)
+    return AdminReviewOut(
+        id=review.id,
+        event_id=review.event_id,
+        event_title=event.title if event else "",
+        user_id=review.user_id,
+        user_name=reviewer.full_name if reviewer else None,
+        overall_computed=review.overall_computed,
+        comment_text=review.comment_text,
+        status=review.status.value,
+        hidden_reason=review.hidden_reason,
+        created_at=review.created_at,
+    )
+
+
+@router.get("/reviews", response_model=list[AdminReviewOut])
+@limiter.limit(_ADMIN_RATE_LIMIT)
+def list_reviews(
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    reviews = admin_service.list_all_reviews(db)
+    return [_to_admin_review_out(db, r) for r in reviews]
+
+
+@router.patch("/reviews/{review_id}/hide", response_model=AdminReviewOut)
+@limiter.limit(_ADMIN_RATE_LIMIT)
+def hide_review(
+    request: Request,
+    review_id: int,
+    body: HideReviewIn,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    review = db.get(EventReview, review_id)
+    if review is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "نظر یافت نشد")
+    review = review_service.set_review_hidden(db, review, hidden=body.hidden, reason=body.reason)
+    action = "hide_review" if body.hidden else "unhide_review"
+    admin_service.log_action(db, admin.id, action, "review", review_id, body.reason)
+    return _to_admin_review_out(db, review)

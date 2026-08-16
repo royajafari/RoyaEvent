@@ -15,6 +15,7 @@ from app.api.v1.routers.instructors import router as instructors_router
 from app.api.v1.routers.orders import router as orders_router
 from app.api.v1.routers.organizer import router as organizer_router
 from app.api.v1.routers.organizers import router as organizers_router
+from app.api.v1.routers.ratings import router as ratings_router
 from app.api.v1.routers.search import router as search_router
 from app.api.v1.routers.social import router as social_router
 from app.api.v1.routers.tickets import router as tickets_router
@@ -64,6 +65,7 @@ app.include_router(instructors_router, prefix=settings.api_v1_prefix)
 app.include_router(search_router, prefix=settings.api_v1_prefix)
 app.include_router(home_router, prefix=settings.api_v1_prefix)
 app.include_router(admin_router, prefix=settings.api_v1_prefix)
+app.include_router(ratings_router, prefix=settings.api_v1_prefix)
 
 
 @app.get("/health")

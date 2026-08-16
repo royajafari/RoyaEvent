@@ -182,3 +182,63 @@ def test_admin_audit_log_lists_actions(client, published_event, admin_auth_heade
     assert resp.status_code == 200
     actions = [entry["action"] for entry in resp.json()]
     assert "feature_event" in actions
+
+
+def _submit_review(client, event, ticket_type, buyer_headers, db_session):
+    from datetime import timedelta
+
+    from app.models.base import utcnow
+
+    create_resp = client.post(
+        "/api/v1/orders",
+        json={"ticket_type_id": ticket_type.id, "session_id": event.sessions[0].id},
+        headers=buyer_headers,
+    )
+    order_id = create_resp.json()["id"]
+    client.post(f"/api/v1/orders/{order_id}/complete", headers=buyer_headers)
+    event.sessions[0].starts_at = utcnow() - timedelta(hours=2)
+    db_session.commit()
+
+    resp = client.post(
+        f"/api/v1/events/{event.id}/reviews",
+        json={
+            "axis_content_uptodate": 5,
+            "axis_instructor_mastery": 5,
+            "axis_value_for_price": 5,
+            "axis_experience_driven": 5,
+        },
+        headers=buyer_headers,
+    )
+    return resp.json()["id"]
+
+
+def test_admin_list_reviews(
+    client, published_event, free_ticket_type, buyer_auth_headers, admin_auth_headers, db_session
+):
+    _submit_review(client, published_event, free_ticket_type, buyer_auth_headers, db_session)
+
+    resp = client.get("/api/v1/admin/reviews", headers=admin_auth_headers)
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+    assert resp.json()[0]["event_title"] == published_event.title
+
+
+def test_admin_hide_review_removes_from_public_list_and_logs_action(
+    client, published_event, free_ticket_type, buyer_auth_headers, admin_auth_headers, db_session
+):
+    review_id = _submit_review(client, published_event, free_ticket_type, buyer_auth_headers, db_session)
+
+    resp = client.patch(
+        f"/api/v1/admin/reviews/{review_id}/hide",
+        json={"hidden": True, "reason": "نامناسب"},
+        headers=admin_auth_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "hidden"
+
+    public_list = client.get(f"/api/v1/events/{published_event.id}/reviews")
+    assert public_list.json() == []
+
+    log_resp = client.get("/api/v1/admin/audit-log", headers=admin_auth_headers)
+    actions = [entry["action"] for entry in log_resp.json()]
+    assert "hide_review" in actions

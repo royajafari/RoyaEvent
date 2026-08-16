@@ -27,6 +27,7 @@ def test_home_sections_shape_on_empty_db(client):
         "popular_events",
         "latest_events",
         "featured_events",
+        "top_rated_events",
         "popular_instructors",
         "popular_organizers",
     }
@@ -85,7 +86,7 @@ def test_home_sections_excludes_draft_event(client, leaf_category, auth_headers)
 
     resp = client.get("/api/v1/home/sections")
     body = resp.json()
-    sections = ("popular_events", "latest_events", "featured_events")
+    sections = ("popular_events", "latest_events", "featured_events", "top_rated_events")
     all_ids = {e["id"] for section in sections for e in body[section]}
     assert event_id not in all_ids
 
@@ -117,3 +118,36 @@ def test_home_sections_is_cached(client, leaf_category, auth_headers):
 
     second = client.get("/api/v1/home/sections")
     assert second.json()["latest_events"] == [], "باید نتیجه‌ی قبلی از کش Redis برگرده، نه کوئری تازه"
+
+
+def test_home_top_rated_events_respects_floor_and_order(
+    client, leaf_category, auth_headers, db_session
+):
+    from app.models.event import Event
+
+    high_rated = client.post(
+        "/api/v1/events",
+        json=_event_payload(leaf_category.id, title="رویداد پرامتیاز"),
+        headers=auth_headers,
+    ).json()
+    client.post(f"/api/v1/events/{high_rated['id']}/publish", headers=auth_headers)
+
+    below_floor = client.post(
+        "/api/v1/events",
+        json=_event_payload(leaf_category.id, title="رویداد کم‌بازدید"),
+        headers=auth_headers,
+    ).json()
+    client.post(f"/api/v1/events/{below_floor['id']}/publish", headers=auth_headers)
+
+    high_row = db_session.get(Event, high_rated["id"])
+    high_row.rating_avg = 4.8
+    high_row.rating_count = 5
+    below_row = db_session.get(Event, below_floor["id"])
+    below_row.rating_avg = 5.0
+    below_row.rating_count = 1  # زیر کف MIN_RATING_COUNT_FOR_TOP_RATED (۳)
+    db_session.commit()
+
+    resp = client.get("/api/v1/home/sections")
+    top_rated_ids = [e["id"] for e in resp.json()["top_rated_events"]]
+    assert high_row.id in top_rated_ids
+    assert below_row.id not in top_rated_ids
