@@ -5,6 +5,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ClaimInstructorButton } from "@/components/ClaimInstructorButton";
 import { EventCard } from "@/components/EventCard";
 import { FollowInstructorButton } from "@/components/FollowInstructorButton";
+import { RateEntityWidget } from "@/components/RateEntityWidget";
 import { Separator } from "@/components/ui/separator";
 import { instructorsServer } from "@/lib/instructors-server";
 
@@ -44,6 +45,12 @@ export default async function InstructorDetailPage({ params }: Props) {
           <span className="text-muted-foreground text-sm">
             {instructor.follower_count.toLocaleString("fa-IR")} دنبال‌کننده
           </span>
+          <RateEntityWidget
+            entityType="instructor"
+            entityId={instructor.id}
+            initialRatingAvg={instructor.rating_avg}
+            initialRatingCount={instructor.rating_count}
+          />
         </div>
         <div className="flex flex-col items-start gap-2 sm:mr-auto sm:items-end">
           <FollowInstructorButton instructorId={instructor.id} />

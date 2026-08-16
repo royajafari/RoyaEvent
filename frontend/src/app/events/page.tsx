@@ -24,7 +24,14 @@ export default async function EventsListPage({ searchParams }: Props) {
     eventsServer.listCategories(),
   ]);
 
-  const heading = sort === "popular" ? "وبینارهای محبوب" : featuredOnly ? "وبینارهای ویژه" : "رویدادها";
+  const heading =
+    sort === "popular"
+      ? "وبینارهای محبوب"
+      : sort === "top_rated"
+        ? "برترین وبینارها"
+        : featuredOnly
+          ? "وبینارهای ویژه"
+          : "رویدادها";
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8">

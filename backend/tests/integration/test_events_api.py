@@ -218,6 +218,34 @@ def test_list_events_sort_popular_orders_by_view_count(client, leaf_category, au
     assert ids.index(high["id"]) < ids.index(low["id"])
 
 
+def test_list_events_sort_top_rated_respects_floor_and_order(
+    client, leaf_category, auth_headers, db_session
+):
+    from app.models.event import Event
+
+    high_rated = client.post(
+        "/api/v1/events", json=_event_payload(leaf_category.id, title="امتیاز بالا"), headers=auth_headers
+    ).json()
+    below_floor = client.post(
+        "/api/v1/events", json=_event_payload(leaf_category.id, title="زیر کف"), headers=auth_headers
+    ).json()
+    client.post(f"/api/v1/events/{high_rated['id']}/publish", headers=auth_headers)
+    client.post(f"/api/v1/events/{below_floor['id']}/publish", headers=auth_headers)
+
+    db_session.query(Event).filter(Event.id == high_rated["id"]).update(
+        {"rating_avg": 4.5, "rating_count": 5}
+    )
+    db_session.query(Event).filter(Event.id == below_floor["id"]).update(
+        {"rating_avg": 5.0, "rating_count": 1}
+    )
+    db_session.commit()
+
+    resp = client.get("/api/v1/events?sort=top_rated")
+    ids = [e["id"] for e in resp.json()]
+    assert high_rated["id"] in ids
+    assert below_floor["id"] not in ids
+
+
 def test_list_my_events_shows_all_own_statuses(client, leaf_category, auth_headers):
     client.post("/api/v1/events", json=_event_payload(leaf_category.id), headers=auth_headers)
     client.post("/api/v1/events", json=_event_payload(leaf_category.id), headers=auth_headers)

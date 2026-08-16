@@ -21,6 +21,7 @@ from app.schemas.event import (
 from app.schemas.review import EventReviewIn, EventReviewOut
 from app.services import event_service, review_service
 from app.services.event_service import EventServiceError, event_query, to_list_item_out
+from app.services.home_service import MIN_RATING_COUNT_FOR_TOP_RATED
 from app.services.image_service import InvalidImageError, validate_and_reencode_image
 from app.services.review_service import ReviewServiceError
 from app.services.video_service import InvalidVideoError, validate_video_file
@@ -58,10 +59,13 @@ def list_events(
     if featured is not None:
         query = query.filter(Event.is_featured == featured)
 
-    # sort=popular: بازدید تنها معیار محبوبیت واقعیه که الان داریم — سیستم
-    # امتیازدهی هنوز پیاده نشده (فاز ۷)، پس rating_avg برای همه صفره
     if sort == "popular":
         query = query.order_by(Event.view_count.desc())
+    elif sort == "top_rated":
+        # یه رویداد با یه امتیاز ۵ تنها نباید بالای لیست بشینه.
+        query = query.filter(Event.rating_count >= MIN_RATING_COUNT_FOR_TOP_RATED).order_by(
+            Event.rating_avg.desc()
+        )
     else:
         query = query.order_by(Event.published_at.desc())
 

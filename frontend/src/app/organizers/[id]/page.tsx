@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { EventCard } from "@/components/EventCard";
 import { FollowOrganizerButton } from "@/components/FollowOrganizerButton";
+import { RateEntityWidget } from "@/components/RateEntityWidget";
 import { Separator } from "@/components/ui/separator";
 import { organizersServer } from "@/lib/organizers-server";
 
@@ -22,6 +24,8 @@ export default async function OrganizerDetailPage({ params }: Props) {
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-8">
+      <Breadcrumbs items={[{ label: organizer.name ?? "برگزارکننده" }]} />
+
       <div className="flex flex-wrap items-center gap-4">
         <div className="bg-muted flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full">
           {organizer.avatar_url ? (
@@ -42,6 +46,12 @@ export default async function OrganizerDetailPage({ params }: Props) {
           <span className="text-muted-foreground text-sm">
             {organizer.follower_count.toLocaleString("fa-IR")} دنبال‌کننده
           </span>
+          <RateEntityWidget
+            entityType="organizer"
+            entityId={organizer.id}
+            initialRatingAvg={organizer.rating_avg}
+            initialRatingCount={organizer.rating_count}
+          />
         </div>
         <div className="sm:mr-auto">
           <FollowOrganizerButton organizerId={organizer.id} />

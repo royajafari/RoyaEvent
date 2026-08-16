@@ -13,6 +13,9 @@ export type InstructorDetail = InstructorOut & {
   is_following: boolean;
   is_claimed: boolean;
   is_owned_by_me: boolean;
+  rating_avg: number;
+  rating_count: number;
+  my_rating: number | null;
   events: EventListItem[];
 };
 

@@ -21,6 +21,14 @@ export default async function Home() {
         <NewsletterSignup />
       </div>
 
+      {sections.top_rated_events.length > 0 && (
+        <EventCarousel
+          title="برترین وبینارها"
+          events={sections.top_rated_events}
+          viewAllHref="/events?sort=top_rated"
+        />
+      )}
+
       <EventCarousel
         title="وبینارهای محبوب"
         events={sections.popular_events}

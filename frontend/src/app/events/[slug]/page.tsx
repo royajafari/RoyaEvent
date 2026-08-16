@@ -5,9 +5,11 @@ import Link from "next/link";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { EventCard } from "@/components/EventCard";
+import { EventReviews } from "@/components/EventReviews";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { FollowInstructorButton } from "@/components/FollowInstructorButton";
 import { FollowOrganizerButton } from "@/components/FollowOrganizerButton";
+import { StarRating } from "@/components/StarRating";
 import { StickyTicketFooter } from "@/components/StickyTicketFooter";
 import { TicketCheckout } from "@/components/TicketCheckout";
 import { Badge } from "@/components/ui/badge";
@@ -96,6 +98,15 @@ export default async function EventDetailPage({ params }: Props) {
       </div>
 
       <h1 className="text-2xl font-bold sm:text-3xl">{event.title}</h1>
+
+      {event.rating_count > 0 && (
+        <div className="flex items-center gap-2">
+          <StarRating value={event.rating_avg} readOnly size={18} />
+          <span className="text-muted-foreground text-sm">
+            {event.rating_avg.toFixed(1)} ({event.rating_count.toLocaleString("fa-IR")} نظر)
+          </span>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-2 text-sm">
@@ -229,6 +240,9 @@ export default async function EventDetailPage({ params }: Props) {
           </section>
         </>
       )}
+
+      <Separator />
+      <EventReviews eventId={event.id} />
 
       {related.length > 0 && (
         <>
