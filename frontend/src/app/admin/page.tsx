@@ -317,31 +317,47 @@ export default function AdminPage() {
       )}
 
       {tab === "users" && (
-        <div className="flex flex-col gap-3">
-          {users.map((u) => (
-            <Card key={u.id} className="text-right">
-              <CardHeader className="flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-base">{u.full_name ?? "بدون نام"}</CardTitle>
-                <Badge variant={u.status === "suspended" ? "destructive" : "secondary"}>
-                  {u.status === "suspended" ? "تعلیق‌شده" : "فعال"}
-                </Badge>
-              </CardHeader>
-              <CardContent className="flex flex-wrap items-center gap-2">
-                <span className="text-muted-foreground text-xs">
-                  {u.phone ?? u.email ?? "بدون شماره/ایمیل"} — نقش: {u.role}
-                </span>
-                <Button
-                  size="sm"
-                  variant={u.status === "suspended" ? "outline" : "destructive"}
-                  className="mr-auto"
-                  disabled={busyId === u.id || u.role === "admin"}
-                  onClick={() => handleToggleSuspend(u)}
-                >
-                  {u.status === "suspended" ? "رفع تعلیق" : "تعلیق کاربر"}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="overflow-x-auto rounded-lg bg-[silver] ring-1 ring-foreground/10">
+          <table className="w-full text-right text-sm">
+            <thead className="bg-[#a8a8a8] text-xs text-zinc-700">
+              <tr>
+                <th className="px-3 py-2 font-normal">ردیف</th>
+                <th className="px-3 py-2 font-normal">نام</th>
+                <th className="px-3 py-2 font-normal">شماره/ایمیل</th>
+                <th className="px-3 py-2 font-normal">نقش</th>
+                <th className="px-3 py-2 font-normal">وضعیت</th>
+                <th className="px-3 py-2 font-normal">عملیات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u, index) => (
+                <tr key={u.id} className="border-t border-zinc-400">
+                  <td className="px-3 py-2 text-zinc-700">{index + 1}</td>
+                  <td className="px-3 py-2 text-zinc-900">{u.full_name ?? "بدون نام"}</td>
+                  <td className="px-3 py-2 text-zinc-700 whitespace-nowrap">
+                    {u.phone ?? u.email ?? "بدون شماره/ایمیل"}
+                  </td>
+                  <td className="px-3 py-2 text-zinc-700">{u.role}</td>
+                  <td className="px-3 py-2">
+                    <Badge variant={u.status === "suspended" ? "destructive" : "secondary"}>
+                      {u.status === "suspended" ? "تعلیق‌شده" : "فعال"}
+                    </Badge>
+                  </td>
+                  <td className="px-3 py-2">
+                    <Button
+                      size="sm"
+                      variant={u.status === "suspended" ? "outline" : "destructive"}
+                      className="whitespace-nowrap"
+                      disabled={busyId === u.id || u.role === "admin"}
+                      onClick={() => handleToggleSuspend(u)}
+                    >
+                      {u.status === "suspended" ? "رفع تعلیق" : "تعلیق کاربر"}
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -362,14 +378,14 @@ export default function AdminPage() {
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label>دسته‌ی والد (اختیاری)</Label>
+                  <Label>دسته‌بندی</Label>
                   <Select
                     value={newCategoryParentId}
                     onValueChange={(v) => setNewCategoryParentId(v)}
                   >
                     <SelectTrigger className="w-48">
                       <SelectValue>
-                        {(v) => parentCategories.find((c) => String(c.id) === v)?.name ?? "بدون والد"}
+                        {(v) => parentCategories.find((c) => String(c.id) === v)?.name ?? "انتخاب"}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
@@ -388,30 +404,39 @@ export default function AdminPage() {
             </CardContent>
           </Card>
 
-          <div className="flex flex-col gap-2">
-            {categories.map((c) => (
-              <Card key={c.id} className="text-right">
-                <CardContent className="flex items-center justify-between py-4">
-                  <span>
-                    {c.name}
-                    {categoryParentName(c.parent_id) && (
-                      <span className="text-muted-foreground text-xs">
-                        {" "}
-                        (زیردسته‌ی {categoryParentName(c.parent_id)})
-                      </span>
-                    )}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    disabled={busyId === c.id}
-                    onClick={() => handleDeleteCategory(c.id)}
-                  >
-                    حذف
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="overflow-x-auto rounded-lg bg-[silver] ring-1 ring-foreground/10">
+            <table className="w-full text-right text-sm">
+              <thead className="bg-[#a8a8a8] text-xs text-zinc-700">
+                <tr>
+                  <th className="px-3 py-2 font-normal">ردیف</th>
+                  <th className="px-3 py-2 font-normal">نام</th>
+                  <th className="px-3 py-2 font-normal">دسته‌بندی</th>
+                  <th className="px-3 py-2 font-normal">عملیات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {categories.map((c, index) => (
+                  <tr key={c.id} className="border-t border-zinc-400">
+                    <td className="px-3 py-2 text-zinc-700">{index + 1}</td>
+                    <td className="px-3 py-2 text-zinc-900">{c.name}</td>
+                    <td className="px-3 py-2 text-zinc-700">
+                      {categoryParentName(c.parent_id) ?? "—"}
+                    </td>
+                    <td className="px-3 py-2">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="whitespace-nowrap"
+                        disabled={busyId === c.id}
+                        onClick={() => handleDeleteCategory(c.id)}
+                      >
+                        حذف
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
