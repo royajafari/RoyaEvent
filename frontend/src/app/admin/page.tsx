@@ -54,7 +54,7 @@ export default function AdminPage() {
   const [visibleCategoriesCount, setVisibleCategoriesCount] = useState(LAZY_CHUNK_SIZE);
   const categoriesSentinelRef = useRef<HTMLTableRowElement | null>(null);
   const [visibleAuditCount, setVisibleAuditCount] = useState(LAZY_CHUNK_SIZE);
-  const auditSentinelRef = useRef<HTMLDivElement | null>(null);
+  const auditSentinelRef = useRef<HTMLTableRowElement | null>(null);
 
   const trimmedEventSearch = eventSearchQuery.trim();
   const filteredEvents = trimmedEventSearch
@@ -246,6 +246,20 @@ export default function AdminPage() {
   const parentCategories = categories.filter((c) => c.parent_id === null);
   const categoryParentName = (parentId: number | null) =>
     parentId ? categories.find((c) => c.id === parentId)?.name : null;
+
+  const auditTargetLabel = (entry: AuditLogEntry): string => {
+    if (entry.target_type === "event") {
+      return events.find((e) => e.id === entry.target_id)?.title ?? `رویداد #${entry.target_id}`;
+    }
+    if (entry.target_type === "user") {
+      const target = users.find((u) => u.id === entry.target_id);
+      return target ? (target.full_name ?? target.phone ?? target.email ?? `کاربر #${entry.target_id}`) : `کاربر #${entry.target_id}`;
+    }
+    if (entry.target_type === "category") {
+      return categories.find((c) => c.id === entry.target_id)?.name ?? `دسته‌بندی #${entry.target_id}`;
+    }
+    return `${entry.target_type} #${entry.target_id}`;
+  };
 
   const visibleEvents = filteredEvents.slice(0, visibleEventsCount);
   const hasMoreEvents = visibleEventsCount < filteredEvents.length;
@@ -510,23 +524,43 @@ export default function AdminPage() {
       {tab === "audit" && (
         <div className="flex flex-col gap-2">
           {auditLog.length === 0 && <p className="text-muted-foreground">هنوز اقدامی ثبت نشده.</p>}
-          {visibleAuditLog.map((entry) => (
-            <Card key={entry.id} className="text-right">
-              <CardContent className="flex flex-col gap-1 py-4 text-sm">
-                <span>
-                  <strong>{entry.admin_name ?? `ادمین #${entry.admin_user_id}`}</strong> — {entry.action} روی{" "}
-                  {entry.target_type} #{entry.target_id}
-                </span>
-                {entry.reason && <span className="text-muted-foreground">دلیل: {entry.reason}</span>}
-                <span className="text-muted-foreground text-xs">
-                  {formatJalaliDateTime(entry.created_at)}
-                </span>
-              </CardContent>
-            </Card>
-          ))}
-          {hasMoreAudit && (
-            <div ref={auditSentinelRef} className="py-3 text-center text-xs text-muted-foreground">
-              در حال بارگذاری موارد بیشتر...
+          {auditLog.length > 0 && (
+            <div className="overflow-x-auto rounded-lg bg-[silver] ring-1 ring-foreground/10">
+              <table className="w-full text-right text-sm">
+                <thead className="bg-[#a8a8a8] text-xs text-zinc-700">
+                  <tr>
+                    <th className="px-3 py-2 font-normal">ردیف</th>
+                    <th className="px-3 py-2 font-normal">ادمین</th>
+                    <th className="px-3 py-2 font-normal">اقدام</th>
+                    <th className="px-3 py-2 font-normal">هدف</th>
+                    <th className="px-3 py-2 font-normal">دلیل</th>
+                    <th className="px-3 py-2 font-normal">تاریخ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleAuditLog.map((entry, index) => (
+                    <tr key={entry.id} className="border-t border-zinc-400">
+                      <td className="px-3 py-2 text-zinc-700">{index + 1}</td>
+                      <td className="px-3 py-2 text-zinc-900">
+                        {entry.admin_name ?? `ادمین #${entry.admin_user_id}`}
+                      </td>
+                      <td className="px-3 py-2 text-zinc-700">{entry.action}</td>
+                      <td className="px-3 py-2 text-zinc-700">{auditTargetLabel(entry)}</td>
+                      <td className="px-3 py-2 text-zinc-700">{entry.reason ?? "—"}</td>
+                      <td className="px-3 py-2 text-zinc-700 whitespace-nowrap">
+                        {formatJalaliDateTime(entry.created_at)}
+                      </td>
+                    </tr>
+                  ))}
+                  {hasMoreAudit && (
+                    <tr ref={auditSentinelRef}>
+                      <td colSpan={6} className="px-3 py-3 text-center text-xs text-zinc-600">
+                        در حال بارگذاری موارد بیشتر...
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
