@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { AdminEvent, AdminUser, AuditLogEntry } from "@/lib/admin-api";
+import type { AdminEvent, AdminNotification, AdminUser, AuditLogEntry } from "@/lib/admin-api";
 import { adminApi } from "@/lib/admin-api";
 import { ApiError } from "@/lib/api-client";
 import type { CategoryOut } from "@/lib/events-api";
@@ -24,9 +24,26 @@ const EVENT_STATUS_LABELS: Record<AdminEvent["status"], string> = {
   cancelled: "لغوشده",
 };
 
+const NOTIFICATION_CHANNEL_LABELS: Record<AdminNotification["channel"], string> = {
+  sms: "پیامک",
+  email: "ایمیل",
+};
+
+const NOTIFICATION_STATUS_LABELS: Record<AdminNotification["status"], string> = {
+  pending: "در انتظار ارسال",
+  sent: "ارسال‌شده",
+  failed: "ناموفق",
+};
+
+const NOTIFICATION_TEMPLATE_LABELS: Record<string, string> = {
+  registration_complete: "تأیید ثبت‌نام",
+  ticket_purchase_complete: "تأیید خرید بلیط",
+  event_reminder_1h: "یادآوری ۱ساعته",
+};
+
 const LAZY_CHUNK_SIZE = 10;
 
-type Tab = "events" | "users" | "categories" | "audit";
+type Tab = "events" | "users" | "categories" | "audit" | "notifications";
 
 export default function AdminPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -37,6 +54,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [categories, setCategories] = useState<CategoryOut[]>([]);
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
+  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -44,6 +62,27 @@ export default function AdminPage() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryParentId, setNewCategoryParentId] = useState<string | null>(null);
   const [eventSearchQuery, setEventSearchQuery] = useState("");
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [categorySearchQuery, setCategorySearchQuery] = useState("");
+  const [auditSearchQuery, setAuditSearchQuery] = useState("");
+  const [notificationSearchQuery, setNotificationSearchQuery] = useState("");
+
+  const categoryParentName = (parentId: number | null) =>
+    parentId ? categories.find((c) => c.id === parentId)?.name : null;
+
+  const auditTargetLabel = (entry: AuditLogEntry): string => {
+    if (entry.target_type === "event") {
+      return events.find((e) => e.id === entry.target_id)?.title ?? `رویداد #${entry.target_id}`;
+    }
+    if (entry.target_type === "user") {
+      const target = users.find((u) => u.id === entry.target_id);
+      return target ? (target.full_name ?? target.phone ?? target.email ?? `کاربر #${entry.target_id}`) : `کاربر #${entry.target_id}`;
+    }
+    if (entry.target_type === "category") {
+      return categories.find((c) => c.id === entry.target_id)?.name ?? `دسته‌بندی #${entry.target_id}`;
+    }
+    return `${entry.target_type} #${entry.target_id}`;
+  };
 
   // نمایش تدریجی ۱۰تا ۱۰تا با اسکرول (به‌جای صفحه‌بندی دکمه‌ای)، یک state/ref/effect
   // جدا برای هر تب — یک ردیف sentinel وقتی وارد viewport بشه chunk بعدی رو نشون می‌ده.
@@ -55,6 +94,8 @@ export default function AdminPage() {
   const categoriesSentinelRef = useRef<HTMLTableRowElement | null>(null);
   const [visibleAuditCount, setVisibleAuditCount] = useState(LAZY_CHUNK_SIZE);
   const auditSentinelRef = useRef<HTMLTableRowElement | null>(null);
+  const [visibleNotificationsCount, setVisibleNotificationsCount] = useState(LAZY_CHUNK_SIZE);
+  const notificationsSentinelRef = useRef<HTMLTableRowElement | null>(null);
 
   const trimmedEventSearch = eventSearchQuery.trim();
   const filteredEvents = trimmedEventSearch
@@ -65,6 +106,49 @@ export default function AdminPage() {
           (event.organizer_name ?? "").includes(trimmedEventSearch),
       )
     : events;
+
+  const trimmedUserSearch = userSearchQuery.trim();
+  const filteredUsers = trimmedUserSearch
+    ? users.filter(
+        (u) =>
+          (u.full_name ?? "").includes(trimmedUserSearch) ||
+          (u.phone ?? "").includes(trimmedUserSearch) ||
+          (u.email ?? "").includes(trimmedUserSearch) ||
+          u.role.includes(trimmedUserSearch),
+      )
+    : users;
+
+  const trimmedCategorySearch = categorySearchQuery.trim();
+  const filteredCategories = trimmedCategorySearch
+    ? categories.filter(
+        (c) =>
+          c.name.includes(trimmedCategorySearch) ||
+          (categoryParentName(c.parent_id) ?? "").includes(trimmedCategorySearch),
+      )
+    : categories;
+
+  const trimmedAuditSearch = auditSearchQuery.trim();
+  const filteredAuditLog = trimmedAuditSearch
+    ? auditLog.filter(
+        (entry) =>
+          (entry.admin_name ?? "").includes(trimmedAuditSearch) ||
+          entry.action.includes(trimmedAuditSearch) ||
+          auditTargetLabel(entry).includes(trimmedAuditSearch) ||
+          (entry.reason ?? "").includes(trimmedAuditSearch),
+      )
+    : auditLog;
+
+  const trimmedNotificationSearch = notificationSearchQuery.trim();
+  const filteredNotifications = trimmedNotificationSearch
+    ? notifications.filter(
+        (n) =>
+          n.destination.includes(trimmedNotificationSearch) ||
+          (n.event_title ?? "").includes(trimmedNotificationSearch) ||
+          (NOTIFICATION_TEMPLATE_LABELS[n.template_key] ?? n.template_key).includes(
+            trimmedNotificationSearch,
+          ),
+      )
+    : notifications;
 
   useEffect(() => {
     const sentinel = eventsSentinelRef.current;
@@ -94,7 +178,7 @@ export default function AdminPage() {
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [tab, users.length, visibleUsersCount]);
+  }, [tab, filteredUsers.length, visibleUsersCount]);
 
   useEffect(() => {
     const sentinel = categoriesSentinelRef.current;
@@ -109,7 +193,7 @@ export default function AdminPage() {
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [tab, categories.length, visibleCategoriesCount]);
+  }, [tab, filteredCategories.length, visibleCategoriesCount]);
 
   useEffect(() => {
     const sentinel = auditSentinelRef.current;
@@ -124,7 +208,22 @@ export default function AdminPage() {
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [tab, auditLog.length, visibleAuditCount]);
+  }, [tab, filteredAuditLog.length, visibleAuditCount]);
+
+  useEffect(() => {
+    const sentinel = notificationsSentinelRef.current;
+    if (!sentinel || tab !== "notifications") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleNotificationsCount((prev) => prev + LAZY_CHUNK_SIZE);
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [tab, filteredNotifications.length, visibleNotificationsCount]);
 
   function loadAll(token: string) {
     Promise.all([
@@ -132,12 +231,14 @@ export default function AdminPage() {
       adminApi.listUsers(token),
       adminApi.listCategories(token),
       adminApi.listAuditLog(token),
+      adminApi.listNotifications(token),
     ])
-      .then(([e, u, c, a]) => {
+      .then(([e, u, c, a, n]) => {
         setEvents(e);
         setUsers(u);
         setCategories(c);
         setAuditLog(a);
+        setNotifications(n);
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در دریافت اطلاعات پنل ادمین"))
       .finally(() => setLoading(false));
@@ -244,31 +345,17 @@ export default function AdminPage() {
   }
 
   const parentCategories = categories.filter((c) => c.parent_id === null);
-  const categoryParentName = (parentId: number | null) =>
-    parentId ? categories.find((c) => c.id === parentId)?.name : null;
-
-  const auditTargetLabel = (entry: AuditLogEntry): string => {
-    if (entry.target_type === "event") {
-      return events.find((e) => e.id === entry.target_id)?.title ?? `رویداد #${entry.target_id}`;
-    }
-    if (entry.target_type === "user") {
-      const target = users.find((u) => u.id === entry.target_id);
-      return target ? (target.full_name ?? target.phone ?? target.email ?? `کاربر #${entry.target_id}`) : `کاربر #${entry.target_id}`;
-    }
-    if (entry.target_type === "category") {
-      return categories.find((c) => c.id === entry.target_id)?.name ?? `دسته‌بندی #${entry.target_id}`;
-    }
-    return `${entry.target_type} #${entry.target_id}`;
-  };
 
   const visibleEvents = filteredEvents.slice(0, visibleEventsCount);
   const hasMoreEvents = visibleEventsCount < filteredEvents.length;
-  const visibleUsers = users.slice(0, visibleUsersCount);
-  const hasMoreUsers = visibleUsersCount < users.length;
-  const visibleCategories = categories.slice(0, visibleCategoriesCount);
-  const hasMoreCategories = visibleCategoriesCount < categories.length;
-  const visibleAuditLog = auditLog.slice(0, visibleAuditCount);
-  const hasMoreAudit = visibleAuditCount < auditLog.length;
+  const visibleUsers = filteredUsers.slice(0, visibleUsersCount);
+  const hasMoreUsers = visibleUsersCount < filteredUsers.length;
+  const visibleCategories = filteredCategories.slice(0, visibleCategoriesCount);
+  const hasMoreCategories = visibleCategoriesCount < filteredCategories.length;
+  const visibleAuditLog = filteredAuditLog.slice(0, visibleAuditCount);
+  const hasMoreAudit = visibleAuditCount < filteredAuditLog.length;
+  const visibleNotifications = filteredNotifications.slice(0, visibleNotificationsCount);
+  const hasMoreNotifications = visibleNotificationsCount < filteredNotifications.length;
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-10">
@@ -284,6 +371,7 @@ export default function AdminPage() {
           <TabsTrigger value="users">کاربران</TabsTrigger>
           <TabsTrigger value="categories">دسته‌بندی‌ها</TabsTrigger>
           <TabsTrigger value="audit">لاگ اقدامات</TabsTrigger>
+          <TabsTrigger value="notifications">پیامک‌ها و ایمیل‌ها</TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -383,54 +471,66 @@ export default function AdminPage() {
       )}
 
       {tab === "users" && (
-        <div className="overflow-x-auto rounded-lg bg-[silver] ring-1 ring-foreground/10">
-          <table className="w-full text-right text-sm">
-            <thead className="bg-[#a8a8a8] text-xs text-zinc-700">
-              <tr>
-                <th className="px-3 py-2 font-normal">ردیف</th>
-                <th className="px-3 py-2 font-normal">نام</th>
-                <th className="px-3 py-2 font-normal">شماره/ایمیل</th>
-                <th className="px-3 py-2 font-normal">نقش</th>
-                <th className="px-3 py-2 font-normal">وضعیت</th>
-                <th className="px-3 py-2 font-normal">عملیات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleUsers.map((u, index) => (
-                <tr key={u.id} className="border-t border-zinc-400">
-                  <td className="px-3 py-2 text-zinc-700">{index + 1}</td>
-                  <td className="px-3 py-2 text-zinc-900">{u.full_name ?? "بدون نام"}</td>
-                  <td className="px-3 py-2 text-zinc-700 whitespace-nowrap">
-                    {u.phone ?? u.email ?? "بدون شماره/ایمیل"}
-                  </td>
-                  <td className="px-3 py-2 text-zinc-700">{u.role}</td>
-                  <td className="px-3 py-2">
-                    <Badge variant={u.status === "suspended" ? "destructive" : "secondary"}>
-                      {u.status === "suspended" ? "تعلیق‌شده" : "فعال"}
-                    </Badge>
-                  </td>
-                  <td className="px-3 py-2">
-                    <Button
-                      size="sm"
-                      variant={u.status === "suspended" ? "outline" : "destructive"}
-                      className="whitespace-nowrap"
-                      disabled={busyId === u.id || u.role === "admin"}
-                      onClick={() => handleToggleSuspend(u)}
-                    >
-                      {u.status === "suspended" ? "رفع تعلیق" : "تعلیق کاربر"}
-                    </Button>
-                  </td>
+        <div className="flex flex-col gap-2">
+          <Input
+            type="search"
+            placeholder="جستجو بر اساس نام، شماره، ایمیل یا نقش..."
+            value={userSearchQuery}
+            onChange={(e) => setUserSearchQuery(e.target.value)}
+            className="max-w-sm"
+          />
+          {trimmedUserSearch && filteredUsers.length === 0 && (
+            <p className="text-muted-foreground text-sm">موردی یافت نشد.</p>
+          )}
+          <div className="overflow-x-auto rounded-lg bg-[silver] ring-1 ring-foreground/10">
+            <table className="w-full text-right text-sm">
+              <thead className="bg-[#a8a8a8] text-xs text-zinc-700">
+                <tr>
+                  <th className="px-3 py-2 font-normal">ردیف</th>
+                  <th className="px-3 py-2 font-normal">نام</th>
+                  <th className="px-3 py-2 font-normal">شماره/ایمیل</th>
+                  <th className="px-3 py-2 font-normal">نقش</th>
+                  <th className="px-3 py-2 font-normal">وضعیت</th>
+                  <th className="px-3 py-2 font-normal">عملیات</th>
                 </tr>
-              ))}
-              {hasMoreUsers && (
-                <tr ref={usersSentinelRef}>
-                  <td colSpan={6} className="px-3 py-3 text-center text-xs text-zinc-600">
-                    در حال بارگذاری موارد بیشتر...
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {visibleUsers.map((u, index) => (
+                  <tr key={u.id} className="border-t border-zinc-400">
+                    <td className="px-3 py-2 text-zinc-700">{index + 1}</td>
+                    <td className="px-3 py-2 text-zinc-900">{u.full_name ?? "بدون نام"}</td>
+                    <td className="px-3 py-2 text-zinc-700 whitespace-nowrap">
+                      {u.phone ?? u.email ?? "بدون شماره/ایمیل"}
+                    </td>
+                    <td className="px-3 py-2 text-zinc-700">{u.role}</td>
+                    <td className="px-3 py-2">
+                      <Badge variant={u.status === "suspended" ? "destructive" : "secondary"}>
+                        {u.status === "suspended" ? "تعلیق‌شده" : "فعال"}
+                      </Badge>
+                    </td>
+                    <td className="px-3 py-2">
+                      <Button
+                        size="sm"
+                        variant={u.status === "suspended" ? "outline" : "destructive"}
+                        className="whitespace-nowrap"
+                        disabled={busyId === u.id || u.role === "admin"}
+                        onClick={() => handleToggleSuspend(u)}
+                      >
+                        {u.status === "suspended" ? "رفع تعلیق" : "تعلیق کاربر"}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+                {hasMoreUsers && (
+                  <tr ref={usersSentinelRef}>
+                    <td colSpan={6} className="px-3 py-3 text-center text-xs text-zinc-600">
+                      در حال بارگذاری موارد بیشتر...
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -477,6 +577,16 @@ export default function AdminPage() {
             </CardContent>
           </Card>
 
+          <Input
+            type="search"
+            placeholder="جستجو بر اساس نام دسته‌بندی..."
+            value={categorySearchQuery}
+            onChange={(e) => setCategorySearchQuery(e.target.value)}
+            className="max-w-sm"
+          />
+          {trimmedCategorySearch && filteredCategories.length === 0 && (
+            <p className="text-muted-foreground text-sm">موردی یافت نشد.</p>
+          )}
           <div className="overflow-x-auto rounded-lg bg-[silver] ring-1 ring-foreground/10">
             <table className="w-full text-right text-sm">
               <thead className="bg-[#a8a8a8] text-xs text-zinc-700">
@@ -525,6 +635,18 @@ export default function AdminPage() {
         <div className="flex flex-col gap-2">
           {auditLog.length === 0 && <p className="text-muted-foreground">هنوز اقدامی ثبت نشده.</p>}
           {auditLog.length > 0 && (
+            <Input
+              type="search"
+              placeholder="جستجو بر اساس ادمین، اقدام، هدف یا دلیل..."
+              value={auditSearchQuery}
+              onChange={(e) => setAuditSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
+          )}
+          {trimmedAuditSearch && filteredAuditLog.length === 0 && (
+            <p className="text-muted-foreground text-sm">موردی یافت نشد.</p>
+          )}
+          {filteredAuditLog.length > 0 && (
             <div className="overflow-x-auto rounded-lg bg-[silver] ring-1 ring-foreground/10">
               <table className="w-full text-right text-sm">
                 <thead className="bg-[#a8a8a8] text-xs text-zinc-700">
@@ -555,6 +677,85 @@ export default function AdminPage() {
                   {hasMoreAudit && (
                     <tr ref={auditSentinelRef}>
                       <td colSpan={6} className="px-3 py-3 text-center text-xs text-zinc-600">
+                        در حال بارگذاری موارد بیشتر...
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "notifications" && (
+        <div className="flex flex-col gap-2">
+          {notifications.length === 0 && (
+            <p className="text-muted-foreground">هنوز پیامک/ایمیلی در صف نبوده.</p>
+          )}
+          {notifications.length > 0 && (
+            <Input
+              type="search"
+              placeholder="جستجو بر اساس مقصد، رویداد یا قالب..."
+              value={notificationSearchQuery}
+              onChange={(e) => setNotificationSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
+          )}
+          {trimmedNotificationSearch && filteredNotifications.length === 0 && (
+            <p className="text-muted-foreground text-sm">موردی یافت نشد.</p>
+          )}
+          {filteredNotifications.length > 0 && (
+            <div className="overflow-x-auto rounded-lg bg-[silver] ring-1 ring-foreground/10">
+              <table className="w-full text-right text-sm">
+                <thead className="bg-[#a8a8a8] text-xs text-zinc-700">
+                  <tr>
+                    <th className="px-3 py-2 font-normal">ردیف</th>
+                    <th className="px-3 py-2 font-normal">کانال</th>
+                    <th className="px-3 py-2 font-normal">مقصد</th>
+                    <th className="px-3 py-2 font-normal">قالب</th>
+                    <th className="px-3 py-2 font-normal">رویداد</th>
+                    <th className="px-3 py-2 font-normal">وضعیت</th>
+                    <th className="px-3 py-2 font-normal">تلاش‌ها</th>
+                    <th className="px-3 py-2 font-normal">تاریخ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleNotifications.map((n, index) => (
+                    <tr key={n.id} className="border-t border-zinc-400">
+                      <td className="px-3 py-2 text-zinc-700">{index + 1}</td>
+                      <td className="px-3 py-2 text-zinc-900">
+                        {NOTIFICATION_CHANNEL_LABELS[n.channel]}
+                      </td>
+                      <td className="px-3 py-2 text-zinc-700 whitespace-nowrap" dir="ltr">
+                        {n.destination}
+                      </td>
+                      <td className="px-3 py-2 text-zinc-700">
+                        {NOTIFICATION_TEMPLATE_LABELS[n.template_key] ?? n.template_key}
+                      </td>
+                      <td className="px-3 py-2 text-zinc-700">{n.event_title ?? "—"}</td>
+                      <td className="px-3 py-2">
+                        <Badge
+                          variant={
+                            n.status === "sent"
+                              ? "default"
+                              : n.status === "failed"
+                                ? "destructive"
+                                : "secondary"
+                          }
+                        >
+                          {NOTIFICATION_STATUS_LABELS[n.status]}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-2 text-zinc-700">{n.attempts}</td>
+                      <td className="px-3 py-2 text-zinc-700 whitespace-nowrap">
+                        {formatJalaliDateTime(n.created_at)}
+                      </td>
+                    </tr>
+                  ))}
+                  {hasMoreNotifications && (
+                    <tr ref={notificationsSentinelRef}>
+                      <td colSpan={8} className="px-3 py-3 text-center text-xs text-zinc-600">
                         در حال بارگذاری موارد بیشتر...
                       </td>
                     </tr>

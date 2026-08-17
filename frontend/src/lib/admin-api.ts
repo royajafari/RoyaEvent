@@ -34,6 +34,20 @@ export type AuditLogEntry = {
   created_at: string;
 };
 
+export type AdminNotification = {
+  id: number;
+  channel: "sms" | "email";
+  destination: string;
+  template_key: string;
+  status: "pending" | "sent" | "failed";
+  attempts: number;
+  provider: string | null;
+  last_error: string | null;
+  event_id: number | null;
+  event_title: string | null;
+  created_at: string;
+};
+
 export const adminApi = {
   listEvents: (accessToken: string) => request<AdminEvent[]>("/admin/events", { accessToken }),
 
@@ -78,4 +92,7 @@ export const adminApi = {
 
   listAuditLog: (accessToken: string) =>
     request<AuditLogEntry[]>("/admin/audit-log", { accessToken }),
+
+  listNotifications: (accessToken: string) =>
+    request<AdminNotification[]>("/admin/notifications", { accessToken }),
 };
