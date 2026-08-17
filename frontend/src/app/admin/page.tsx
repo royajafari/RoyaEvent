@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -43,7 +43,24 @@ export default function AdminPage() {
   const [newCategoryParentId, setNewCategoryParentId] = useState<string | null>(null);
   const [eventSearchQuery, setEventSearchQuery] = useState("");
   const [eventPage, setEventPage] = useState(1);
-  const [categoryPage, setCategoryPage] = useState(1);
+  const CATEGORIES_CHUNK_SIZE = 10;
+  const [visibleCategoriesCount, setVisibleCategoriesCount] = useState(CATEGORIES_CHUNK_SIZE);
+  const categorySentinelRef = useRef<HTMLTableRowElement | null>(null);
+
+  useEffect(() => {
+    const sentinel = categorySentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCategoriesCount((prev) => prev + CATEGORIES_CHUNK_SIZE);
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [tab, categories.length, visibleCategoriesCount]);
 
   function loadAll(token: string) {
     Promise.all([
@@ -184,13 +201,8 @@ export default function AdminPage() {
     currentEventPage * EVENTS_PAGE_SIZE,
   );
 
-  const CATEGORIES_PAGE_SIZE = 10;
-  const totalCategoryPages = Math.max(1, Math.ceil(categories.length / CATEGORIES_PAGE_SIZE));
-  const currentCategoryPage = Math.min(categoryPage, totalCategoryPages);
-  const pagedCategories = categories.slice(
-    (currentCategoryPage - 1) * CATEGORIES_PAGE_SIZE,
-    currentCategoryPage * CATEGORIES_PAGE_SIZE,
-  );
+  const visibleCategories = categories.slice(0, visibleCategoriesCount);
+  const hasMoreCategories = visibleCategoriesCount < categories.length;
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-10">
@@ -424,11 +436,9 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {pagedCategories.map((c, index) => (
+                {visibleCategories.map((c, index) => (
                   <tr key={c.id} className="border-t border-zinc-400">
-                    <td className="px-3 py-2 text-zinc-700">
-                      {(currentCategoryPage - 1) * CATEGORIES_PAGE_SIZE + index + 1}
-                    </td>
+                    <td className="px-3 py-2 text-zinc-700">{index + 1}</td>
                     <td className="px-3 py-2 text-zinc-900">{c.name}</td>
                     <td className="px-3 py-2 text-zinc-700">
                       {categoryParentName(c.parent_id) ?? "—"}
@@ -446,32 +456,16 @@ export default function AdminPage() {
                     </td>
                   </tr>
                 ))}
+                {hasMoreCategories && (
+                  <tr ref={categorySentinelRef}>
+                    <td colSpan={4} className="px-3 py-3 text-center text-zinc-600 text-xs">
+                      در حال بارگذاری موارد بیشتر...
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
-          {totalCategoryPages > 1 && (
-            <div className="flex items-center justify-center gap-3">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={currentCategoryPage <= 1}
-                onClick={() => setCategoryPage(currentCategoryPage - 1)}
-              >
-                قبلی
-              </Button>
-              <span className="text-muted-foreground text-xs">
-                صفحه {currentCategoryPage} از {totalCategoryPages}
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={currentCategoryPage >= totalCategoryPages}
-                onClick={() => setCategoryPage(currentCategoryPage + 1)}
-              >
-                بعدی
-              </Button>
-            </div>
-          )}
         </div>
       )}
 
