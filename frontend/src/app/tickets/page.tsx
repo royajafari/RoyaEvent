@@ -74,7 +74,7 @@ export default function MyTicketsPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10">
+    <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10">
       <Breadcrumbs items={[{ label: "بلیط‌های من" }]} />
       <h1 className="text-2xl font-bold">بلیط‌های من</h1>
 
