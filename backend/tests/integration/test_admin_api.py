@@ -184,6 +184,34 @@ def test_admin_audit_log_lists_actions(client, published_event, admin_auth_heade
     assert "feature_event" in actions
 
 
+def test_admin_notifications_reject_non_admin(client, buyer_auth_headers):
+    resp = client.get("/api/v1/admin/notifications", headers=buyer_auth_headers)
+    assert resp.status_code == 403
+
+
+def test_admin_notifications_lists_enqueued(
+    client, published_event, free_ticket_type, buyer_auth_headers, admin_auth_headers
+):
+    create_resp = client.post(
+        "/api/v1/orders",
+        json={"ticket_type_id": free_ticket_type.id, "session_id": published_event.sessions[0].id},
+        headers=buyer_auth_headers,
+    )
+    order_id = create_resp.json()["id"]
+    client.post(f"/api/v1/orders/{order_id}/complete", headers=buyer_auth_headers)
+
+    resp = client.get("/api/v1/admin/notifications", headers=admin_auth_headers)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) >= 1
+    row = body[0]
+    assert row["channel"] == "sms"
+    assert row["template_key"] == "registration_complete"
+    assert row["event_id"] == published_event.id
+    assert row["event_title"] == published_event.title
+    assert row["status"] in ("pending", "sent", "failed")
+
+
 def _submit_review(client, event, ticket_type, buyer_headers, db_session):
     from datetime import timedelta
 

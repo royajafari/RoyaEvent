@@ -9,6 +9,7 @@ from app.models.review import EventReview
 from app.models.user import User
 from app.schemas.admin import (
     AdminEventOut,
+    AdminNotificationOut,
     AdminReviewOut,
     AdminUserOut,
     AuditLogEntryOut,
@@ -204,6 +205,39 @@ def get_audit_log(
             created_at=e.created_at,
         )
         for e in entries
+    ]
+
+
+@router.get("/notifications", response_model=list[AdminNotificationOut])
+@limiter.limit(_ADMIN_RATE_LIMIT)
+def list_notifications(
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    notifications = admin_service.list_notifications(db)
+
+    def _event_title(event_id: int | None) -> str | None:
+        if event_id is None:
+            return None
+        event = db.get(Event, event_id)
+        return event.title if event else None
+
+    return [
+        AdminNotificationOut(
+            id=n.id,
+            channel=n.channel.value,
+            destination=n.destination,
+            template_key=n.template_key.value,
+            status=n.status.value,
+            attempts=n.attempts,
+            provider=n.provider,
+            last_error=n.last_error,
+            event_id=n.event_id,
+            event_title=_event_title(n.event_id),
+            created_at=n.created_at,
+        )
+        for n in notifications
     ]
 
 

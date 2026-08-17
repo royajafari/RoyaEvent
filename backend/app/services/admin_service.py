@@ -10,6 +10,7 @@ from app.models.admin_audit_log import AdminAuditLog
 from app.models.base import utcnow
 from app.models.category import Category
 from app.models.event import Event
+from app.models.notification import NotificationOutbox
 from app.models.review import EventReview
 from app.models.user import User, UserStatus
 from app.search.indexer import remove_event
@@ -122,3 +123,10 @@ def list_all_reviews(db: Session, limit: int = 100) -> list[EventReview]:
     رویداد خاص)، ادمین باید همه‌چیز رو ببینه — شامل نظرهای hidden، از همه‌ی
     رویدادها — تا بتونه تصمیم بگیره چی رو hide/unhide کنه."""
     return db.query(EventReview).order_by(EventReview.created_at.desc()).limit(limit).all()
+
+
+def list_notifications(db: Session, limit: int = 200) -> list[NotificationOutbox]:
+    """صف پیامک/ایمیل فاز ۶ (notification_service.enqueue) — فقط دیدنی برای
+    ادمین، هیچ اقدام نوشتنی‌ای اینجا نیست (ارسال واقعی فقط دست
+    app/workers/scheduler.py است)."""
+    return db.query(NotificationOutbox).order_by(NotificationOutbox.created_at.desc()).limit(limit).all()

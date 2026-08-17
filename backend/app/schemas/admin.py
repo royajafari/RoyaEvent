@@ -74,3 +74,17 @@ class AdminReviewOut(BaseModel):
 class HideReviewIn(BaseModel):
     hidden: bool
     reason: str | None = None
+
+
+class AdminNotificationOut(BaseModel):
+    id: int
+    channel: str
+    destination: str
+    template_key: str
+    status: str
+    attempts: int
+    provider: str | None
+    last_error: str | None
+    event_id: int | None
+    event_title: str | None
+    created_at: datetime
