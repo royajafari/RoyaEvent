@@ -28,3 +28,8 @@ class AttendeeOut(BaseModel):
     status: str
     ticket_code: str
     created_at: datetime
+    checked_in_at: datetime | None
+
+
+class CheckInIn(BaseModel):
+    ticket_code: str

@@ -163,3 +163,26 @@ def cancel_registration(db: Session, registration: Registration) -> Registration
     db.commit()
     db.refresh(registration)
     return registration
+
+
+def check_in_registration(db: Session, event_id: int, ticket_code: str, checked_in_by: User) -> Registration:
+    """چک‌این حضوری با کد بلیط — برگزارکننده کد رو با اسکن QR یا ورود دستی می‌گیره."""
+    registration = (
+        db.query(Registration)
+        .filter(Registration.event_id == event_id, Registration.ticket_code == ticket_code.strip())
+        .first()
+    )
+    if registration is None:
+        raise OrderServiceError("کد بلیط برای این رویداد یافت نشد")
+    if registration.status == RegistrationStatus.CANCELLED:
+        raise OrderServiceError("این ثبت‌نام لغو شده است")
+    if registration.status == RegistrationStatus.CHECKED_IN:
+        raise OrderServiceError("این بلیط قبلاً چک‌این شده است")
+
+    registration.status = RegistrationStatus.CHECKED_IN
+    registration.checked_in_at = utcnow()
+    registration.checked_in_by_user_id = checked_in_by.id
+
+    db.commit()
+    db.refresh(registration)
+    return registration

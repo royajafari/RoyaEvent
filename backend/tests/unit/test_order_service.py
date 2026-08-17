@@ -11,6 +11,7 @@ from app.services import ticket_service
 from app.services.order_service import (
     OrderServiceError,
     cancel_registration,
+    check_in_registration,
     complete_order,
     create_order,
 )
@@ -256,6 +257,63 @@ def test_cancel_registration_twice_raises(db_session, published_event, buyer, fr
 
 def test_utcnow_naive_for_order_timestamps():
     assert utcnow().tzinfo is None
+
+
+def test_check_in_registration_sets_status_and_timestamp(
+    db_session, published_event, buyer, organizer, free_ticket_type
+):
+    session = published_event.sessions[0]
+    order = create_order(db_session, buyer.id, _order_in(free_ticket_type, session))
+    complete_order(db_session, order)
+
+    from app.models.order import Registration
+
+    registration = db_session.query(Registration).filter_by(user_id=buyer.id).first()
+
+    checked_in = check_in_registration(
+        db_session, published_event.id, registration.ticket_code, organizer
+    )
+
+    assert checked_in.status == RegistrationStatus.CHECKED_IN
+    assert checked_in.checked_in_at is not None
+    assert checked_in.checked_in_by_user_id == organizer.id
+
+
+def test_check_in_registration_unknown_code_raises(db_session, published_event, organizer):
+    with pytest.raises(OrderServiceError):
+        check_in_registration(db_session, published_event.id, "DOESNOTEXIST", organizer)
+
+
+def test_check_in_registration_twice_raises(
+    db_session, published_event, buyer, organizer, free_ticket_type
+):
+    session = published_event.sessions[0]
+    order = create_order(db_session, buyer.id, _order_in(free_ticket_type, session))
+    complete_order(db_session, order)
+
+    from app.models.order import Registration
+
+    registration = db_session.query(Registration).filter_by(user_id=buyer.id).first()
+    check_in_registration(db_session, published_event.id, registration.ticket_code, organizer)
+
+    with pytest.raises(OrderServiceError):
+        check_in_registration(db_session, published_event.id, registration.ticket_code, organizer)
+
+
+def test_check_in_registration_cancelled_raises(
+    db_session, published_event, buyer, organizer, free_ticket_type
+):
+    session = published_event.sessions[0]
+    order = create_order(db_session, buyer.id, _order_in(free_ticket_type, session))
+    complete_order(db_session, order)
+
+    from app.models.order import Registration
+
+    registration = db_session.query(Registration).filter_by(user_id=buyer.id).first()
+    cancel_registration(db_session, registration)
+
+    with pytest.raises(OrderServiceError):
+        check_in_registration(db_session, published_event.id, registration.ticket_code, organizer)
 
 
 def test_complete_order_free_enqueues_registration_complete_notification(

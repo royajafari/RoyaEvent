@@ -11,8 +11,8 @@ from app.models.event import Event, EventSession
 from app.models.order import OrderItem, Registration
 from app.models.ticket import TicketType
 from app.models.user import User
-from app.schemas.organizer import AttendeeOut
-from app.services.order_service import OrderServiceError, cancel_registration
+from app.schemas.organizer import AttendeeOut, CheckInIn
+from app.services.order_service import OrderServiceError, cancel_registration, check_in_registration
 
 router = APIRouter(prefix="/organizer", tags=["organizer"])
 
@@ -45,6 +45,7 @@ def _attendee_rows(db: Session, event_id: int) -> list[AttendeeOut]:
                 status=reg.status.value,
                 ticket_code=reg.ticket_code,
                 created_at=reg.created_at,
+                checked_in_at=reg.checked_in_at,
             )
         )
     return rows
@@ -79,6 +80,23 @@ def remove_attendee(
     return next(r for r in updated_rows if r.registration_id == registration_id)
 
 
+@router.post("/events/{event_id}/checkin", response_model=AttendeeOut)
+def check_in_attendee(
+    event_id: int,
+    payload: CheckInIn,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _get_owned_event(db, event_id, current_user)
+    try:
+        check_in_registration(db, event_id, payload.ticket_code, current_user)
+    except OrderServiceError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+
+    updated_rows = _attendee_rows(db, event_id)
+    return next(r for r in updated_rows if r.ticket_code == payload.ticket_code.strip())
+
+
 @router.get("/events/{event_id}/attendees/export")
 def export_attendees_csv(
     event_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
@@ -89,7 +107,7 @@ def export_attendees_csv(
     buffer = io.StringIO()
     writer = csv.writer(buffer)
     writer.writerow(
-        ["نام", "موبایل", "ایمیل", "زمان جلسه", "نوع بلیط", "وضعیت", "کد بلیط", "تاریخ ثبت‌نام"]
+        ["نام", "موبایل", "ایمیل", "زمان جلسه", "نوع بلیط", "وضعیت", "کد بلیط", "تاریخ ثبت‌نام", "زمان چک‌این"]
     )
     for row in rows:
         # اکسل مقدار خالص عددی شماره موبایل رو به‌صورت خودکار به عدد تبدیل
@@ -106,6 +124,7 @@ def export_attendees_csv(
                 row.status,
                 row.ticket_code,
                 row.created_at.isoformat(),
+                row.checked_in_at.isoformat() if row.checked_in_at else "",
             ]
         )
 

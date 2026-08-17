@@ -78,3 +78,94 @@ def test_export_attendees_csv(
 
     rows = list(csv_module.reader(io.StringIO(body.removeprefix("﻿"))))
     assert rows[1][1] == '="09351234567"'
+
+
+def test_check_in_attendee_as_owner(
+    client, published_event, free_ticket_type, buyer_auth_headers, auth_headers
+):
+    _complete_free_order(client, published_event, free_ticket_type, buyer_auth_headers)
+    attendees = client.get(
+        f"/api/v1/organizer/events/{published_event.id}/attendees", headers=auth_headers
+    ).json()
+    ticket_code = attendees[0]["ticket_code"]
+    assert attendees[0]["checked_in_at"] is None
+
+    resp = client.post(
+        f"/api/v1/organizer/events/{published_event.id}/checkin",
+        json={"ticket_code": ticket_code},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "checked_in"
+    assert body["checked_in_at"] is not None
+
+
+def test_check_in_unknown_code_rejected(client, published_event, auth_headers):
+    resp = client.post(
+        f"/api/v1/organizer/events/{published_event.id}/checkin",
+        json={"ticket_code": "NOTREAL123"},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 422
+
+
+def test_check_in_twice_rejected(
+    client, published_event, free_ticket_type, buyer_auth_headers, auth_headers
+):
+    _complete_free_order(client, published_event, free_ticket_type, buyer_auth_headers)
+    attendees = client.get(
+        f"/api/v1/organizer/events/{published_event.id}/attendees", headers=auth_headers
+    ).json()
+    ticket_code = attendees[0]["ticket_code"]
+
+    first = client.post(
+        f"/api/v1/organizer/events/{published_event.id}/checkin",
+        json={"ticket_code": ticket_code},
+        headers=auth_headers,
+    )
+    assert first.status_code == 200
+
+    second = client.post(
+        f"/api/v1/organizer/events/{published_event.id}/checkin",
+        json={"ticket_code": ticket_code},
+        headers=auth_headers,
+    )
+    assert second.status_code == 422
+    assert "قبلاً" in second.json()["detail"]
+
+
+def test_check_in_cancelled_registration_rejected(
+    client, published_event, free_ticket_type, buyer_auth_headers, auth_headers
+):
+    _complete_free_order(client, published_event, free_ticket_type, buyer_auth_headers)
+    attendees = client.get(
+        f"/api/v1/organizer/events/{published_event.id}/attendees", headers=auth_headers
+    ).json()
+    registration_id = attendees[0]["registration_id"]
+    ticket_code = attendees[0]["ticket_code"]
+
+    client.delete(
+        f"/api/v1/organizer/events/{published_event.id}/attendees/{registration_id}",
+        headers=auth_headers,
+    )
+
+    resp = client.post(
+        f"/api/v1/organizer/events/{published_event.id}/checkin",
+        json={"ticket_code": ticket_code},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 422
+    assert "لغو" in resp.json()["detail"]
+
+
+def test_check_in_forbidden_for_non_owner(
+    client, published_event, free_ticket_type, buyer_auth_headers
+):
+    _complete_free_order(client, published_event, free_ticket_type, buyer_auth_headers)
+    resp = client.post(
+        f"/api/v1/organizer/events/{published_event.id}/checkin",
+        json={"ticket_code": "ANYCODE"},
+        headers=buyer_auth_headers,
+    )
+    assert resp.status_code == 403

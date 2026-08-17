@@ -84,6 +84,13 @@ class Registration(Base, TimestampMixin):
     )
     ticket_code: Mapped[str] = mapped_column(String(20), unique=True, nullable=False, index=True)
     reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(), nullable=True)
+    checked_in_at: Mapped[datetime | None] = mapped_column(DateTime(), nullable=True)
+    # بدون FK رسمی — فقط فیلد ردگیری/audit، نه یکپارچگی رابطه‌ای حیاتی؛
+    # اضافه‌کردن FK به یک جدول موجود روی SQLite با batch mode Alembic به
+    # CircularDependencyError برخورد کرد (باگ شناخته‌شده هنگام بازسازی جدولی
+    # که از قبل چند FK بدون نام صریح داره)، پس مثل admin_audit_log.target_id
+    # ساده نگه داشته شد.
+    checked_in_by_user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class Payment(Base, TimestampMixin):
