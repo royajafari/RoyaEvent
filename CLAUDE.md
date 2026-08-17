@@ -19,13 +19,13 @@
 | ۴ | جستجو (ChromaDB) + صفحه‌ی اصلی | ✅ [`specs/spec4.md`](specs/spec4.md) |
 | ۵ | پنل ادمین | ✅ [`specs/spec5.md`](specs/spec5.md) |
 | ۶ | اعلان‌ها + زمان‌بند + لینک تقویم | ✅ [`specs/spec6.md`](specs/spec6.md) |
-| ۷ | امتیاز/نظر ۴محوره + علاقه‌مندی تکمیلی | ⏳ شروع نشده |
+| ۷ | امتیاز/نظر ۴محوره رویداد + امتیاز ساده مدرس/برگزارکننده/سایت | ✅ [`specs/spec7.md`](specs/spec7.md) |
 | ۸ | آنالیتیکس/KPI | ⏳ شروع نشده |
 | ۹ | استک مانیتورینگ | ⏳ شروع نشده |
 | ۱۰ | تقویت تست + مقاومت آفلاین/RTL | ⏳ شروع نشده |
 | ۱۱ | آماده‌سازی دیپلوی VPS (TLS/HTTPS اجباری — نگاه کن به بخش تصمیمات) | ⏳ باقی فاز نشده؛ بخش TLS/Nginx/Docker زودتر و مستقل انجام شد، نگاه کن به `docs/deployment_tls.md` و `specs/spec3.md` |
 
-بک‌اند در مجموع الان **۲۵۵ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
+بک‌اند در مجموع الان **۲۸۷ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
 
 ## استک فنی (تصمیم قطعی، تغییر نده مگر کاربر بخواد)
 
@@ -51,7 +51,7 @@
 RoyaEvent/
   backend/app/
     api/v1/routers/   # auth.py, events.py, tickets.py, orders.py, social.py, organizer.py (داشبورد خصوصی)،
-                      # organizers.py (پروفایل عمومی، پیچیده نکن با organizer.py)، instructors.py, search.py, home.py, admin.py
+                      # organizers.py (پروفایل عمومی، پیچیده نکن با organizer.py)، instructors.py, search.py, home.py, admin.py، ratings.py
     api/deps.py        # get_db, get_current_user, get_current_user_optional, get_current_admin_user, get_redis, get_sms/email_provider, get_client_ip
     core/               # config, security (JWT+OTP hash), rate_limit (OTP), rate_limit_middleware (عمومی/slowapi)
                         # redis_client, storage (MinIO), slug, validators, calendar (لینک گوگل‌کلندر)
@@ -59,16 +59,18 @@ RoyaEvent/
     db/                 # session.py (engine/Base/get_db)، migrations/ (Alembic)، seed_categories.py
     models/             # User, OTPChallenge, RefreshToken, Category, Tag, Instructor, Event, EventSession,
                         # TicketType, DiscountCode, PlatformDiscountCode, Order, OrderItem, Payment, Registration,
-                        # Favorite, OrganizerFollow, InstructorFollow, AdminAuditLog, NotificationOutbox
+                        # Favorite, OrganizerFollow, InstructorFollow, AdminAuditLog, NotificationOutbox,
+                        # EventReview (نظر ۴محوره)، InstructorRating/OrganizerRating/PlatformRating (امتیاز ساده)
     providers/sms|email/ # base + console(dev) + ippanel/kavenegar/brevo/resend
     schemas/            # auth.py, event.py, ticket.py, order.py, social.py, organizer.py (AttendeeOut + OrganizerProfileOut)،
-                        # instructor.py, search.py, home.py, admin.py (Pydantic)
+                        # instructor.py, search.py, home.py, admin.py (Pydantic)، review.py, rating.py
     services/           # otp_service, auth_service, event_service (+event_query/to_list_item_out عمومی)،
                         # image_service, video_service, ticket_service, discount_service, order_service,
                         # social_service, instructor_service, organizer_service (پروفایل عمومی)،
                         # search_service (جستجوی دوگانه: افراد+رویداد)، home_service (بخش‌های صفحه‌ی اصلی، Redis-cached)،
-                        # admin_service (soft-delete رویداد، تعلیق کاربر، CRUD دسته‌بندی، لاگ اقدامات)،
-                        # notification_service (enqueue صف اعلان)، notification_templates (رندر Jinja2 هر قالب×کانال)
+                        # admin_service (soft-delete رویداد، تعلیق کاربر، CRUD دسته‌بندی، لاگ اقدامات، hide/unhide نظر)،
+                        # notification_service (enqueue صف اعلان)، notification_templates (رندر Jinja2 هر قالب×کانال)،
+                        # review_service (نظر ۴محوره رویداد، gate ثبت‌نام+زمان جلسه)، rating_service (امتیاز زنده‌محاسبه‌ی مدرس/برگزارکننده/سایت)
     search/             # chroma_client.py, embeddings.py, indexer.py (sync_event_index)، reindex.py (بک‌فیل دستی)
     workers/            # scheduler.py — پردازه‌ی جدا (python -m app.workers.scheduler)، دیسپچر صف اعلان + اسکنر یادآوری ۱ساعته
   backend/tests/unit|integration/   # pytest، fakeredis، بدون نیاز به Redis واقعی (+ test_search_api.py: embedding/Chroma قلابی)
@@ -108,6 +110,9 @@ RoyaEvent/
     components/CompleteProfilePrompt.tsx # فرم تکمیل نام، وقتی require_complete_profile خطای ۴۲۲ بده (داخل TicketCheckout/create-event)
     components/NewsletterSignup.tsx # کارت خبرنامه (فقط اعتبارسنجی/localStorage، بدون بک‌اند واقعی)
     components/JalaliDateTimePicker.tsx # تاریخ‌ساعت شمسی (react-multi-date-picker) برای فیلدهای جلسه
+    components/StarRating.tsx      # نمایش/دریافت امتیاز ۱-۵ ستاره، همیشه dir="ltr" داخلی — مشترک بین نظر رویداد و امتیاز مدرس/برگزارکننده
+    components/EventReviews.tsx    # فرم نظر ۴محوره + لیست نظرهای رویداد، در events/[slug]
+    components/RateEntityWidget.tsx # ویجت امتیازدهی ستاره‌ای مشترک مدرس/برگزارکننده (الگوی FollowInstructorButton)
     components/ui/                 # shadcn primitives (+ textarea, select, combobox, progress, checkbox, dialog)
     lib/
       api-client.ts    # fetch wrapper سمت کلاینت، credentials:include، پشتیبانی FormData،
@@ -120,6 +125,7 @@ RoyaEvent/
       admin-api.ts        # کلاینت برای /admin/* (نیاز به accessToken با role=admin)
       home-server.ts     # SSR برای /home/sections (فقط سرور — صفحه‌ی اصلی چیزی سمت کلاینت لازم نداره)
       tickets-api.ts, orders-api.ts, social-api.ts, organizer-api.ts  # فاز ۳ (social-api.ts: +myFollowsDetail)
+      reviews-api.ts, ratings-api.ts  # فاز ۷ — نظر ۴محوره رویداد + امتیاز ساده مدرس/برگزارکننده/سایت
       date.ts            # formatJalali* — Intl بومی fa-IR-u-ca-persian، بدون کتابخانه‌ی جانبی
     store/auth-store.ts  # Zustand، accessToken فقط در حافظه + user (UserOut، برای نمایش‌های سبک مثل آواتار هدر)
     fonts/kalameh.ts
@@ -157,7 +163,7 @@ RoyaEvent/
 - **تکمیل پروفایل اجباری:** `PATCH /auth/me` (`{full_name}`) نام کاربر رو آپدیت می‌کنه. `core/permissions.py: require_complete_profile(user)` قبل از `POST /events` و `POST /orders` صدا زده می‌شه و اگه `full_name` خالی باشه ۴۲۲ با پیام «برای این کار باید ابتدا نام و نام خانوادگی خود را تکمیل کنید» برمی‌گردونه. فرانت این پیام دقیق رو با `isIncompleteProfileError()` (`lib/api-client.ts`) تشخیص می‌ده و به‌جای نمایش خطای خام، `CompleteProfilePrompt` رو نشون می‌ده. هر endpoint نوشتنی جدیدی که یک کاربر OTP-only (بدون نام) می‌تونه بهش برسه، باید همین گارد رو صدا بزنه.
 - **آواتار کاربر:** `POST /auth/me/avatar` — همون `validate_and_reencode_image` امن بنر رویداد رو re-use می‌کنه، فقط `storage.upload_avatar_image()` جدا (namespace `avatars/{user_id}/...` تو MinIO/ArvanCloud).
 - **مدرس (get-or-create با اسم):** `instructor_names` روی `EventCreateIn`/`EventUpdateIn`، دقیقاً مثل `tag_names` — رشته‌ی دقیقاً یکسان = همون رکورد، وگرنه رکورد جدید (`event_service._get_or_create_instructors`). `GET /instructors` (مرتب بر اساس follower_count زنده)، `GET /instructors/{id}` (بیوگرافی+رویدادهای منتشرشده+`is_following`). برای auth اختیاری (کاربر لاگین‌کرده یا نه، رفتار endpoint کمی فرق می‌کنه) از `deps.py: get_current_user_optional` استفاده کن، نه `get_current_user` اجباری.
-- **محبوبیت (MVP):** `GET /events?sort=popular` بر اساس `view_count` (نه `rating_avg`، چون سیستم امتیازدهی فاز ۷ هنوز نیست). همین‌طور `GET /instructors` بر اساس `follower_count` زنده، نه رول‌آپ شبانه‌ی `popularity_score` (که در `architecture.md` برای آینده/مقیاس بزرگ‌تر پیش‌بینی شده).
+- **محبوبیت (MVP):** `GET /events?sort=popular` بر اساس `view_count` (`sort=top_rated` جداست، بر اساس `rating_avg`— نگاه کن به بند نظر/امتیاز پایین). همین‌طور `GET /instructors` بر اساس `follower_count` زنده، نه رول‌آپ شبانه‌ی `popularity_score` (که در `architecture.md` برای آینده/مقیاس بزرگ‌تر پیش‌بینی شده).
 - **جستجو:** `GET /search?q=&category_id=&format=` — همیشه هم `search_people` (prefix match مدرس/برگزارکننده) هم `search_events` (embedding + ChromaDB) رو با هم اجرا می‌کنه، نه either/or. هر رویدادی که PUBLISHED+PUBLIC می‌شه (یا اسم/توضیحاتش عوض می‌شه) باید `app/search/indexer.py: sync_event_index(event)` صداش بزنه — این قلاب از قبل تو `event_service.py: publish_event/update_event/cancel_event` هست، برای هر تابع جدیدی که وضعیت/محتوای رویداد رو عوض می‌کنه هم باید صدا زده بشه. رویدادهای منتشرشده‌ی قبل از فاز ۴ باید یک‌بار دستی با `python -m app.search.reindex` بک‌فیل بشن.
 - **صفحه‌ی اصلی:** همه‌چیز از یک `GET /home/sections` میاد (Redis-cached، TTL ۵ دقیقه، کلید `home:sections`) — هیچ‌وقت مستقیم چند تا endpoint جدا برای بخش‌های صفحه‌ی اصلی صدا نزن، همه باید از `home_service.py` عبور کنن تا کش یک‌جا کار کنه. بخش «ویژه» تا وقتی پنل ادمین (فاز ۵) امکان ست‌کردن دستی `is_featured` رو نداره، fallback‌ش بر اساس محبوبیت واقعی برگزارکننده (تعداد دنبال‌کننده) انتخاب می‌کنه، **نه** صرفاً جدیدترین‌ها — وگرنه این بخش با «آخرین وبینارها» یکی به نظر می‌رسه (بازخورد مستقیم کاربر).
 - **پروفایل عمومی برگزارکننده/مدرس:** `GET /organizers/{id}` و `GET /instructors/{id}` — هر جا اسم برگزارکننده یا مدرس نمایش داده می‌شه (کارت رویداد، صفحه‌ی جزئیات، `/follows`)، باید لینک به این صفحات باشه، نه متن ساده.
@@ -166,6 +172,7 @@ RoyaEvent/
 - **حذف کامل رویداد (ادمین):** برخلاف تصمیم اولیه‌ی فاز ۵ (حذف واقعی و برگشت‌ناپذیر)، از فاز ۶ به بعد **soft delete** است — تصمیم صریح کاربر تا هم دیتا برای بازیابی/بررسی بمونه هم `admin_audit_log` بی‌معنی نشه. `admin_service.soft_delete_event` فقط `event.deleted_at = utcnow()` می‌زنه (+ حذف از ایندکس جستجو)، هیچ ردیفی واقعاً پاک نمی‌شه. `event_service.event_query()` (نقطه‌ی مشترک همه‌ی لیستینگ/جزئیات عمومی) و `admin_service.list_all_events` هر دو `Event.deleted_at.is_(None)` رو فیلتر می‌کنن، پس رویداد soft-delete شده خودکار از همه‌جای عمومی و از لیست خود پنل ادمین هم ناپدید می‌شه، بدون این‌که واقعاً از DB بره. هر FK جدیدی که به `events.id` اضافه می‌کنی (مثل `NotificationOutbox.event_id`) نیازی به دستکاری این منطق نداره چون دیگه هیچ حذف واقعی‌ای در کار نیست.
 - **صف اعلان‌ها (فاز ۶):** `NotificationOutbox` (channel=sms/email، template_key، payload_json، status، next_attempt_at) صف مشترک هر ۳ قالب (`REGISTRATION_COMPLETE`/`TICKET_PURCHASE_COMPLETE`/`EVENT_REMINDER_1H`) است. کد سرویس هرگز مستقیم provider رو صدا نمی‌زنه؛ فقط `notification_service.enqueue(...)` یه سطر می‌سازه. ارسال واقعی فقط تو `app/workers/scheduler.py` (پردازه‌ی جدا، `python -m app.workers.scheduler`، دو job: دیسپچر صف هر ۱۵ ثانیه + اسکنر یادآوری ۱ساعته هر ۶۰ ثانیه) اتفاق می‌افته. `complete_order` (سفارش رایگان یا پولی، فرقی نداره) قلاب `notify_registration_complete` رو صدا می‌زنه — چون این پروژه «ثبت‌نام» جدا از «خرید» نداره. برخلاف ایندکس جستجو (دام #۲۱)، این enqueue فقط یه INSERT محلیه نه I/O شبکه‌ای، پس try/except ساده (بدون thread/timeout) کافیه.
 - **تاریخ/ساعت جلالی سمت سرور:** برای متن پیامک/ایمیل (که مرورگری در کار نیست تا خودش timezone/calendar رو حدس بزنه، برخلاف `lib/date.ts` فرانت که از `Intl` مرورگر استفاده می‌کنه) از `app/core/persian_date.py: format_jalali_datetime(dt)` استفاده کن، نه یه تبدیل دستی جدید. وابسته به `jdatetime` + `tzdata` (این یکی روی ویندوز/Docker slim اجباریه، `zoneinfo` بدونش fail می‌ده).
+- **نظر رویداد (۴محوره) در برابر امتیاز ساده (فاز ۷):** این دو مسیر قرینه‌ی هم نیستن. `POST /events/{id}/reviews` گیت سخت داره — `review_service._find_eligible_registration` فقط به کسی اجازه می‌ده که `Registration.status=CONFIRMED` واقعی داشته باشه **و** `EventSession.starts_at` جلسه‌ش گذشته باشه (قبل از برگزاری نمی‌شه نظر داد)؛ submit دوباره = ویرایش نظر قبلی (create-or-update، نه رد duplicate)، و `event.rating_avg`/`rating_count` بعد از هر submit/hide/unhide از میانگین نظرهای `PUBLISHED` بازمحاسبه می‌شه. در مقابل `POST /ratings {entity_type: instructor|organizer|platform, score}` هیچ گیتی نداره (هر کاربر لاگین‌کرده می‌تونه امتیاز بده) و میانگینش **همیشه زنده محاسبه می‌شه، نه denorm** — هم‌راستا با الگوی `follower_count` زنده‌ی همین پروژه، نه رول‌آپ شبانه. `GET /events?sort=top_rated` و بخش «برترین وبینارها»ی صفحه‌ی اصلی هر دو از یک کف مشترک `home_service.MIN_RATING_COUNT_FOR_TOP_RATED=3` استفاده می‌کنن (در `events.py` ایمپورت می‌شه، تکرار نکن). جزئیات کامل در `specs/spec7.md`.
 
 ## قراردادهای UI
 
