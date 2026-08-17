@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { TicketQrCode } from "@/components/TicketQrCode";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ApiError } from "@/lib/api-client";
@@ -108,12 +109,10 @@ export default function MyTicketsPage() {
                   session_online_join_url,
                   session_venue_address,
                 }) => {
-                // eslint-disable-next-line react-hooks/purity -- مقایسه با «اکنون» است، نه باگ
                 const sessionEnd =
                   new Date(session_starts_at).getTime() + session_duration_minutes * 60 * 1000;
                 // eslint-disable-next-line react-hooks/purity -- مقایسه با «اکنون» است، نه باگ
                 const isEnded = Date.now() > sessionEnd;
-                // eslint-disable-next-line react-hooks/purity -- مقایسه با «اکنون» است، نه باگ
                 const isLive = isSessionLive(session_starts_at, session_duration_minutes);
                 return (
                   <tr key={registration.id} className="border-border border-t">
@@ -158,6 +157,7 @@ export default function MyTicketsPage() {
                     <td className="px-3 py-2">
                       {registration.status === "confirmed" && (
                         <div className="flex flex-nowrap gap-1.5">
+                          <TicketQrCode ticketCode={registration.ticket_code} />
                           <Button
                             size="sm"
                             variant="outline"
