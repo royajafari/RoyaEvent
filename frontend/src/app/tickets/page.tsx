@@ -130,10 +130,10 @@ export default function MyTicketsPage() {
                         {!isLive && isEnded && <Badge variant="secondary">منقضی‌شده</Badge>}
                       </div>
                     </td>
-                    <td className="text-muted-foreground px-3 py-2 whitespace-nowrap">
+                    <td className="text-muted-foreground px-3 py-2">
                       {formatJalaliDateTime(session_starts_at)}
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                    <td className="px-3 py-2">
                       {event_format !== "in_person" && session_online_join_url ? (
                         <a
                           href={session_online_join_url}
@@ -156,7 +156,7 @@ export default function MyTicketsPage() {
                     </td>
                     <td className="px-3 py-2">
                       {registration.status === "confirmed" && (
-                        <div className="flex flex-nowrap gap-1.5">
+                        <div className="flex flex-wrap gap-1.5">
                           <TicketQrCode
                             ticketCode={registration.ticket_code}
                             eventId={registration.event_id}
