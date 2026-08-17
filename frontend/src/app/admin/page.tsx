@@ -24,6 +24,8 @@ const EVENT_STATUS_LABELS: Record<AdminEvent["status"], string> = {
   cancelled: "لغوشده",
 };
 
+const LAZY_CHUNK_SIZE = 10;
+
 type Tab = "events" | "users" | "categories" | "audit";
 
 export default function AdminPage() {
@@ -42,18 +44,65 @@ export default function AdminPage() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryParentId, setNewCategoryParentId] = useState<string | null>(null);
   const [eventSearchQuery, setEventSearchQuery] = useState("");
-  const [eventPage, setEventPage] = useState(1);
-  const CATEGORIES_CHUNK_SIZE = 10;
-  const [visibleCategoriesCount, setVisibleCategoriesCount] = useState(CATEGORIES_CHUNK_SIZE);
-  const categorySentinelRef = useRef<HTMLTableRowElement | null>(null);
+
+  // نمایش تدریجی ۱۰تا ۱۰تا با اسکرول (به‌جای صفحه‌بندی دکمه‌ای)، یک state/ref/effect
+  // جدا برای هر تب — یک ردیف sentinel وقتی وارد viewport بشه chunk بعدی رو نشون می‌ده.
+  const [visibleEventsCount, setVisibleEventsCount] = useState(LAZY_CHUNK_SIZE);
+  const eventsSentinelRef = useRef<HTMLTableRowElement | null>(null);
+  const [visibleUsersCount, setVisibleUsersCount] = useState(LAZY_CHUNK_SIZE);
+  const usersSentinelRef = useRef<HTMLTableRowElement | null>(null);
+  const [visibleCategoriesCount, setVisibleCategoriesCount] = useState(LAZY_CHUNK_SIZE);
+  const categoriesSentinelRef = useRef<HTMLTableRowElement | null>(null);
+  const [visibleAuditCount, setVisibleAuditCount] = useState(LAZY_CHUNK_SIZE);
+  const auditSentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const trimmedEventSearch = eventSearchQuery.trim();
+  const filteredEvents = trimmedEventSearch
+    ? events.filter(
+        (event) =>
+          event.title.includes(trimmedEventSearch) ||
+          event.event_code.includes(trimmedEventSearch) ||
+          (event.organizer_name ?? "").includes(trimmedEventSearch),
+      )
+    : events;
 
   useEffect(() => {
-    const sentinel = categorySentinelRef.current;
-    if (!sentinel) return;
+    const sentinel = eventsSentinelRef.current;
+    if (!sentinel || tab !== "events") return;
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {
-          setVisibleCategoriesCount((prev) => prev + CATEGORIES_CHUNK_SIZE);
+          setVisibleEventsCount((prev) => prev + LAZY_CHUNK_SIZE);
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [tab, filteredEvents.length, visibleEventsCount]);
+
+  useEffect(() => {
+    const sentinel = usersSentinelRef.current;
+    if (!sentinel || tab !== "users") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleUsersCount((prev) => prev + LAZY_CHUNK_SIZE);
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [tab, users.length, visibleUsersCount]);
+
+  useEffect(() => {
+    const sentinel = categoriesSentinelRef.current;
+    if (!sentinel || tab !== "categories") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCategoriesCount((prev) => prev + LAZY_CHUNK_SIZE);
         }
       },
       { rootMargin: "200px" },
@@ -61,6 +110,21 @@ export default function AdminPage() {
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [tab, categories.length, visibleCategoriesCount]);
+
+  useEffect(() => {
+    const sentinel = auditSentinelRef.current;
+    if (!sentinel || tab !== "audit") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleAuditCount((prev) => prev + LAZY_CHUNK_SIZE);
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [tab, auditLog.length, visibleAuditCount]);
 
   function loadAll(token: string) {
     Promise.all([
@@ -183,26 +247,14 @@ export default function AdminPage() {
   const categoryParentName = (parentId: number | null) =>
     parentId ? categories.find((c) => c.id === parentId)?.name : null;
 
-  const trimmedEventSearch = eventSearchQuery.trim();
-  const filteredEvents = trimmedEventSearch
-    ? events.filter(
-        (event) =>
-          event.title.includes(trimmedEventSearch) ||
-          event.event_code.includes(trimmedEventSearch) ||
-          (event.organizer_name ?? "").includes(trimmedEventSearch),
-      )
-    : events;
-
-  const EVENTS_PAGE_SIZE = 10;
-  const totalEventPages = Math.max(1, Math.ceil(filteredEvents.length / EVENTS_PAGE_SIZE));
-  const currentEventPage = Math.min(eventPage, totalEventPages);
-  const pagedEvents = filteredEvents.slice(
-    (currentEventPage - 1) * EVENTS_PAGE_SIZE,
-    currentEventPage * EVENTS_PAGE_SIZE,
-  );
-
+  const visibleEvents = filteredEvents.slice(0, visibleEventsCount);
+  const hasMoreEvents = visibleEventsCount < filteredEvents.length;
+  const visibleUsers = users.slice(0, visibleUsersCount);
+  const hasMoreUsers = visibleUsersCount < users.length;
   const visibleCategories = categories.slice(0, visibleCategoriesCount);
   const hasMoreCategories = visibleCategoriesCount < categories.length;
+  const visibleAuditLog = auditLog.slice(0, visibleAuditCount);
+  const hasMoreAudit = visibleAuditCount < auditLog.length;
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-10">
@@ -227,10 +279,7 @@ export default function AdminPage() {
             type="search"
             placeholder="جستجو بر اساس عنوان، کد رویداد یا برگزارکننده..."
             value={eventSearchQuery}
-            onChange={(e) => {
-              setEventSearchQuery(e.target.value);
-              setEventPage(1);
-            }}
+            onChange={(e) => setEventSearchQuery(e.target.value)}
             className="max-w-sm"
           />
           {trimmedEventSearch && filteredEvents.length === 0 && (
@@ -250,11 +299,9 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {pagedEvents.map((event, index) => (
+                {visibleEvents.map((event, index) => (
                   <tr key={event.id} className="border-t border-zinc-400">
-                    <td className="px-3 py-2 text-zinc-700">
-                      {(currentEventPage - 1) * EVENTS_PAGE_SIZE + index + 1}
-                    </td>
+                    <td className="px-3 py-2 text-zinc-700">{index + 1}</td>
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-1.5">
                         <span className="text-zinc-900">{event.title}</span>
@@ -308,32 +355,16 @@ export default function AdminPage() {
                     </td>
                   </tr>
                 ))}
+                {hasMoreEvents && (
+                  <tr ref={eventsSentinelRef}>
+                    <td colSpan={7} className="px-3 py-3 text-center text-xs text-zinc-600">
+                      در حال بارگذاری موارد بیشتر...
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
-          {totalEventPages > 1 && (
-            <div className="flex items-center justify-center gap-3">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={currentEventPage <= 1}
-                onClick={() => setEventPage(currentEventPage - 1)}
-              >
-                قبلی
-              </Button>
-              <span className="text-muted-foreground text-xs">
-                صفحه {currentEventPage} از {totalEventPages}
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={currentEventPage >= totalEventPages}
-                onClick={() => setEventPage(currentEventPage + 1)}
-              >
-                بعدی
-              </Button>
-            </div>
-          )}
         </div>
       )}
 
@@ -351,7 +382,7 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {users.map((u, index) => (
+              {visibleUsers.map((u, index) => (
                 <tr key={u.id} className="border-t border-zinc-400">
                   <td className="px-3 py-2 text-zinc-700">{index + 1}</td>
                   <td className="px-3 py-2 text-zinc-900">{u.full_name ?? "بدون نام"}</td>
@@ -377,6 +408,13 @@ export default function AdminPage() {
                   </td>
                 </tr>
               ))}
+              {hasMoreUsers && (
+                <tr ref={usersSentinelRef}>
+                  <td colSpan={6} className="px-3 py-3 text-center text-xs text-zinc-600">
+                    در حال بارگذاری موارد بیشتر...
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -457,8 +495,8 @@ export default function AdminPage() {
                   </tr>
                 ))}
                 {hasMoreCategories && (
-                  <tr ref={categorySentinelRef}>
-                    <td colSpan={4} className="px-3 py-3 text-center text-zinc-600 text-xs">
+                  <tr ref={categoriesSentinelRef}>
+                    <td colSpan={4} className="px-3 py-3 text-center text-xs text-zinc-600">
                       در حال بارگذاری موارد بیشتر...
                     </td>
                   </tr>
@@ -472,7 +510,7 @@ export default function AdminPage() {
       {tab === "audit" && (
         <div className="flex flex-col gap-2">
           {auditLog.length === 0 && <p className="text-muted-foreground">هنوز اقدامی ثبت نشده.</p>}
-          {auditLog.map((entry) => (
+          {visibleAuditLog.map((entry) => (
             <Card key={entry.id} className="text-right">
               <CardContent className="flex flex-col gap-1 py-4 text-sm">
                 <span>
@@ -486,6 +524,11 @@ export default function AdminPage() {
               </CardContent>
             </Card>
           ))}
+          {hasMoreAudit && (
+            <div ref={auditSentinelRef} className="py-3 text-center text-xs text-muted-foreground">
+              در حال بارگذاری موارد بیشتر...
+            </div>
+          )}
         </div>
       )}
     </div>
