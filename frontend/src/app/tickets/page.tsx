@@ -157,7 +157,10 @@ export default function MyTicketsPage() {
                     <td className="px-3 py-2">
                       {registration.status === "confirmed" && (
                         <div className="flex flex-nowrap gap-1.5">
-                          <TicketQrCode ticketCode={registration.ticket_code} />
+                          <TicketQrCode
+                            ticketCode={registration.ticket_code}
+                            eventId={registration.event_id}
+                          />
                           <Button
                             size="sm"
                             variant="outline"

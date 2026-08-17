@@ -12,14 +12,18 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-export function TicketQrCode({ ticketCode }: { ticketCode: string }) {
+export function TicketQrCode({ ticketCode, eventId }: { ticketCode: string; eventId: number }) {
   const [open, setOpen] = useState(false);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    QRCode.toDataURL(ticketCode, { margin: 1, width: 240 })
+    // QR یک لینک قابل‌بازکردن با هر دوربینی رو کد می‌کنه (نه صرفاً متن خام کد
+    // بلیط) — با اسکن، برگزارکننده مستقیم به صفحه‌ی چک‌این همون رویداد با کد
+    // از پیش پرشده می‌ره، بدون نیاز به اسکنر داخلی اپ یا تایپ دستی کد.
+    const checkinUrl = `${window.location.origin}/organizer/events/${eventId}/checkin?code=${encodeURIComponent(ticketCode)}`;
+    QRCode.toDataURL(checkinUrl, { margin: 1, width: 240 })
       .then((url) => {
         if (!cancelled) setDataUrl(url);
       })
@@ -29,7 +33,7 @@ export function TicketQrCode({ ticketCode }: { ticketCode: string }) {
     return () => {
       cancelled = true;
     };
-  }, [open, ticketCode]);
+  }, [open, ticketCode, eventId]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

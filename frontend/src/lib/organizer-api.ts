@@ -11,6 +11,7 @@ export type Attendee = {
   status: string;
   ticket_code: string;
   created_at: string;
+  checked_in_at: string | null;
 };
 
 export const organizerApi = {
@@ -20,6 +21,13 @@ export const organizerApi = {
   removeAttendee: (eventId: number, registrationId: number, accessToken: string) =>
     request<Attendee>(`/organizer/events/${eventId}/attendees/${registrationId}`, {
       method: "DELETE",
+      accessToken,
+    }),
+
+  checkIn: (eventId: number, ticketCode: string, accessToken: string) =>
+    request<Attendee>(`/organizer/events/${eventId}/checkin`, {
+      method: "POST",
+      body: JSON.stringify({ ticket_code: ticketCode }),
       accessToken,
     }),
 

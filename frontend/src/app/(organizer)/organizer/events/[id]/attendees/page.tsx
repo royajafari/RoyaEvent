@@ -85,9 +85,17 @@ export default function AttendeesPage({ params }: { params: Promise<{ id: string
         <h1 className="text-2xl font-bold">
           شرکت‌کنندگان {event ? `— ${event.title}` : ""}
         </h1>
-        <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting}>
-          {exporting ? "در حال دریافت..." : "خروجی CSV"}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/organizer/events/${eventId}/checkin`}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            چک‌این حضوری
+          </Link>
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting}>
+            {exporting ? "در حال دریافت..." : "خروجی CSV"}
+          </Button>
+        </div>
       </div>
 
       {error && <p className="text-destructive text-sm">{error}</p>}
