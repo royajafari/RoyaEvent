@@ -18,8 +18,15 @@ _TEHRAN = ZoneInfo("Asia/Tehran")
 
 
 def format_jalali_datetime(dt: datetime) -> str:
-    """dt باید naive UTC باشه (قرارداد همیشگی پروژه، app.models.base.utcnow)."""
+    """dt باید naive UTC باشه (قرارداد همیشگی پروژه، app.models.base.utcnow).
+
+    jdatetime بدون locale صریح، اسم ماه رو بر اساس locale سیستم‌عامل حدس
+    می‌زنه (`_is_fa_locale()` سراغ `locale.getlocale()` می‌ره) — روی ویندوز
+    dev این محیط تصادفاً فارسی درمیاد ولی روی رانر لینوکسیِ CI (بدون هیچ
+    locale سیستمی ست‌شده) میفته رو انگلیسی («Mordad» به‌جای «مرداد»). باید
+    همیشه صریح `fa_IR`/`Persian_Iran` رو پاس بدیم، نه به locale محیط تکیه کنیم.
+    """
     aware_utc = dt.replace(tzinfo=_UTC)
     tehran = aware_utc.astimezone(_TEHRAN)
-    jdt = jdatetime.datetime.fromgregorian(datetime=tehran)
+    jdt = jdatetime.datetime.fromgregorian(datetime=tehran, locale=jdatetime.FA_LOCALE)
     return jdt.strftime("%d %B %Y ساعت %H:%M")
