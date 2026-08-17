@@ -93,7 +93,7 @@ RoyaEvent/
       organizers/[id]/page.tsx     # پروفایل عمومی برگزارکننده — مشابه instructors/[id] (SSR/dynamic)
       profile/page.tsx             # فرم نام + آپلود آواتار کاربر (client)
       search/page.tsx              # نتایج جستجو — بخش «افراد» + «رویدادها» (SSR/dynamic)
-      admin/page.tsx                # پنل ادمین — تب رویدادها/کاربران/دسته‌بندی‌ها/لاگ اقدامات (client، فقط role===admin)
+      admin/page.tsx                # پنل ادمین — تب رویدادها/کاربران/دسته‌بندی‌ها/لاگ اقدامات/پیامک‌ها-ایمیل‌ها/نظرات (client، فقط role===admin؛ همه‌ی تب‌ها جدولی + جستجو + lazy loading)
       page.tsx                     # خانه (async Server Component، یک fetch به /home/sections)
     components/EventCard.tsx       # کارت رویداد (Server Component)
     components/EventCarousel.tsx   # کاروسل بخش‌های صفحه‌ی اصلی — فلش‌ها + «مشاهده همه» (client)
