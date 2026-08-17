@@ -11,7 +11,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { AdminEvent, AdminNotification, AdminUser, AuditLogEntry } from "@/lib/admin-api";
+import type {
+  AdminEvent,
+  AdminNotification,
+  AdminReview,
+  AdminUser,
+  AuditLogEntry,
+} from "@/lib/admin-api";
 import { adminApi } from "@/lib/admin-api";
 import { ApiError } from "@/lib/api-client";
 import type { CategoryOut } from "@/lib/events-api";
@@ -41,9 +47,14 @@ const NOTIFICATION_TEMPLATE_LABELS: Record<string, string> = {
   event_reminder_1h: "یادآوری ۱ساعته",
 };
 
+const REVIEW_STATUS_LABELS: Record<AdminReview["status"], string> = {
+  published: "منتشرشده",
+  hidden: "نهفته",
+};
+
 const LAZY_CHUNK_SIZE = 10;
 
-type Tab = "events" | "users" | "categories" | "audit" | "notifications";
+type Tab = "events" | "users" | "categories" | "audit" | "notifications" | "reviews";
 
 export default function AdminPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -55,6 +66,7 @@ export default function AdminPage() {
   const [categories, setCategories] = useState<CategoryOut[]>([]);
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+  const [reviews, setReviews] = useState<AdminReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -66,6 +78,7 @@ export default function AdminPage() {
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [auditSearchQuery, setAuditSearchQuery] = useState("");
   const [notificationSearchQuery, setNotificationSearchQuery] = useState("");
+  const [reviewSearchQuery, setReviewSearchQuery] = useState("");
 
   const categoryParentName = (parentId: number | null) =>
     parentId ? categories.find((c) => c.id === parentId)?.name : null;
@@ -96,6 +109,8 @@ export default function AdminPage() {
   const auditSentinelRef = useRef<HTMLTableRowElement | null>(null);
   const [visibleNotificationsCount, setVisibleNotificationsCount] = useState(LAZY_CHUNK_SIZE);
   const notificationsSentinelRef = useRef<HTMLTableRowElement | null>(null);
+  const [visibleReviewsCount, setVisibleReviewsCount] = useState(LAZY_CHUNK_SIZE);
+  const reviewsSentinelRef = useRef<HTMLTableRowElement | null>(null);
 
   const trimmedEventSearch = eventSearchQuery.trim();
   const filteredEvents = trimmedEventSearch
@@ -149,6 +164,16 @@ export default function AdminPage() {
           ),
       )
     : notifications;
+
+  const trimmedReviewSearch = reviewSearchQuery.trim();
+  const filteredReviews = trimmedReviewSearch
+    ? reviews.filter(
+        (r) =>
+          r.event_title.includes(trimmedReviewSearch) ||
+          (r.user_name ?? "").includes(trimmedReviewSearch) ||
+          (r.comment_text ?? "").includes(trimmedReviewSearch),
+      )
+    : reviews;
 
   useEffect(() => {
     const sentinel = eventsSentinelRef.current;
@@ -225,6 +250,21 @@ export default function AdminPage() {
     return () => observer.disconnect();
   }, [tab, filteredNotifications.length, visibleNotificationsCount]);
 
+  useEffect(() => {
+    const sentinel = reviewsSentinelRef.current;
+    if (!sentinel || tab !== "reviews") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleReviewsCount((prev) => prev + LAZY_CHUNK_SIZE);
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [tab, filteredReviews.length, visibleReviewsCount]);
+
   function loadAll(token: string) {
     Promise.all([
       adminApi.listEvents(token),
@@ -232,13 +272,15 @@ export default function AdminPage() {
       adminApi.listCategories(token),
       adminApi.listAuditLog(token),
       adminApi.listNotifications(token),
+      adminApi.listReviews(token),
     ])
-      .then(([e, u, c, a, n]) => {
+      .then(([e, u, c, a, n, r]) => {
         setEvents(e);
         setUsers(u);
         setCategories(c);
         setAuditLog(a);
         setNotifications(n);
+        setReviews(r);
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در دریافت اطلاعات پنل ادمین"))
       .finally(() => setLoading(false));
@@ -325,6 +367,26 @@ export default function AdminPage() {
     }
   }
 
+  async function handleToggleReviewHidden(review: AdminReview) {
+    if (!accessToken) return;
+    const hidden = review.status !== "hidden";
+    let reason: string | undefined;
+    if (hidden) {
+      const promptResult = window.prompt("دلیل نهفتن نظر (اختیاری):");
+      if (promptResult === null) return; // انصراف از پرامپت = انصراف از کل اقدام
+      reason = promptResult || undefined;
+    }
+    setBusyId(review.id);
+    try {
+      const updated = await adminApi.setReviewHidden(review.id, hidden, accessToken, reason);
+      setReviews((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "خطا در تغییر وضعیت نظر");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   if (!accessToken) {
     return (
       <div className="mx-auto max-w-xl px-4 py-10 text-center">
@@ -356,6 +418,8 @@ export default function AdminPage() {
   const hasMoreAudit = visibleAuditCount < filteredAuditLog.length;
   const visibleNotifications = filteredNotifications.slice(0, visibleNotificationsCount);
   const hasMoreNotifications = visibleNotificationsCount < filteredNotifications.length;
+  const visibleReviews = filteredReviews.slice(0, visibleReviewsCount);
+  const hasMoreReviews = visibleReviewsCount < filteredReviews.length;
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-10">
@@ -372,6 +436,7 @@ export default function AdminPage() {
           <TabsTrigger value="categories">دسته‌بندی‌ها</TabsTrigger>
           <TabsTrigger value="audit">لاگ اقدامات</TabsTrigger>
           <TabsTrigger value="notifications">پیامک‌ها و ایمیل‌ها</TabsTrigger>
+          <TabsTrigger value="reviews">نظرات</TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -755,6 +820,88 @@ export default function AdminPage() {
                   ))}
                   {hasMoreNotifications && (
                     <tr ref={notificationsSentinelRef}>
+                      <td colSpan={8} className="px-3 py-3 text-center text-xs text-zinc-600">
+                        در حال بارگذاری موارد بیشتر...
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "reviews" && (
+        <div className="flex flex-col gap-2">
+          {reviews.length === 0 && <p className="text-muted-foreground">هنوز نظری ثبت نشده.</p>}
+          {reviews.length > 0 && (
+            <Input
+              type="search"
+              placeholder="جستجو بر اساس رویداد، کاربر یا متن نظر..."
+              value={reviewSearchQuery}
+              onChange={(e) => setReviewSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
+          )}
+          {trimmedReviewSearch && filteredReviews.length === 0 && (
+            <p className="text-muted-foreground text-sm">موردی یافت نشد.</p>
+          )}
+          {filteredReviews.length > 0 && (
+            <div className="overflow-x-auto rounded-lg bg-[silver] ring-1 ring-foreground/10">
+              <table className="w-full text-right text-sm">
+                <thead className="bg-[#a8a8a8] text-xs text-zinc-700">
+                  <tr>
+                    <th className="px-3 py-2 font-normal">ردیف</th>
+                    <th className="px-3 py-2 font-normal">رویداد</th>
+                    <th className="px-3 py-2 font-normal">کاربر</th>
+                    <th className="px-3 py-2 font-normal">امتیاز</th>
+                    <th className="px-3 py-2 font-normal">نظر</th>
+                    <th className="px-3 py-2 font-normal">وضعیت</th>
+                    <th className="px-3 py-2 font-normal">تاریخ</th>
+                    <th className="px-3 py-2 font-normal">عملیات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleReviews.map((r, index) => (
+                    <tr key={r.id} className="border-t border-zinc-400">
+                      <td className="px-3 py-2 text-zinc-700">{index + 1}</td>
+                      <td className="px-3 py-2 text-zinc-900">{r.event_title}</td>
+                      <td className="px-3 py-2 text-zinc-700">{r.user_name ?? `کاربر #${r.user_id}`}</td>
+                      <td className="px-3 py-2 text-zinc-700" dir="ltr">
+                        {r.overall_computed.toFixed(1)} / ۵
+                      </td>
+                      <td className="max-w-xs px-3 py-2 text-zinc-700">
+                        <span className="line-clamp-2">{r.comment_text ?? "—"}</span>
+                        {r.hidden_reason && (
+                          <span className="text-muted-foreground block text-xs">
+                            دلیل نهفتن: {r.hidden_reason}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        <Badge variant={r.status === "hidden" ? "secondary" : "default"}>
+                          {REVIEW_STATUS_LABELS[r.status]}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-2 text-zinc-700 whitespace-nowrap">
+                        {formatJalaliDateTime(r.created_at)}
+                      </td>
+                      <td className="px-3 py-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="whitespace-nowrap border border-cyan-600 bg-cyan-400 text-cyan-950 hover:bg-cyan-500"
+                          disabled={busyId === r.id}
+                          onClick={() => handleToggleReviewHidden(r)}
+                        >
+                          {r.status === "hidden" ? "نمایش نظر" : "نهفتن نظر"}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                  {hasMoreReviews && (
+                    <tr ref={reviewsSentinelRef}>
                       <td colSpan={8} className="px-3 py-3 text-center text-xs text-zinc-600">
                         در حال بارگذاری موارد بیشتر...
                       </td>

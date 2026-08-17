@@ -34,6 +34,19 @@ export type AuditLogEntry = {
   created_at: string;
 };
 
+export type AdminReview = {
+  id: number;
+  event_id: number;
+  event_title: string;
+  user_id: number;
+  user_name: string | null;
+  overall_computed: number;
+  comment_text: string | null;
+  status: "published" | "hidden";
+  hidden_reason: string | null;
+  created_at: string;
+};
+
 export type AdminNotification = {
   id: number;
   channel: "sms" | "email";
@@ -95,4 +108,13 @@ export const adminApi = {
 
   listNotifications: (accessToken: string) =>
     request<AdminNotification[]>("/admin/notifications", { accessToken }),
+
+  listReviews: (accessToken: string) => request<AdminReview[]>("/admin/reviews", { accessToken }),
+
+  setReviewHidden: (reviewId: number, hidden: boolean, accessToken: string, reason?: string) =>
+    request<AdminReview>(`/admin/reviews/${reviewId}/hide`, {
+      method: "PATCH",
+      body: JSON.stringify({ hidden, reason: reason ?? null }),
+      accessToken,
+    }),
 };
