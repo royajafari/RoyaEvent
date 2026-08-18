@@ -53,7 +53,15 @@ def list_events(
         Event.status == EventStatus.PUBLISHED, Event.visibility == EventVisibility.PUBLIC
     )
     if category_id is not None:
-        query = query.filter(Event.category_id == category_id)
+        # رویداد فقط زیردسته می‌گیره (نه دسته‌ی والد)، ولی کاربر باید بتونه
+        # روی یک دسته‌ی والد (مثلاً از صفحه‌ی اصلی) کلیک کنه و همه‌ی رویدادهای
+        # همه‌ی زیردسته‌هاش رو ببینه — پس اگه id ورودی والد باشه (زیردسته
+        # داره)، فیلتر روی مجموعه‌ی id زیردسته‌هاش اعمال می‌شه، نه تطبیق دقیق.
+        child_ids = [c.id for c in db.query(Category.id).filter(Category.parent_id == category_id).all()]
+        if child_ids:
+            query = query.filter(Event.category_id.in_(child_ids))
+        else:
+            query = query.filter(Event.category_id == category_id)
     if format is not None:
         query = query.filter(Event.format == format)
     if featured is not None:

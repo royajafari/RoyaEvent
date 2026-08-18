@@ -147,6 +147,33 @@ def test_list_events_only_shows_published_public(client, leaf_category, auth_hea
     assert draft["id"] not in ids
 
 
+def test_list_events_filter_by_leaf_category(client, leaf_category, auth_headers):
+    published = client.post(
+        "/api/v1/events", json=_event_payload(leaf_category.id), headers=auth_headers
+    ).json()
+    client.post(f"/api/v1/events/{published['id']}/publish", headers=auth_headers)
+
+    resp = client.get(f"/api/v1/events?category_id={leaf_category.id}")
+    ids = [e["id"] for e in resp.json()]
+    assert published["id"] in ids
+
+
+def test_list_events_filter_by_parent_category_includes_children(
+    client, leaf_category, auth_headers
+):
+    """رویداد فقط زیردسته می‌گیره، ولی کلیک روی دسته‌ی والد (مثلاً از ردیف
+    دسته‌بندی‌های صفحه‌ی اصلی) باید همه‌ی رویدادهای همه‌ی زیردسته‌هاش رو
+    برگردونه، نه هیچی — این دقیقاً همون باگی بود که قبل از این فیکس وجود داشت."""
+    published = client.post(
+        "/api/v1/events", json=_event_payload(leaf_category.id), headers=auth_headers
+    ).json()
+    client.post(f"/api/v1/events/{published['id']}/publish", headers=auth_headers)
+
+    resp = client.get(f"/api/v1/events?category_id={leaf_category.parent_id}")
+    ids = [e["id"] for e in resp.json()]
+    assert published["id"] in ids
+
+
 def test_create_event_with_instant_registration(client, leaf_category, auth_headers):
     resp = client.post(
         "/api/v1/events",
