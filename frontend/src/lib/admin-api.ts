@@ -61,6 +61,13 @@ export type AdminNotification = {
   created_at: string;
 };
 
+export type KpiSnapshot = {
+  date: string;
+  metric_name: string;
+  dimensions: Record<string, string>;
+  value: number;
+};
+
 export const adminApi = {
   listEvents: (accessToken: string) => request<AdminEvent[]>("/admin/events", { accessToken }),
 
@@ -115,6 +122,16 @@ export const adminApi = {
     request<AdminReview>(`/admin/reviews/${reviewId}/hide`, {
       method: "PATCH",
       body: JSON.stringify({ hidden, reason: reason ?? null }),
+      accessToken,
+    }),
+
+  getKpiReport: (days: number, accessToken: string) =>
+    request<KpiSnapshot[]>(`/admin/reports/kpis?days=${days}`, { accessToken }),
+
+  rollupKpis: (date: string | null, accessToken: string) =>
+    request<KpiSnapshot[]>("/admin/reports/kpis/rollup", {
+      method: "POST",
+      body: JSON.stringify({ date }),
       accessToken,
     }),
 };

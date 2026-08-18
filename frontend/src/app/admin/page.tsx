@@ -17,11 +17,12 @@ import type {
   AdminReview,
   AdminUser,
   AuditLogEntry,
+  KpiSnapshot,
 } from "@/lib/admin-api";
 import { adminApi } from "@/lib/admin-api";
 import { ApiError } from "@/lib/api-client";
 import type { CategoryOut } from "@/lib/events-api";
-import { formatJalaliDateTime } from "@/lib/date";
+import { formatJalaliDate, formatJalaliDateTime } from "@/lib/date";
 import { useAuthStore } from "@/store/auth-store";
 
 const EVENT_STATUS_LABELS: Record<AdminEvent["status"], string> = {
@@ -49,12 +50,77 @@ const NOTIFICATION_TEMPLATE_LABELS: Record<string, string> = {
 
 const REVIEW_STATUS_LABELS: Record<AdminReview["status"], string> = {
   published: "منتشرشده",
-  hidden: "نهفته",
+  hidden: "مخفی",
+};
+
+const KPI_METRIC_LABELS: Record<string, string> = {
+  funnel_view_event: "قیف — بازدید رویداد",
+  funnel_click_register: "قیف — کلیک ثبت‌نام",
+  funnel_start_checkout: "قیف — شروع تسویه‌حساب",
+  funnel_complete_order: "قیف — تکمیل سفارش",
+  funnel_conversion_view_to_complete_pct: "نرخ تبدیل بازدید به سفارش (٪)",
+  search_total_queries: "تعداد کل جستجوها",
+  search_failed_queries: "جستجوهای بی‌نتیجه",
+  search_keyword: "کلیدواژه‌ی پرجستجو",
+  dau: "کاربران فعال روزانه (DAU)",
+  otp_requested: "درخواست کد OTP",
+  otp_verified: "تأیید موفق OTP",
 };
 
 const LAZY_CHUNK_SIZE = 10;
+// بازه‌ی گسترده‌تر از بقیه‌ی تب‌ها چون نمای ماهانه‌ی KPI به چند ماه داده نیاز داره.
+const KPI_FETCH_DAYS = 180;
 
-type Tab = "events" | "users" | "categories" | "audit" | "notifications" | "reviews";
+function jalaliMonthOf(dateStr: string): { sortKey: string; label: string } {
+  const date = new Date(dateStr);
+  const numericParts = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(date);
+  const year = numericParts.find((p) => p.type === "year")?.value ?? "";
+  const month = numericParts.find((p) => p.type === "month")?.value ?? "";
+  const label = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+    year: "numeric",
+    month: "long",
+  }).format(date);
+  return { sortKey: `${year}-${month}`, label };
+}
+
+// جمع ساده‌ی مقدارها به تفکیک ماه شمسی + معیار + جزئیات — به‌جز نرخ تبدیل
+// قیف که جمع/میانگین درصدهای روزانه‌اش ریاضی‌اش غلطه؛ اون یکی از مجموع
+// بازدید/تکمیل سفارش همون ماه دوباره محاسبه می‌شه.
+function aggregateMonthlyKpis(rows: KpiSnapshot[]): KpiSnapshot[] {
+  const sums = new Map<string, KpiSnapshot & { sortKey: string }>();
+  for (const row of rows) {
+    const { sortKey, label } = jalaliMonthOf(row.date);
+    const groupKey = `${sortKey}__${row.metric_name}__${JSON.stringify(row.dimensions)}`;
+    const existing = sums.get(groupKey);
+    if (existing) {
+      existing.value += row.value;
+    } else {
+      sums.set(groupKey, { ...row, date: label, sortKey, value: row.value });
+    }
+  }
+
+  const monthlyFunnelCounts = new Map<string, { view: number; complete: number }>();
+  for (const row of rows) {
+    const { sortKey } = jalaliMonthOf(row.date);
+    const bucket = monthlyFunnelCounts.get(sortKey) ?? { view: 0, complete: 0 };
+    if (row.metric_name === "funnel_view_event") bucket.view += row.value;
+    if (row.metric_name === "funnel_complete_order") bucket.complete += row.value;
+    monthlyFunnelCounts.set(sortKey, bucket);
+  }
+  for (const entry of sums.values()) {
+    if (entry.metric_name === "funnel_conversion_view_to_complete_pct") {
+      const counts = monthlyFunnelCounts.get(entry.sortKey);
+      entry.value = counts && counts.view > 0 ? (counts.complete / counts.view) * 100 : 0;
+    }
+  }
+
+  return Array.from(sums.values()).sort((a, b) => b.sortKey.localeCompare(a.sortKey));
+}
+
+type Tab = "events" | "users" | "categories" | "audit" | "notifications" | "reviews" | "kpis";
 
 export default function AdminPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -67,9 +133,11 @@ export default function AdminPage() {
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [reviews, setReviews] = useState<AdminReview[]>([]);
+  const [kpis, setKpis] = useState<KpiSnapshot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [rollingUp, setRollingUp] = useState(false);
 
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryParentId, setNewCategoryParentId] = useState<string | null>(null);
@@ -79,6 +147,8 @@ export default function AdminPage() {
   const [auditSearchQuery, setAuditSearchQuery] = useState("");
   const [notificationSearchQuery, setNotificationSearchQuery] = useState("");
   const [reviewSearchQuery, setReviewSearchQuery] = useState("");
+  const [kpiSearchQuery, setKpiSearchQuery] = useState("");
+  const [kpiGranularity, setKpiGranularity] = useState<"daily" | "monthly">("daily");
 
   const categoryParentName = (parentId: number | null) =>
     parentId ? categories.find((c) => c.id === parentId)?.name : null;
@@ -111,6 +181,8 @@ export default function AdminPage() {
   const notificationsSentinelRef = useRef<HTMLTableRowElement | null>(null);
   const [visibleReviewsCount, setVisibleReviewsCount] = useState(LAZY_CHUNK_SIZE);
   const reviewsSentinelRef = useRef<HTMLTableRowElement | null>(null);
+  const [visibleKpisCount, setVisibleKpisCount] = useState(LAZY_CHUNK_SIZE);
+  const kpisSentinelRef = useRef<HTMLTableRowElement | null>(null);
 
   const trimmedEventSearch = eventSearchQuery.trim();
   const filteredEvents = trimmedEventSearch
@@ -174,6 +246,17 @@ export default function AdminPage() {
           (r.comment_text ?? "").includes(trimmedReviewSearch),
       )
     : reviews;
+
+  const granularKpis = kpiGranularity === "monthly" ? aggregateMonthlyKpis(kpis) : kpis;
+  const trimmedKpiSearch = kpiSearchQuery.trim();
+  const filteredKpis = trimmedKpiSearch
+    ? granularKpis.filter(
+        (k) =>
+          (KPI_METRIC_LABELS[k.metric_name] ?? k.metric_name).includes(trimmedKpiSearch) ||
+          k.date.includes(trimmedKpiSearch) ||
+          Object.values(k.dimensions).some((v) => v.includes(trimmedKpiSearch)),
+      )
+    : granularKpis;
 
   useEffect(() => {
     const sentinel = eventsSentinelRef.current;
@@ -265,6 +348,21 @@ export default function AdminPage() {
     return () => observer.disconnect();
   }, [tab, filteredReviews.length, visibleReviewsCount]);
 
+  useEffect(() => {
+    const sentinel = kpisSentinelRef.current;
+    if (!sentinel || tab !== "kpis") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleKpisCount((prev) => prev + LAZY_CHUNK_SIZE);
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [tab, filteredKpis.length, visibleKpisCount]);
+
   function loadAll(token: string) {
     Promise.all([
       adminApi.listEvents(token),
@@ -273,14 +371,16 @@ export default function AdminPage() {
       adminApi.listAuditLog(token),
       adminApi.listNotifications(token),
       adminApi.listReviews(token),
+      adminApi.getKpiReport(KPI_FETCH_DAYS, token),
     ])
-      .then(([e, u, c, a, n, r]) => {
+      .then(([e, u, c, a, n, r, k]) => {
         setEvents(e);
         setUsers(u);
         setCategories(c);
         setAuditLog(a);
         setNotifications(n);
         setReviews(r);
+        setKpis(k);
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "خطا در دریافت اطلاعات پنل ادمین"))
       .finally(() => setLoading(false));
@@ -372,7 +472,7 @@ export default function AdminPage() {
     const hidden = review.status !== "hidden";
     let reason: string | undefined;
     if (hidden) {
-      const promptResult = window.prompt("دلیل نهفتن نظر (اختیاری):");
+      const promptResult = window.prompt("دلیل مخفی‌کردن نظر (اختیاری):");
       if (promptResult === null) return; // انصراف از پرامپت = انصراف از کل اقدام
       reason = promptResult || undefined;
     }
@@ -384,6 +484,20 @@ export default function AdminPage() {
       setError(err instanceof ApiError ? err.message : "خطا در تغییر وضعیت نظر");
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function handleRollupYesterday() {
+    if (!accessToken) return;
+    setRollingUp(true);
+    setError(null);
+    try {
+      await adminApi.rollupKpis(null, accessToken);
+      loadAll(accessToken);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "خطا در محاسبه‌ی KPI");
+    } finally {
+      setRollingUp(false);
     }
   }
 
@@ -420,6 +534,8 @@ export default function AdminPage() {
   const hasMoreNotifications = visibleNotificationsCount < filteredNotifications.length;
   const visibleReviews = filteredReviews.slice(0, visibleReviewsCount);
   const hasMoreReviews = visibleReviewsCount < filteredReviews.length;
+  const visibleKpis = filteredKpis.slice(0, visibleKpisCount);
+  const hasMoreKpis = visibleKpisCount < filteredKpis.length;
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-10">
@@ -437,6 +553,7 @@ export default function AdminPage() {
           <TabsTrigger value="audit">لاگ اقدامات</TabsTrigger>
           <TabsTrigger value="notifications">پیامک‌ها و ایمیل‌ها</TabsTrigger>
           <TabsTrigger value="reviews">نظرات</TabsTrigger>
+          <TabsTrigger value="kpis">آمار و KPI</TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -875,7 +992,7 @@ export default function AdminPage() {
                         <span className="line-clamp-2">{r.comment_text ?? "—"}</span>
                         {r.hidden_reason && (
                           <span className="text-muted-foreground block text-xs">
-                            دلیل نهفتن: {r.hidden_reason}
+                            دلیل مخفی‌کردن: {r.hidden_reason}
                           </span>
                         )}
                       </td>
@@ -895,7 +1012,7 @@ export default function AdminPage() {
                           disabled={busyId === r.id}
                           onClick={() => handleToggleReviewHidden(r)}
                         >
-                          {r.status === "hidden" ? "نمایش نظر" : "نهفتن نظر"}
+                          {r.status === "hidden" ? "نمایش نظر" : "مخفی کردن نظر"}
                         </Button>
                       </td>
                     </tr>
@@ -903,6 +1020,101 @@ export default function AdminPage() {
                   {hasMoreReviews && (
                     <tr ref={reviewsSentinelRef}>
                       <td colSpan={8} className="px-3 py-3 text-center text-xs text-zinc-600">
+                        در حال بارگذاری موارد بیشتر...
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "kpis" && (
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-muted-foreground text-sm">
+              رول‌آپ شبانه (بازه‌ی ۱۸۰ روز اخیر) — هر روز یک‌بار خودکار محاسبه می‌شه.
+            </p>
+            <Button size="sm" variant="outline" disabled={rollingUp} onClick={handleRollupYesterday}>
+              {rollingUp ? "در حال محاسبه..." : "محاسبه‌ی دوباره‌ی دیروز"}
+            </Button>
+          </div>
+          {kpis.length === 0 && (
+            <p className="text-muted-foreground">هنوز هیچ آماری محاسبه نشده — روی «محاسبه‌ی دوباره‌ی دیروز» بزنید.</p>
+          )}
+          {kpis.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex overflow-hidden rounded-md border border-zinc-400">
+                <button
+                  type="button"
+                  onClick={() => setKpiGranularity("daily")}
+                  className={`px-3 py-1.5 text-sm ${
+                    kpiGranularity === "daily"
+                      ? "bg-cyan-400 text-cyan-950"
+                      : "bg-[silver] text-zinc-700 hover:bg-zinc-300"
+                  }`}
+                >
+                  روزانه
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setKpiGranularity("monthly")}
+                  className={`px-3 py-1.5 text-sm ${
+                    kpiGranularity === "monthly"
+                      ? "bg-cyan-400 text-cyan-950"
+                      : "bg-[silver] text-zinc-700 hover:bg-zinc-300"
+                  }`}
+                >
+                  ماهانه
+                </button>
+              </div>
+              <Input
+                type="search"
+                placeholder="جستجو بر اساس معیار یا تاریخ..."
+                value={kpiSearchQuery}
+                onChange={(e) => setKpiSearchQuery(e.target.value)}
+                className="max-w-sm"
+              />
+            </div>
+          )}
+          {trimmedKpiSearch && filteredKpis.length === 0 && (
+            <p className="text-muted-foreground text-sm">موردی یافت نشد.</p>
+          )}
+          {filteredKpis.length > 0 && (
+            <div className="overflow-x-auto rounded-lg bg-[silver] ring-1 ring-foreground/10">
+              <table className="w-full text-right text-sm">
+                <thead className="bg-[#a8a8a8] text-xs text-zinc-700">
+                  <tr>
+                    <th className="px-3 py-2 font-normal">ردیف</th>
+                    <th className="px-3 py-2 font-normal">{kpiGranularity === "daily" ? "تاریخ" : "ماه"}</th>
+                    <th className="px-3 py-2 font-normal">معیار</th>
+                    <th className="px-3 py-2 font-normal">جزئیات</th>
+                    <th className="px-3 py-2 font-normal">مقدار</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleKpis.map((k, index) => (
+                    <tr key={`${k.date}-${k.metric_name}-${index}`} className="border-t border-zinc-400">
+                      <td className="px-3 py-2 text-zinc-700">{index + 1}</td>
+                      <td className="px-3 py-2 text-zinc-700 whitespace-nowrap">
+                        {kpiGranularity === "daily" ? formatJalaliDate(k.date) : k.date}
+                      </td>
+                      <td className="px-3 py-2 text-zinc-900">
+                        {KPI_METRIC_LABELS[k.metric_name] ?? k.metric_name}
+                      </td>
+                      <td className="px-3 py-2 text-zinc-700">
+                        {Object.values(k.dimensions).join(", ") || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-zinc-700" dir="ltr">
+                        {k.value.toLocaleString("fa-IR")}
+                      </td>
+                    </tr>
+                  ))}
+                  {hasMoreKpis && (
+                    <tr ref={kpisSentinelRef}>
+                      <td colSpan={5} className="px-3 py-3 text-center text-xs text-zinc-600">
                         در حال بارگذاری موارد بیشتر...
                       </td>
                     </tr>
