@@ -18,6 +18,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError, authApi, isIncompleteProfileError } from "@/lib/api-client";
 import { eventsApi } from "@/lib/events-api";
 import type { EventListItem } from "@/lib/events-api";
+import { toPersianDigits } from "@/lib/digits";
 import { ordersApi } from "@/lib/orders-api";
 import { ticketsApi } from "@/lib/tickets-api";
 import { track } from "@/lib/track";
@@ -178,7 +179,9 @@ export function InstantRegisterModal({
         {step === "otp" && (
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="instant-otp">کد تأیید ارسال‌شده به {destination}</Label>
+              <Label htmlFor="instant-otp">
+                کد تأیید ارسال‌شده به {channel === "sms" ? toPersianDigits(destination) : destination}
+              </Label>
               <Input
                 id="instant-otp"
                 dir="ltr"

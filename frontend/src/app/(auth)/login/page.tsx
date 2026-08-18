@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { ApiError, authApi } from "@/lib/api-client";
-import { toEnglishDigits } from "@/lib/digits";
+import { toEnglishDigits, toPersianDigits } from "@/lib/digits";
 import { useAuthStore } from "@/store/auth-store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -103,7 +103,7 @@ export default function LoginPage() {
           <CardDescription>
             {step === "destination"
               ? "شماره موبایل یا ایمیل خود را وارد کنید تا کد تأیید ارسال شود."
-              : `کد ارسال‌شده به ${destination} را وارد کنید.`}
+              : `کد ارسال‌شده به ${channel === "sms" ? toPersianDigits(destination) : destination} را وارد کنید.`}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -154,7 +154,7 @@ export default function LoginPage() {
                 تأیید و ورود
               </Button>
               <Button variant="ghost" disabled={cooldown > 0} onClick={handleResend}>
-                {cooldown > 0 ? `ارسال مجدد کد (${cooldown} ثانیه)` : "ارسال مجدد کد"}
+                {cooldown > 0 ? `ارسال مجدد کد (${toPersianDigits(cooldown)} ثانیه)` : "ارسال مجدد کد"}
               </Button>
             </>
           )}

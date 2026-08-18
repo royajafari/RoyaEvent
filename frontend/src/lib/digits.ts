@@ -14,3 +14,9 @@ export function toEnglishDigits(value: string): string {
     return arabicIndex !== -1 ? String(arabicIndex) : char;
   });
 }
+
+// فقط برای *نمایش* به کاربر (نه ارسال به بک‌اند) — عکس toEnglishDigits،
+// هیچ‌وقت روی مقداری که به سرور می‌ره صدا زده نشه.
+export function toPersianDigits(value: string | number): string {
+  return String(value).replace(/[0-9]/g, (char) => PERSIAN_DIGITS[Number(char)]);
+}
