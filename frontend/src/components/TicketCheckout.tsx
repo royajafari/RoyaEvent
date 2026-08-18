@@ -14,7 +14,7 @@ import { ApiError, isIncompleteProfileError } from "@/lib/api-client";
 import type { EventDetail, EventSessionOut } from "@/lib/events-api";
 import type { MyTicket } from "@/lib/orders-api";
 import { ordersApi } from "@/lib/orders-api";
-import type { TicketType } from "@/lib/tickets-api";
+import type { DiscountValidateResult, TicketType } from "@/lib/tickets-api";
 import { ticketsApi } from "@/lib/tickets-api";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -39,6 +39,9 @@ export function TicketCheckout({ event }: { event: EventDetail }) {
     event.sessions[0]?.id ?? null,
   );
   const [discountCode, setDiscountCode] = useState("");
+  const [discountResult, setDiscountResult] = useState<DiscountValidateResult | null>(null);
+  const [discountError, setDiscountError] = useState<string | null>(null);
+  const [checkingDiscount, setCheckingDiscount] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [needsProfile, setNeedsProfile] = useState(false);
@@ -73,6 +76,25 @@ export function TicketCheckout({ event }: { event: EventDetail }) {
   }, [accessToken, event.id]);
 
   const selectedTicket = ticketTypes.find((t) => t.id === selectedTicketId) ?? null;
+
+  async function handleCheckDiscount() {
+    const trimmed = discountCode.trim();
+    setDiscountResult(null);
+    if (!trimmed) {
+      setDiscountError("کد تخفیف معتبر نیست");
+      return;
+    }
+    setDiscountError(null);
+    setCheckingDiscount(true);
+    try {
+      const result = await ticketsApi.validateDiscount(trimmed, event.id);
+      setDiscountResult(result);
+    } catch (err) {
+      setDiscountError(err instanceof ApiError ? err.message : "کد تخفیف معتبر نیست");
+    } finally {
+      setCheckingDiscount(false);
+    }
+  }
 
   async function handleSubmit() {
     if (!accessToken || !selectedTicketId || !selectedSessionId) return;
@@ -201,13 +223,37 @@ export function TicketCheckout({ event }: { event: EventDetail }) {
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="discount">کد تخفیف (اختیاری)</Label>
-          <Input
-            id="discount"
-            dir="ltr"
-            value={discountCode}
-            onChange={(e) => setDiscountCode(e.target.value)}
-            placeholder="مثلاً OFF10"
-          />
+          <div className="flex gap-2">
+            <Input
+              id="discount"
+              dir="ltr"
+              value={discountCode}
+              onChange={(e) => {
+                setDiscountCode(e.target.value);
+                setDiscountResult(null);
+                setDiscountError(null);
+              }}
+              placeholder="کد تخفیف خود را وارد کنید"
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={checkingDiscount}
+              onClick={handleCheckDiscount}
+            >
+              {checkingDiscount ? "در حال بررسی..." : "بررسی کد"}
+            </Button>
+          </div>
+          {discountError && <p className="text-destructive text-sm">{discountError}</p>}
+          {discountResult && (
+            <p className="text-primary text-sm">
+              کد تخفیف معتبر است —{" "}
+              {discountResult.discount_type === "percent"
+                ? `${discountResult.value}٪ تخفیف`
+                : `${discountResult.value.toLocaleString("fa-IR")} تومان تخفیف`}
+            </p>
+          )}
         </div>
 
         {error && <p className="text-destructive text-sm">{error}</p>}
