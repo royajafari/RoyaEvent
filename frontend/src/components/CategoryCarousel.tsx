@@ -44,7 +44,7 @@ export function CategoryCarousel({ categories }: { categories: CategoryOut[] }) 
   if (categories.length === 0) return null;
 
   return (
-    <section className="flex w-full max-w-5xl flex-col gap-4 px-4">
+    <section id="tour-categories" className="flex w-full max-w-5xl flex-col gap-4 px-4">
       <h2 className="flex items-center gap-2 text-lg font-semibold">
         <span className="bg-primary h-5 w-1 rounded-full" />
         دسته‌بندی‌ها

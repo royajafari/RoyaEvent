@@ -28,6 +28,27 @@ const ALL_STEPS = [
     },
   },
   {
+    element: "#tour-categories",
+    popover: {
+      title: "دسته‌بندی‌ها",
+      description: "رویدادها رو بر اساس دسته‌بندی موردعلاقه‌تون فیلتر کنید.",
+    },
+  },
+  {
+    element: "#tour-upcoming",
+    popover: {
+      title: "وبینارهای پیش‌رو",
+      description: "وبینارهایی که به‌زودی شروع می‌شن یا همین الان در حال برگزاریه.",
+    },
+  },
+  {
+    element: "#tour-featured",
+    popover: {
+      title: "وبینارهای ویژه",
+      description: "رویدادهای منتخب و پیشنهادی رویا ایونت.",
+    },
+  },
+  {
     element: "#tour-search",
     popover: {
       title: "جستجو",

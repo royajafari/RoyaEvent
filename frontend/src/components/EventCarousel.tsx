@@ -15,6 +15,7 @@ export function EventCarousel({
   viewAllHref,
   highlight = false,
   pulseIcon,
+  id,
 }: {
   title: string;
   events: EventListItem[];
@@ -26,6 +27,10 @@ export function EventCarousel({
    * دادن زنده‌بودن)، "heart" برای محبوب (نشون دادن پرطرفدار بودن)، "star"
    * برای ویژه (نشون دادن انتخاب‌شده بودن). */
   pulseIcon?: "dot" | "heart" | "star";
+  /** برای هدف‌گیری تور آموزشی سایت (lib/onboarding-tour.ts) روی بخش‌های
+   * خاص صفحه‌ی اصلی — اختیاریه چون این کامپوننت چندبار با title متفاوت
+   * تو یک صفحه استفاده می‌شه. */
+  id?: string;
 }) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
@@ -33,6 +38,7 @@ export function EventCarousel({
 
   return (
     <section
+      id={id}
       className={`flex w-full max-w-6xl flex-col gap-4 px-4 ${
         highlight ? "bg-destructive/10 rounded-xl py-6" : ""
       }`}

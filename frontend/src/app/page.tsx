@@ -31,6 +31,7 @@ export default async function Home() {
 
       {sections.upcoming_events.length > 0 && (
         <EventCarousel
+          id="tour-upcoming"
           title="وبینارهای پیش‌رو"
           events={sections.upcoming_events}
           viewAllHref="/events"
@@ -61,6 +62,7 @@ export default async function Home() {
       />
 
       <EventCarousel
+        id="tour-featured"
         title="وبینارهای ویژه"
         events={sections.featured_events}
         viewAllHref="/events?featured=true"
