@@ -154,6 +154,13 @@ export function InstantRegisterModal({
             <Button disabled={loading || !destination.trim()} onClick={handleRequestOtp}>
               ارسال کد تأیید
             </Button>
+            <p className="text-muted-foreground text-center text-xs">
+              ورود شما به معنای پذیرش{" "}
+              <Link href="/terms" target="_blank" className="text-primary hover:underline">
+                قوانین و مقررات
+              </Link>{" "}
+              رویا ایونت است.
+            </p>
           </div>
         )}
 

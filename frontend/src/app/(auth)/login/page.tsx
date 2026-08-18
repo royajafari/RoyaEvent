@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { ApiError, authApi } from "@/lib/api-client";
@@ -157,6 +158,14 @@ export default function LoginPage() {
               </Button>
             </>
           )}
+
+          <p className="text-muted-foreground text-center text-xs">
+            ورود شما به معنای پذیرش{" "}
+            <Link href="/terms" target="_blank" className="text-primary hover:underline">
+              قوانین و مقررات
+            </Link>{" "}
+            رویا ایونت است.
+          </p>
         </CardContent>
       </Card>
     </div>
