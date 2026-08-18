@@ -64,6 +64,12 @@ class Settings(BaseSettings):
     # Vector search
     chroma_persist_dir: str = "./chroma_data"
 
+    # آنالیتیکس/KPI (فاز ۸) — رول‌آپ شبانه در app/workers/scheduler.py
+    # ساعت ۰۰:۰۰ UTC معادل ۰۳:۳۰ بامداد به‌وقت تهران، ترافیک کم
+    kpi_rollup_hour_utc: int = 0
+    kpi_rollup_minute_utc: int = 0
+    kpi_top_keywords_limit: int = 5
+
     # مانیتورینگ
     prometheus_enabled: bool = True
 

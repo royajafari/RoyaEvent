@@ -1,11 +1,12 @@
 import fakeredis
+import mongomock
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 import app.models  # noqa: F401  ثبت مدل‌ها روی Base.metadata
-from app.api.deps import get_db, get_email_provider, get_redis, get_sms_provider
+from app.api.deps import get_db, get_email_provider, get_mongo_db, get_redis, get_sms_provider
 from app.core.rate_limit_middleware import limiter
 from app.db.session import Base
 from app.main import app as fastapi_app
@@ -59,6 +60,14 @@ def fake_redis():
 
 
 @pytest.fixture()
+def fake_mongo():
+    """mongomock جایگزین اتصال واقعی Mongo (فاز ۸، آنالیتیکس) در تست‌ها می‌شه
+    — مثل fake_redis بالا، بدون نیاز به سرویس بیرونی واقعی."""
+    client = mongomock.MongoClient()
+    yield client["royaevent_analytics_test"]
+
+
+@pytest.fixture()
 def sms_provider():
     return ConsoleSmsProvider()
 
@@ -83,9 +92,10 @@ def auth_service(db_session):
 
 
 @pytest.fixture()
-def client(db_session, fake_redis, sms_provider, email_provider):
+def client(db_session, fake_redis, fake_mongo, sms_provider, email_provider):
     fastapi_app.dependency_overrides[get_db] = lambda: db_session
     fastapi_app.dependency_overrides[get_redis] = lambda: fake_redis
+    fastapi_app.dependency_overrides[get_mongo_db] = lambda: fake_mongo
     fastapi_app.dependency_overrides[get_sms_provider] = lambda: sms_provider
     fastapi_app.dependency_overrides[get_email_provider] = lambda: email_provider
 

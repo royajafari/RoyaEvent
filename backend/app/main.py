@@ -19,6 +19,7 @@ from app.api.v1.routers.ratings import router as ratings_router
 from app.api.v1.routers.search import router as search_router
 from app.api.v1.routers.social import router as social_router
 from app.api.v1.routers.tickets import router as tickets_router
+from app.api.v1.routers.track import router as track_router
 from app.core.config import get_settings
 from app.core.rate_limit_middleware import limiter
 from app.db.session import Base, engine
@@ -66,6 +67,7 @@ app.include_router(search_router, prefix=settings.api_v1_prefix)
 app.include_router(home_router, prefix=settings.api_v1_prefix)
 app.include_router(admin_router, prefix=settings.api_v1_prefix)
 app.include_router(ratings_router, prefix=settings.api_v1_prefix)
+app.include_router(track_router, prefix=settings.api_v1_prefix)
 
 
 @app.get("/health")

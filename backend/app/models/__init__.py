@@ -3,6 +3,7 @@ from app.models.category import Category
 from app.models.event import Event, EventSession, event_instructors, event_tags
 from app.models.favorite import Favorite, InstructorFollow, OrganizerFollow
 from app.models.instructor import Instructor
+from app.models.kpi import KpiDailySnapshot
 from app.models.notification import (
     NotificationChannel,
     NotificationOutbox,
@@ -29,6 +30,7 @@ __all__ = [
     "Instructor",
     "InstructorFollow",
     "InstructorRating",
+    "KpiDailySnapshot",
     "NotificationChannel",
     "NotificationOutbox",
     "NotificationStatus",

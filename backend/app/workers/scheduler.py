@@ -18,12 +18,13 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import timedelta
+from datetime import date, timedelta
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.mongo_client import get_mongo_db
 from app.core.redis_client import get_redis
 from app.db.session import SessionLocal
 from app.models.base import utcnow
@@ -33,7 +34,7 @@ from app.models.order import Registration, RegistrationStatus
 from app.models.user import User
 from app.providers.email.factory import get_email_provider
 from app.providers.sms.factory import get_sms_provider
-from app.services import notification_service
+from app.services import kpi_service, notification_service
 from app.services.notification_templates import render_email, render_sms
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,7 @@ settings = get_settings()
 
 _DISPATCH_LOCK_KEY = "lock:notification-dispatch"
 _REMINDER_LOCK_KEY = "lock:reminder-scan"
+_KPI_ROLLUP_LOCK_KEY = "lock:kpi-rollup"
 _BATCH_SIZE = 50
 
 
@@ -144,6 +146,20 @@ def scan_reminders(db: Session | None = None) -> None:
             db.close()
 
 
+def rollup_kpis(db: Session | None = None, target_date: date | None = None) -> None:
+    """دیروز (به‌وقت UTC) رو رول‌آپ می‌کنه — چون رفتار امروز هنوز کامل نشده.
+    مثل bقیه‌ی jobها db اختیاریه (تست session ایزوله تزریق می‌کنه)."""
+    owns_session = db is None
+    if db is None:
+        db = SessionLocal()
+    try:
+        day = target_date if target_date is not None else (utcnow().date() - timedelta(days=1))
+        kpi_service.rollup_daily_kpis(db, get_mongo_db(), day)
+    finally:
+        if owns_session:
+            db.close()
+
+
 def run() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     scheduler = BlockingScheduler(timezone="UTC")
@@ -159,6 +175,14 @@ def run() -> None:
         "interval",
         seconds=settings.reminder_scan_interval_seconds,
         id="scan_reminders",
+        max_instances=1,
+    )
+    scheduler.add_job(
+        lambda: _with_lock(_KPI_ROLLUP_LOCK_KEY, 3600, rollup_kpis),
+        "cron",
+        hour=settings.kpi_rollup_hour_utc,
+        minute=settings.kpi_rollup_minute_utc,
+        id="rollup_kpis",
         max_instances=1,
     )
     logger.info("RoyaEvent notification worker started")

@@ -1,10 +1,14 @@
+import json
+from datetime import date, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_admin_user, get_db
+from app.api.deps import get_current_admin_user, get_db, get_mongo_db
 from app.core.rate_limit_middleware import limiter
 from app.models.category import Category
 from app.models.event import Event
+from app.models.kpi import KpiDailySnapshot
 from app.models.review import EventReview
 from app.models.user import User
 from app.schemas.admin import (
@@ -17,10 +21,12 @@ from app.schemas.admin import (
     DeleteEventIn,
     FeatureToggleIn,
     HideReviewIn,
+    KpiRollupIn,
+    KpiSnapshotOut,
     SuspendUserIn,
 )
 from app.schemas.event import CategoryOut
-from app.services import admin_service, review_service
+from app.services import admin_service, kpi_service, review_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -285,3 +291,52 @@ def hide_review(
     action = "hide_review" if body.hidden else "unhide_review"
     admin_service.log_action(db, admin.id, action, "review", review_id, body.reason)
     return _to_admin_review_out(db, review)
+
+
+@router.get("/reports/kpis", response_model=list[KpiSnapshotOut])
+@limiter.limit(_ADMIN_RATE_LIMIT)
+def get_kpi_report(
+    request: Request,
+    days: int = 7,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    snapshots = kpi_service.get_kpi_report(db, days)
+    return [
+        KpiSnapshotOut(
+            date=s.snapshot_date.isoformat(),
+            metric_name=s.metric_name,
+            dimensions=json.loads(s.dimensions_json),
+            value=s.value,
+        )
+        for s in snapshots
+    ]
+
+
+@router.post("/reports/kpis/rollup", response_model=list[KpiSnapshotOut])
+@limiter.limit(_ADMIN_RATE_LIMIT)
+def trigger_kpi_rollup(
+    request: Request,
+    body: KpiRollupIn,
+    db: Session = Depends(get_db),
+    mongo_db=Depends(get_mongo_db),
+    admin: User = Depends(get_current_admin_user),
+):
+    """محاسبه‌ی دستی/دوباره‌ی یک روز — برای بک‌فیل یا تست بدون صبر تا اجرای
+    شبانه‌ی worker. فقط-نوشتنی روی kpi_daily_snapshot، هیچ داده‌ی کاربری
+    تغییر نمی‌کنه، ولی چون یک اقدام صریح ادمینه لاگ می‌شه."""
+    target_date = date.fromisoformat(body.date) if body.date else (date.today() - timedelta(days=1))
+    kpi_service.rollup_daily_kpis(db, mongo_db, target_date)
+    admin_service.log_action(db, admin.id, "manual_kpi_rollup", "kpi", 0, target_date.isoformat())
+    snapshots = (
+        db.query(KpiDailySnapshot).filter(KpiDailySnapshot.snapshot_date == target_date).all()
+    )
+    return [
+        KpiSnapshotOut(
+            date=s.snapshot_date.isoformat(),
+            metric_name=s.metric_name,
+            dimensions=json.loads(s.dimensions_json),
+            value=s.value,
+        )
+        for s in snapshots
+    ]

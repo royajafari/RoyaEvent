@@ -76,6 +76,17 @@ class HideReviewIn(BaseModel):
     reason: str | None = None
 
 
+class KpiSnapshotOut(BaseModel):
+    date: str
+    metric_name: str
+    dimensions: dict
+    value: float
+
+
+class KpiRollupIn(BaseModel):
+    date: str | None = None  # ISO yyyy-mm-dd، پیش‌فرض دیروز
+
+
 class AdminNotificationOut(BaseModel):
     id: int
     channel: str

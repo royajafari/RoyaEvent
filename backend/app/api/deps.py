@@ -2,9 +2,11 @@ from collections.abc import Generator
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pymongo.database import Database
 from redis import Redis
 from sqlalchemy.orm import Session
 
+from app.core.mongo_client import get_mongo_db as _get_mongo_db
 from app.core.redis_client import get_redis as _get_redis
 from app.db.session import get_db as _get_db
 from app.models.user import User
@@ -23,6 +25,10 @@ def get_db() -> Generator[Session, None, None]:
 
 def get_redis() -> Redis:
     return _get_redis()
+
+
+def get_mongo_db() -> Database:
+    return _get_mongo_db()
 
 
 def get_sms_provider() -> SmsProvider:
