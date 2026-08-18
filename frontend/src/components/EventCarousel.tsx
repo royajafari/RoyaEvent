@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, Star } from "lucide-react";
 
 import { EventCard } from "@/components/EventCard";
 import type { EventListItem } from "@/lib/events-api";
@@ -14,14 +14,18 @@ export function EventCarousel({
   events,
   viewAllHref,
   highlight = false,
+  pulseIcon,
 }: {
   title: string;
   events: EventListItem[];
   viewAllHref: string;
-  /** برای بخش‌هایی مثل «وبینارهای پیش‌رو» — پس‌زمینه‌ی صورتی + نقطه‌ی
-   * چشمک‌زن کنار عنوان، برای جلب توجه به رویدادهایی که به‌زودی/همین الان
-   * برگزار می‌شن. */
+  /** برای بخش‌هایی مثل «وبینارهای پیش‌رو» — پس‌زمینه‌ی صورتی کنار عنوان،
+   * برای جلب توجه به رویدادهایی که به‌زودی/همین الان برگزار می‌شن. */
   highlight?: boolean;
+  /** نشان چشمک‌زن کنار عنوان، مستقل از highlight — "dot" برای پیش‌رو (نشون
+   * دادن زنده‌بودن)، "heart" برای محبوب (نشون دادن پرطرفدار بودن)، "star"
+   * برای ویژه (نشون دادن انتخاب‌شده بودن). */
+  pulseIcon?: "dot" | "heart" | "star";
 }) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
@@ -35,11 +39,17 @@ export function EventCarousel({
     >
       <div className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
-          {highlight && (
+          {pulseIcon === "dot" && (
             <span className="relative flex h-3 w-3">
               <span className="bg-destructive absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
               <span className="bg-destructive relative inline-flex h-3 w-3 rounded-full" />
             </span>
+          )}
+          {pulseIcon === "heart" && (
+            <Heart className="fill-destructive text-destructive h-4 w-4 animate-pulse" />
+          )}
+          {pulseIcon === "star" && (
+            <Star className="fill-primary text-primary h-4 w-4 animate-pulse" />
           )}
           {title}
         </h2>

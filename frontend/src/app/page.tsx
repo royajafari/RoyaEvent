@@ -35,6 +35,7 @@ export default async function Home() {
           events={sections.upcoming_events}
           viewAllHref="/events"
           highlight
+          pulseIcon="dot"
         />
       )}
 
@@ -50,6 +51,7 @@ export default async function Home() {
         title="وبینارهای محبوب"
         events={sections.popular_events}
         viewAllHref="/events?sort=popular"
+        pulseIcon="heart"
       />
 
       <EventCarousel
@@ -62,6 +64,7 @@ export default async function Home() {
         title="وبینارهای ویژه"
         events={sections.featured_events}
         viewAllHref="/events?featured=true"
+        pulseIcon="star"
       />
 
       {sections.popular_instructors.length > 0 && (
