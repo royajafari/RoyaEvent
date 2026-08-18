@@ -1,12 +1,18 @@
 import Link from "next/link";
 
+import { CategoryCarousel } from "@/components/CategoryCarousel";
 import { EventCarousel } from "@/components/EventCarousel";
 import { Badge } from "@/components/ui/badge";
 import { NewsletterSignup } from "@/components/NewsletterSignup";
+import { eventsServer } from "@/lib/events-server";
 import { homeServer } from "@/lib/home-server";
 
 export default async function Home() {
-  const sections = await homeServer.getSections();
+  const [sections, allCategories] = await Promise.all([
+    homeServer.getSections(),
+    eventsServer.listCategories(),
+  ]);
+  const parentCategories = allCategories.filter((c) => c.parent_id === null);
 
   return (
     <div className="flex flex-1 flex-col items-center gap-16 bg-zinc-50 py-16 dark:bg-black">
@@ -20,6 +26,17 @@ export default async function Home() {
 
         <NewsletterSignup />
       </div>
+
+      <CategoryCarousel categories={parentCategories} />
+
+      {sections.upcoming_events.length > 0 && (
+        <EventCarousel
+          title="وبینارهای پیش‌رو"
+          events={sections.upcoming_events}
+          viewAllHref="/events"
+          highlight
+        />
+      )}
 
       {sections.top_rated_events.length > 0 && (
         <EventCarousel

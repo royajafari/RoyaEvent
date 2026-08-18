@@ -13,19 +13,36 @@ export function EventCarousel({
   title,
   events,
   viewAllHref,
+  highlight = false,
 }: {
   title: string;
   events: EventListItem[];
   viewAllHref: string;
+  /** برای بخش‌هایی مثل «وبینارهای پیش‌رو» — پس‌زمینه‌ی صورتی + نقطه‌ی
+   * چشمک‌زن کنار عنوان، برای جلب توجه به رویدادهایی که به‌زودی/همین الان
+   * برگزار می‌شن. */
+  highlight?: boolean;
 }) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
   if (events.length === 0) return null;
 
   return (
-    <section className="flex w-full max-w-6xl flex-col gap-4 px-4">
+    <section
+      className={`flex w-full max-w-6xl flex-col gap-4 px-4 ${
+        highlight ? "bg-destructive/10 rounded-xl py-6" : ""
+      }`}
+    >
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">{title}</h2>
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          {highlight && (
+            <span className="relative flex h-3 w-3">
+              <span className="bg-destructive absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
+              <span className="bg-destructive relative inline-flex h-3 w-3 rounded-full" />
+            </span>
+          )}
+          {title}
+        </h2>
         <Link
           href={viewAllHref}
           className="text-primary flex items-center gap-1 text-sm hover:underline"

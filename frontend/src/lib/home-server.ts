@@ -16,6 +16,7 @@ export type HomeSections = {
   latest_events: EventListItem[];
   featured_events: EventListItem[];
   top_rated_events: EventListItem[];
+  upcoming_events: EventListItem[];
   popular_instructors: InstructorOut[];
   popular_organizers: OrganizerSummary[];
 };
