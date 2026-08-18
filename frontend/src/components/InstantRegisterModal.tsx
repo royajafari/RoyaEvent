@@ -157,7 +157,7 @@ export function InstantRegisterModal({
               <Input
                 id="instant-destination"
                 dir="ltr"
-                placeholder={channel === "sms" ? "09xxxxxxxxx" : "you@example.com"}
+                placeholder={channel === "sms" ? "۰۹xxxxxxxxx" : "you@example.com"}
                 value={channel === "sms" ? toPersianDigits(destination) : destination}
                 onChange={(e) =>
                   setDestination(channel === "sms" ? toEnglishDigits(e.target.value) : e.target.value)
