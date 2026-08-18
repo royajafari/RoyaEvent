@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BackToTopButton } from "@/components/BackToTopButton";
 import { OnboardingTour } from "@/components/OnboardingTour";
+import { PageViewTracker } from "@/components/PageViewTracker";
 import { SessionBootstrap } from "@/components/SessionBootstrap";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col font-sans">
         <SessionBootstrap />
+        <PageViewTracker />
         <SiteHeader />
         {children}
         <SiteFooter />

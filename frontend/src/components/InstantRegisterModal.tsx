@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { CompleteProfilePrompt } from "@/components/CompleteProfilePrompt";
@@ -20,6 +20,7 @@ import { eventsApi } from "@/lib/events-api";
 import type { EventListItem } from "@/lib/events-api";
 import { ordersApi } from "@/lib/orders-api";
 import { ticketsApi } from "@/lib/tickets-api";
+import { track } from "@/lib/track";
 import { useAuthStore } from "@/store/auth-store";
 
 type Step = "destination" | "otp" | "confirm" | "submitting" | "needsProfile" | "success" | "error";
@@ -51,6 +52,14 @@ export function InstantRegisterModal({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // این کامپوننت فقط وقتی مودال واقعاً باز می‌شه mount می‌شه (نکته‌ی بالا)،
+  // پس mount == کاربر روی «ثبت‌نام فوری» کلیک کرده == معادل CLICK_REGISTER
+  // قیف. track() از یک ماژول دیگه import شده و هیچ setState صدا نمی‌زنه،
+  // پس با react-hooks/set-state-in-effect تداخل نداره.
+  useEffect(() => {
+    track("funnel_step", { step: "CLICK_REGISTER", event_id: event.id });
+  }, [event.id]);
+
   async function register(token: string) {
     setStep("submitting");
     setLoading(true);
@@ -70,11 +79,13 @@ export function InstantRegisterModal({
         setStep("error");
         return;
       }
+      track("funnel_step", { step: "START_CHECKOUT", event_id: event.id });
       const order = await ordersApi.create(
         { ticket_type_id: ticket.id, session_id: session.id },
         token,
       );
       await ordersApi.complete(order.id, token);
+      track("funnel_step", { step: "COMPLETE_ORDER", event_id: event.id });
       setStep("success");
     } catch (err) {
       if (isIncompleteProfileError(err)) {

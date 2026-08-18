@@ -16,6 +16,7 @@ import type { MyTicket } from "@/lib/orders-api";
 import { ordersApi } from "@/lib/orders-api";
 import type { DiscountValidateResult, TicketType } from "@/lib/tickets-api";
 import { ticketsApi } from "@/lib/tickets-api";
+import { track } from "@/lib/track";
 import { useAuthStore } from "@/store/auth-store";
 
 const PRICING_LABELS: Record<TicketType["pricing_model"], string> = {
@@ -98,10 +99,12 @@ export function TicketCheckout({ event }: { event: EventDetail }) {
 
   async function handleSubmit() {
     if (!accessToken || !selectedTicketId || !selectedSessionId) return;
+    track("funnel_step", { step: "CLICK_REGISTER", event_id: event.id });
     setSubmitting(true);
     setError(null);
     setNeedsProfile(false);
     try {
+      track("funnel_step", { step: "START_CHECKOUT", event_id: event.id });
       const order = await ordersApi.create(
         {
           ticket_type_id: selectedTicketId,
@@ -111,6 +114,7 @@ export function TicketCheckout({ event }: { event: EventDetail }) {
         accessToken,
       );
       await ordersApi.complete(order.id, accessToken);
+      track("funnel_step", { step: "COMPLETE_ORDER", event_id: event.id });
       setSuccessCode(order.id.toString());
     } catch (err) {
       if (isIncompleteProfileError(err)) {

@@ -8,6 +8,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { EventActionIcons } from "@/components/EventActionIcons";
 import { EventCard } from "@/components/EventCard";
 import { EventReviews } from "@/components/EventReviews";
+import { EventViewTracker } from "@/components/EventViewTracker";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { FollowInstructorButton } from "@/components/FollowInstructorButton";
 import { FollowOrganizerButton } from "@/components/FollowOrganizerButton";
@@ -74,6 +75,7 @@ export default async function EventDetailPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
+      <EventViewTracker eventId={event.id} />
       <Breadcrumbs items={[{ label: "رویدادها", href: "/events" }, { label: event.title }]} />
 
       {event.promo_video_url ? (
