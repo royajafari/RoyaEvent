@@ -12,11 +12,14 @@ rating_avg همه صفر بود چون سیستم امتیازدهی نبود.
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from redis import Redis
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.models.event import Event, EventStatus, EventVisibility
+from app.models.base import utcnow
+from app.models.event import Event, EventSession, EventStatus, EventVisibility
 from app.models.favorite import OrganizerFollow
 from app.models.user import User
 from app.schemas.home import HomeSectionsOut, OrganizerSummaryOut
@@ -103,6 +106,31 @@ def _featured_events(db: Session) -> list:
     return [to_list_item_out(e) for e in featured]
 
 
+def _upcoming_events(db: Session) -> list:
+    """«وبینارهای پیش‌رو» — رویدادهایی که جلسه‌شون یا هنوز شروع نشده یا
+    همین اواخر (تا ۴ ساعت پیش) شروع شده، پس به‌احتمال زیاد همین الان هم در
+    حال برگزاریه (بج «در حال ارائه» در فرانت از isSessionLive جدا محاسبه
+    می‌شه، نه اینجا) — مرتب بر اساس نزدیک‌ترین زمان شروع."""
+    live_since = utcnow() - timedelta(hours=4)
+    rows = (
+        _published_public_query(db)
+        .join(EventSession, EventSession.event_id == Event.id)
+        .filter(EventSession.starts_at >= live_since)
+        .order_by(EventSession.starts_at.asc())
+        .all()
+    )
+    seen: set[int] = set()
+    result = []
+    for event in rows:
+        if event.id in seen:
+            continue
+        seen.add(event.id)
+        result.append(event)
+        if len(result) >= SECTION_LIMIT:
+            break
+    return [to_list_item_out(e) for e in result]
+
+
 def _popular_organizers(db: Session) -> list[OrganizerSummaryOut]:
     rows = (
         db.query(User, func.count(OrganizerFollow.follower_user_id))
@@ -138,6 +166,7 @@ def get_home_sections(db: Session, redis_client: Redis) -> HomeSectionsOut:
         latest_events=_latest_events(db),
         featured_events=_featured_events(db),
         top_rated_events=_top_rated_events(db),
+        upcoming_events=_upcoming_events(db),
         popular_instructors=_popular_instructors(db),
         popular_organizers=_popular_organizers(db),
     )

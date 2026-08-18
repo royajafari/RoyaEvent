@@ -16,5 +16,6 @@ class HomeSectionsOut(BaseModel):
     latest_events: list[EventListItemOut]
     featured_events: list[EventListItemOut]
     top_rated_events: list[EventListItemOut]
+    upcoming_events: list[EventListItemOut]
     popular_instructors: list[InstructorOut]
     popular_organizers: list[OrganizerSummaryOut]

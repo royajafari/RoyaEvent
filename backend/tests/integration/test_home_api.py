@@ -28,6 +28,7 @@ def test_home_sections_shape_on_empty_db(client):
         "latest_events",
         "featured_events",
         "top_rated_events",
+        "upcoming_events",
         "popular_instructors",
         "popular_organizers",
     }
@@ -86,9 +87,46 @@ def test_home_sections_excludes_draft_event(client, leaf_category, auth_headers)
 
     resp = client.get("/api/v1/home/sections")
     body = resp.json()
-    sections = ("popular_events", "latest_events", "featured_events", "top_rated_events")
+    sections = (
+        "popular_events",
+        "latest_events",
+        "featured_events",
+        "top_rated_events",
+        "upcoming_events",
+    )
     all_ids = {e["id"] for section in sections for e in body[section]}
     assert event_id not in all_ids
+
+
+def test_home_sections_upcoming_events_excludes_long_past_sessions(
+    client, leaf_category, auth_headers, db_session
+):
+    from datetime import timedelta
+
+    from app.models.base import utcnow
+    from app.models.event import EventSession
+
+    soon = client.post(
+        "/api/v1/events",
+        json=_event_payload(leaf_category.id, title="وبینار به‌زودی"),
+        headers=auth_headers,
+    ).json()
+    client.post(f"/api/v1/events/{soon['id']}/publish", headers=auth_headers)
+
+    long_past = client.post(
+        "/api/v1/events",
+        json=_event_payload(leaf_category.id, title="وبینار خیلی قدیمی"),
+        headers=auth_headers,
+    ).json()
+    client.post(f"/api/v1/events/{long_past['id']}/publish", headers=auth_headers)
+    session_row = db_session.query(EventSession).filter_by(event_id=long_past["id"]).first()
+    session_row.starts_at = utcnow() - timedelta(hours=100)
+    db_session.commit()
+
+    resp = client.get("/api/v1/home/sections")
+    upcoming_ids = [e["id"] for e in resp.json()["upcoming_events"]]
+    assert soon["id"] in upcoming_ids
+    assert long_past["id"] not in upcoming_ids
 
 
 def test_home_sections_includes_popular_organizer(
