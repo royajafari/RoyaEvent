@@ -20,12 +20,12 @@
 | ۵ | پنل ادمین | ✅ [`specs/spec5.md`](specs/spec5.md) |
 | ۶ | اعلان‌ها + زمان‌بند + لینک تقویم | ✅ [`specs/spec6.md`](specs/spec6.md) |
 | ۷ | امتیاز/نظر ۴محوره رویداد + امتیاز ساده مدرس/برگزارکننده/سایت | ✅ [`specs/spec7.md`](specs/spec7.md) |
-| ۸ | آنالیتیکس/KPI | ⏳ شروع نشده |
+| ۸ | آنالیتیکس/KPI (بیکن ردیابی + رول‌آپ شبانه + گزارش ادمین) | ✅ [`specs/spec8.md`](specs/spec8.md) |
 | ۹ | استک مانیتورینگ | ⏳ شروع نشده |
 | ۱۰ | تقویت تست + مقاومت آفلاین/RTL | ⏳ شروع نشده |
 | ۱۱ | آماده‌سازی دیپلوی VPS (TLS/HTTPS اجباری — نگاه کن به بخش تصمیمات) | ⏳ باقی فاز نشده؛ بخش TLS/Nginx/Docker زودتر و مستقل انجام شد، نگاه کن به `docs/deployment_tls.md` و `specs/spec3.md` |
 
-بک‌اند در مجموع الان **۲۸۷ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
+بک‌اند در مجموع الان **۳۰۸ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
 
 ## استک فنی (تصمیم قطعی، تغییر نده مگر کاربر بخواد)
 
@@ -34,7 +34,7 @@
 | فرانت‌اند | Next.js 16 (App Router) + shadcn/ui (بر پایه‌ی Base UI، نه Radix) + Tailwind v4، RTL/فارسی |
 | بک‌اند | FastAPI (Python 3.12) |
 | DB اصلی | SQLite (WAL mode)، از طریق SQLAlchemy 2.0 + Alembic |
-| آنالیتیکس رفتاری | MongoDB (فاز ۸، هنوز کدی نیست) |
+| آنالیتیکس رفتاری | MongoDB — فعال از فاز ۸ (`app/core/mongo_client.py`، کالکشن‌های `page_views`/`search_queries`/`funnel_events`/`click_events` از `POST /track`) |
 | کش/Rate-limit | Redis |
 | فایل/بنر/ویدیو | S3-compatible Object Storage — **ArvanCloud Object Storage** فعال (production/dev اشتراکی، کلید در `.env`، هرگز commit نمی‌شه)؛ **MinIO خودمیزبان** (`infra/docker-compose.yml`) به‌عنوان سناریوی جایگزین همیشه در دسترس می‌مونه — کد (`app/core/storage.py`) با `minio-py` صحبت می‌کنه که با هر دو کار می‌کنه، سوییچ فقط تغییر ۴-۵ متغیر در `.env` است، بدون تغییر کد |
 | جستجوی محتوایی | ChromaDB embedded (`backend/app/search/`) + `sentence-transformers` (مدل `paraphrase-multilingual-MiniLM-L12-v2`، چندزبانه) — فعال از فاز ۴. **موقع نصب local/Docker از این پس، حتماً اول `pip install torch --index-url https://download.pytorch.org/whl/cpu` رو جدا بزن**، بعد `pip install -r requirements.txt` — وگرنه نصب `sentence-transformers` سراغ wheel غول‌پیکر CUDA torch می‌ره |
@@ -51,28 +51,30 @@
 RoyaEvent/
   backend/app/
     api/v1/routers/   # auth.py, events.py, tickets.py, orders.py, social.py, organizer.py (داشبورد خصوصی)،
-                      # organizers.py (پروفایل عمومی، پیچیده نکن با organizer.py)، instructors.py, search.py, home.py, admin.py، ratings.py
-    api/deps.py        # get_db, get_current_user, get_current_user_optional, get_current_admin_user, get_redis, get_sms/email_provider, get_client_ip
+                      # organizers.py (پروفایل عمومی، پیچیده نکن با organizer.py)، instructors.py, search.py, home.py, admin.py، ratings.py، track.py
+    api/deps.py        # get_db, get_current_user, get_current_user_optional, get_current_admin_user, get_redis, get_mongo_db, get_sms/email_provider, get_client_ip
     core/               # config, security (JWT+OTP hash), rate_limit (OTP), rate_limit_middleware (عمومی/slowapi)
-                        # redis_client, storage (MinIO), slug, validators, calendar (لینک گوگل‌کلندر)
+                        # redis_client, mongo_client (فاز ۸، get_mongo_db)، storage (MinIO), slug, validators, calendar (لینک گوگل‌کلندر)
                         # permissions (require_event_owner, require_complete_profile)، persian_date (UTC→جلالی تهران، برای متن پیامک/ایمیل)
     db/                 # session.py (engine/Base/get_db)، migrations/ (Alembic)، seed_categories.py
     models/             # User, OTPChallenge, RefreshToken, Category, Tag, Instructor, Event, EventSession,
                         # TicketType, DiscountCode, PlatformDiscountCode, Order, OrderItem, Payment, Registration,
                         # Favorite, OrganizerFollow, InstructorFollow, AdminAuditLog, NotificationOutbox,
-                        # EventReview (نظر ۴محوره)، InstructorRating/OrganizerRating/PlatformRating (امتیاز ساده)
+                        # EventReview (نظر ۴محوره)، InstructorRating/OrganizerRating/PlatformRating (امتیاز ساده)،
+                        # KpiDailySnapshot (رول‌آپ شبانه‌ی فاز ۸)
     providers/sms|email/ # base + console(dev) + ippanel/kavenegar/brevo/resend
     schemas/            # auth.py, event.py, ticket.py, order.py, social.py, organizer.py (AttendeeOut + OrganizerProfileOut)،
-                        # instructor.py, search.py, home.py, admin.py (Pydantic)، review.py, rating.py
+                        # instructor.py, search.py, home.py, admin.py (Pydantic)، review.py, rating.py، track.py
     services/           # otp_service, auth_service, event_service (+event_query/to_list_item_out عمومی)،
                         # image_service, video_service, ticket_service, discount_service, order_service,
                         # social_service, instructor_service, organizer_service (پروفایل عمومی)،
                         # search_service (جستجوی دوگانه: افراد+رویداد)، home_service (بخش‌های صفحه‌ی اصلی، Redis-cached)،
                         # admin_service (soft-delete رویداد، تعلیق کاربر، CRUD دسته‌بندی، لاگ اقدامات، hide/unhide نظر)،
                         # notification_service (enqueue صف اعلان)، notification_templates (رندر Jinja2 هر قالب×کانال)،
-                        # review_service (نظر ۴محوره رویداد، gate ثبت‌نام+زمان جلسه)، rating_service (امتیاز زنده‌محاسبه‌ی مدرس/برگزارکننده/سایت)
+                        # review_service (نظر ۴محوره رویداد، gate ثبت‌نام+زمان جلسه)، rating_service (امتیاز زنده‌محاسبه‌ی مدرس/برگزارکننده/سایت)،
+                        # track_service (نوشتن رویداد رفتاری در Mongo)، kpi_service (رول‌آپ شبانه + گزارش ادمین، فاز ۸)
     search/             # chroma_client.py, embeddings.py, indexer.py (sync_event_index)، reindex.py (بک‌فیل دستی)
-    workers/            # scheduler.py — پردازه‌ی جدا (python -m app.workers.scheduler)، دیسپچر صف اعلان + اسکنر یادآوری ۱ساعته
+    workers/            # scheduler.py — پردازه‌ی جدا (python -m app.workers.scheduler)، دیسپچر صف اعلان + اسکنر یادآوری ۱ساعته + رول‌آپ شبانه‌ی KPI (فاز ۸)
   backend/tests/unit|integration/   # pytest، fakeredis، بدون نیاز به Redis واقعی (+ test_search_api.py: embedding/Chroma قلابی)
   frontend/src/
     app/
@@ -115,6 +117,10 @@ RoyaEvent/
     components/EventReviews.tsx    # فرم نظر ۴محوره + لیست نظرهای رویداد، در events/[slug]
     components/RateEntityWidget.tsx # ویجت امتیازدهی ستاره‌ای مشترک مدرس/برگزارکننده (الگوی FollowInstructorButton)
     components/TicketQrCode.tsx    # QR بلیط («بلیط‌های من») — لینک /organizer/events/{id}/checkin?code=... رو کد می‌کنه، نه متن خام کد
+    components/EventActionIcons.tsx # افزودن‌به‌تقویم (بدون لاگین، تابع محض) + کپی‌لینک، در صفحه‌ی عمومی رویداد
+    components/CategoryCarousel.tsx # ردیف دسته‌های والد صفحه‌ی اصلی — آیکون بر اساس slug + دکمه‌ی جهت (نه اسکرول لمسی خام)
+    components/EventCarousel.tsx   # کاروسل بخش‌های صفحه‌ی اصلی — prop اختیاری highlight (پس‌زمینه) و pulseIcon ("dot"|"heart"|"star"، مستقل از هم) + id (هدف‌گیری تور آموزشی)
+    components/PageViewTracker.tsx, EventViewTracker.tsx, SearchQueryTracker.tsx # فاز ۸ — بیکن آنالیتیکس (lib/track.ts)، همه بدون UI مثل SessionBootstrap
     components/ui/                 # shadcn primitives (+ textarea, select, combobox, progress, checkbox, dialog)
     lib/
       api-client.ts    # fetch wrapper سمت کلاینت، credentials:include، پشتیبانی FormData،
@@ -128,6 +134,9 @@ RoyaEvent/
       home-server.ts     # SSR برای /home/sections (فقط سرور — صفحه‌ی اصلی چیزی سمت کلاینت لازم نداره)
       tickets-api.ts, orders-api.ts, social-api.ts, organizer-api.ts  # فاز ۳ (social-api.ts: +myFollowsDetail)
       reviews-api.ts, ratings-api.ts  # فاز ۷ — نظر ۴محوره رویداد + امتیاز ساده مدرس/برگزارکننده/سایت
+      track.ts           # فاز ۸ — sendBeacon (fallback fetch+keepalive) + session_id در localStorage
+      calendar.ts         # معادل فرانتی app/core/calendar.py (تابع محض، بدون بک‌اند) — افزودن به تقویم گوگل بدون نیاز به لاگین
+      digits.ts           # toEnglishDigits (نرمال‌سازی ورودی برای بک‌اند) + toPersianDigits (فقط نمایش، هرگز برای ارسال به سرور)
       date.ts            # formatJalali* — Intl بومی fa-IR-u-ca-persian، بدون کتابخانه‌ی جانبی
     store/auth-store.ts  # Zustand، accessToken فقط در حافظه + user (UserOut، برای نمایش‌های سبک مثل آواتار هدر)
     fonts/kalameh.ts
@@ -153,7 +162,8 @@ RoyaEvent/
 5. ~~ثبت‌نام فوری~~ ✅ **انجام شد** — `is_instant_registration` روی `Event` (جدا از پولی/رایگان/حمایتی بودن بلیط). `InstantRegisterModal.tsx` + `InstantRegisterButton.tsx` (داخل `EventCard`، با `stopPropagation`): اگه لاگین نباشه اول OTP می‌گیره، اگه لاگین باشه یه مرحله‌ی «تأیید» ساده قبل از ثبت‌نام واقعی نشون می‌ده (نه ثبت‌نام کاملاً بی‌اطلاع کاربر). فقط رویدادهای instant برچسب «فوری» می‌گیرن. جزئیات کامل و دام‌های react-hooks/set-state-in-effect که حین ساختش کشف شد در `specs/spec4.md`.
 6. ~~کلیک روی اسم برگزارکننده/مدرس باید به صفحه‌ی رویدادهاش بره~~ ✅ **انجام شد** — مدرس از قبل کار می‌کرد (فاز ۳ addendum)؛ برگزارکننده جدید بود: `GET /organizers/{id}` + صفحه‌ی `organizers/[id]` (مشابه صفحه‌ی مدرس)، اسم برگزارکننده تو `/follows` و صفحه‌ی جزئیات رویداد حالا لینکه.
 7. ~~چک‌این حضوری با QR (Phase 2 سند `docs/RoyaEvent_Registration_Ticket_Access_Attendance.md`)~~ ✅ **انجام شد** — `Registration.checked_in_at`/`checked_in_by_user_id` (بدون FK رسمی، فقط audit)، `order_service.check_in_registration`، `POST /organizer/events/{id}/checkin`. فرانت: `TicketQrCode.tsx` (QR بلیط، لینک کامل `/organizer/events/{id}/checkin?code=...` رو کد می‌کنه نه متن خام کد، تا با دوربین عادی گوشی هم کار کنه) + صفحه‌ی `organizer/events/[id]/checkin` (اسکنر دوربین درون‌اپ با `html5-qrcode` + فرم ورود دستی، `?code=` از QR فقط مقدار اولیه‌ی فرمه، هنوز یک تپ تأیید لازمه). دامنه‌ی این فاز عمداً فقط چک‌این حضوری بود؛ Access امن آنلاین/Attendance چندسطحی/Certificate سند از بهبودهای آینده‌ان.
-8. **پذیرش قوانین/شرایط استفاده** ⏳ **در صف، منتظر متن از کاربر** — قبل از ایجاد رویداد یا خرید بلیط باید کاربر قوانین سایت رو تأیید کرده باشه؛ احتمالاً با همون الگوی `require_complete_profile` (گارد قبل از `POST /events`/`POST /orders`) پیاده می‌شه.
+8. **پذیرش قوانین/شرایط استفاده** ⏳ **نیمه‌کاره** — صفحه‌ی `/terms` (پیش‌نویس اولیه‌ی محدود، نوشته‌شده توسط دستیار و پیش از commit تأیید کاربر شد) + خط «ورود شما به معنای پذیرش قوانین است» (لینک به `/terms`) در `login/page.tsx` و `InstantRegisterModal.tsx` ساخته شد. **هنوز مونده:** متن نهایی/واقعی قوانین از کاربر، و یک گارد واقعی سمت بک‌اند (مثل الگوی `require_complete_profile`، قبل از `POST /events`/`POST /orders`) که واقعاً جلوی ادامه‌کار رو بگیره — چیزی که الان هست فقط یک اعلان غیرفعاله، نه یک gate اجباری.
+9. ~~ردیف دسته‌بندی‌های صفحه‌ی اصلی + بخش «وبینارهای پیش‌رو» + بولت‌های انیمیشن‌دار + آیکون‌های صفحه‌ی رویداد + بررسی کد تخفیف~~ ✅ **انجام شد** (طی یک نشست طولانی، واکنشی به اسکرین‌شات‌های زنده‌ی کاربر از رقبا) — `CategoryCarousel.tsx` (دسته‌های والد صفحه‌ی اصلی، آیکون بر اساس slug، دکمه‌ی جهت). بخش «وبینارهای پیش‌رو» (`home_service._upcoming_events`: جلسه‌ی هنوز‌شروع‌نشده یا تا ۴ ساعت پیش شروع‌شده). `EventCarousel` سه بولت چشمک‌زن مستقل از هم گرفت: dot (پیش‌رو)، heart (محبوب)، star (ویژه). فیکس باگ واقعی: فیلتر `category_id` روی `GET /events` قبلاً فقط تطبیق دقیق زیردسته بود، کلیک روی دسته‌ی والد همیشه لیست خالی می‌داد — الان اگه id ورودی والد باشه (زیردسته داره)، خودکار به مجموعه‌ی id زیردسته‌هاش گسترش پیدا می‌کنه. `EventActionIcons.tsx` (افزودن‌به‌تقویم گوگل بدون لاگین + کپی‌لینک، در صفحه‌ی عمومی رویداد) + مسیر دسته‌بندی والد/زیردسته کنار تگ‌ها. دکمه‌ی «بررسی کد» تخفیف در `TicketCheckout.tsx` (backend `POST /discount-codes/validate` از قبل آماده بود). سه بخش جدید صفحه‌ی اصلی به تور آموزشی سایت اضافه شدن. اعداد/تاریخ‌های نمایشی (شماره موبایل، شمارش‌معکوس OTP، تاریخ KPI) به فارسی/شمسی تبدیل شدن (`lib/digits.ts: toPersianDigits`).
 
 ## قراردادهای API
 
@@ -176,6 +186,7 @@ RoyaEvent/
 - **حذف کامل رویداد (ادمین):** برخلاف تصمیم اولیه‌ی فاز ۵ (حذف واقعی و برگشت‌ناپذیر)، از فاز ۶ به بعد **soft delete** است — تصمیم صریح کاربر تا هم دیتا برای بازیابی/بررسی بمونه هم `admin_audit_log` بی‌معنی نشه. `admin_service.soft_delete_event` فقط `event.deleted_at = utcnow()` می‌زنه (+ حذف از ایندکس جستجو)، هیچ ردیفی واقعاً پاک نمی‌شه. `event_service.event_query()` (نقطه‌ی مشترک همه‌ی لیستینگ/جزئیات عمومی) و `admin_service.list_all_events` هر دو `Event.deleted_at.is_(None)` رو فیلتر می‌کنن، پس رویداد soft-delete شده خودکار از همه‌جای عمومی و از لیست خود پنل ادمین هم ناپدید می‌شه، بدون این‌که واقعاً از DB بره. هر FK جدیدی که به `events.id` اضافه می‌کنی (مثل `NotificationOutbox.event_id`) نیازی به دستکاری این منطق نداره چون دیگه هیچ حذف واقعی‌ای در کار نیست.
 - **صف اعلان‌ها (فاز ۶):** `NotificationOutbox` (channel=sms/email، template_key، payload_json، status، next_attempt_at) صف مشترک هر ۳ قالب (`REGISTRATION_COMPLETE`/`TICKET_PURCHASE_COMPLETE`/`EVENT_REMINDER_1H`) است. کد سرویس هرگز مستقیم provider رو صدا نمی‌زنه؛ فقط `notification_service.enqueue(...)` یه سطر می‌سازه. ارسال واقعی فقط تو `app/workers/scheduler.py` (پردازه‌ی جدا، `python -m app.workers.scheduler`، دو job: دیسپچر صف هر ۱۵ ثانیه + اسکنر یادآوری ۱ساعته هر ۶۰ ثانیه) اتفاق می‌افته. `complete_order` (سفارش رایگان یا پولی، فرقی نداره) قلاب `notify_registration_complete` رو صدا می‌زنه — چون این پروژه «ثبت‌نام» جدا از «خرید» نداره. برخلاف ایندکس جستجو (دام #۲۱)، این enqueue فقط یه INSERT محلیه نه I/O شبکه‌ای، پس try/except ساده (بدون thread/timeout) کافیه.
 - **تاریخ/ساعت جلالی سمت سرور:** برای متن پیامک/ایمیل (که مرورگری در کار نیست تا خودش timezone/calendar رو حدس بزنه، برخلاف `lib/date.ts` فرانت که از `Intl` مرورگر استفاده می‌کنه) از `app/core/persian_date.py: format_jalali_datetime(dt)` استفاده کن، نه یه تبدیل دستی جدید. وابسته به `jdatetime` + `tzdata` (این یکی روی ویندوز/Docker slim اجباریه، `zoneinfo` بدونش fail می‌ده).
+- **آنالیتیکس/KPI (فاز ۸):** `POST /track {event_type, session_id, payload}` بیکن عمومیه (بدون auth اجباری) که `app/services/track_service.py` رو مستقیم به Mongo (`page_views`/`search_queries`/`funnel_events`/`click_events`) می‌نویسه — کد سرویس هرگز نباید مستقیم `get_mongo_db()` صدا بزنه جای این تابع. هر خطای نوشتن Mongo بی‌صدا catch می‌شه، هیچ‌وقت نباید درخواست کاربر رو fail کنه یا کند کنه. `kpi_daily_snapshot` (SQLite) تنها منبع گزارش ادمینه (`GET /admin/reports/kpis`) — این endpoint هیچ‌وقت مستقیم Mongo رو نمی‌خونه، فقط رول‌آپ شبانه (`app/workers/scheduler.py: rollup_kpis`، همیشه **دیروز** رو محاسبه می‌کنه نه امروز) این جدول رو پر می‌کنه. هر معیار **نسبتی/درصدی** (مثل نرخ تبدیل قیف) اگه قراره در بازه‌ی بزرگ‌تر (روزانه→ماهانه) تجمیع بشه، باید از صورت/مخرج اصلی دوباره محاسبه بشه، نه جمع/میانگین مقدارهای روزانه — ریاضی‌اش غلطه. تجمیع ماهانه‌ی فرانت (`app/admin/page.tsx`) هم بر اساس **ماه شمسی واقعی** گروه‌بندی می‌کنه (هر روز جدا با `Intl` calendar=persian)، نه ماه میلادی. جزئیات کامل در `specs/spec8.md`.
 - **نظر رویداد (۴محوره) در برابر امتیاز ساده (فاز ۷):** این دو مسیر قرینه‌ی هم نیستن. `POST /events/{id}/reviews` گیت سخت داره — `review_service._find_eligible_registration` فقط به کسی اجازه می‌ده که `Registration.status=CONFIRMED` واقعی داشته باشه **و** `EventSession.starts_at` جلسه‌ش گذشته باشه (قبل از برگزاری نمی‌شه نظر داد)؛ submit دوباره = ویرایش نظر قبلی (create-or-update، نه رد duplicate)، و `event.rating_avg`/`rating_count` بعد از هر submit/hide/unhide از میانگین نظرهای `PUBLISHED` بازمحاسبه می‌شه. در مقابل `POST /ratings {entity_type: instructor|organizer|platform, score}` هیچ گیتی نداره (هر کاربر لاگین‌کرده می‌تونه امتیاز بده) و میانگینش **همیشه زنده محاسبه می‌شه، نه denorm** — هم‌راستا با الگوی `follower_count` زنده‌ی همین پروژه، نه رول‌آپ شبانه. `GET /events?sort=top_rated` و بخش «برترین وبینارها»ی صفحه‌ی اصلی هر دو از یک کف مشترک `home_service.MIN_RATING_COUNT_FOR_TOP_RATED=3` استفاده می‌کنن (در `events.py` ایمپورت می‌شه، تکرار نکن). جزئیات کامل در `specs/spec7.md`.
 
 ## قراردادهای UI
