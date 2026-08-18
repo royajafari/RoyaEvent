@@ -123,7 +123,7 @@ export default function LoginPage() {
                   id="destination"
                   dir="ltr"
                   placeholder={channel === "sms" ? "09xxxxxxxxx" : "you@example.com"}
-                  value={destination}
+                  value={channel === "sms" ? toPersianDigits(destination) : destination}
                   onChange={(e) =>
                     setDestination(channel === "sms" ? toEnglishDigits(e.target.value) : e.target.value)
                   }
@@ -145,7 +145,7 @@ export default function LoginPage() {
                   dir="ltr"
                   inputMode="numeric"
                   maxLength={8}
-                  value={otp}
+                  value={toPersianDigits(otp)}
                   onChange={(e) => setOtp(toEnglishDigits(e.target.value))}
                 />
               </div>

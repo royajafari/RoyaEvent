@@ -18,7 +18,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError, authApi, isIncompleteProfileError } from "@/lib/api-client";
 import { eventsApi } from "@/lib/events-api";
 import type { EventListItem } from "@/lib/events-api";
-import { toPersianDigits } from "@/lib/digits";
+import { toEnglishDigits, toPersianDigits } from "@/lib/digits";
 import { ordersApi } from "@/lib/orders-api";
 import { ticketsApi } from "@/lib/tickets-api";
 import { track } from "@/lib/track";
@@ -158,8 +158,10 @@ export function InstantRegisterModal({
                 id="instant-destination"
                 dir="ltr"
                 placeholder={channel === "sms" ? "09xxxxxxxxx" : "you@example.com"}
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
+                value={channel === "sms" ? toPersianDigits(destination) : destination}
+                onChange={(e) =>
+                  setDestination(channel === "sms" ? toEnglishDigits(e.target.value) : e.target.value)
+                }
               />
             </div>
             {error && <p className="text-destructive text-sm">{error}</p>}
@@ -187,8 +189,8 @@ export function InstantRegisterModal({
                 dir="ltr"
                 inputMode="numeric"
                 maxLength={8}
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
+                value={toPersianDigits(otp)}
+                onChange={(e) => setOtp(toEnglishDigits(e.target.value))}
               />
             </div>
             {error && <p className="text-destructive text-sm">{error}</p>}
