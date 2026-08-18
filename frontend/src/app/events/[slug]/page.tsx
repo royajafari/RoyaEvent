@@ -2,8 +2,10 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 import Link from "next/link";
+import { FolderOpen } from "lucide-react";
 
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { EventActionIcons } from "@/components/EventActionIcons";
 import { EventCard } from "@/components/EventCard";
 import { EventReviews } from "@/components/EventReviews";
 import { FavoriteButton } from "@/components/FavoriteButton";
@@ -36,10 +38,16 @@ export default async function EventDetailPage({ params }: Props) {
   const event = await eventsServer.getBySlug(slug);
   if (!event) notFound();
 
-  const related = await eventsServer.getRelated(event.id);
+  const [related, categories] = await Promise.all([
+    eventsServer.getRelated(event.id),
+    eventsServer.listCategories(),
+  ]);
   const isMultiSession = event.sessions.length > 1;
   const firstSession = event.sessions[0];
   const totalDuration = event.sessions.reduce((sum, s) => sum + s.duration_minutes, 0);
+  const parentCategory = event.category
+    ? categories.find((c) => c.id === event.category!.parent_id)
+    : null;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -97,6 +105,19 @@ export default async function EventDetailPage({ params }: Props) {
         ))}
       </div>
 
+      {event.category && (
+        <div className="text-muted-foreground flex items-center gap-2 text-sm">
+          <FolderOpen className="h-4 w-4 shrink-0" />
+          <div className="flex flex-col">
+            <span className="text-xs">دسته‌بندی‌ها</span>
+            <span>
+              {parentCategory ? `${parentCategory.name} / ` : ""}
+              {event.category.name}
+            </span>
+          </div>
+        </div>
+      )}
+
       <h1 className="text-2xl font-bold sm:text-3xl">{event.title}</h1>
 
       {event.rating_count > 0 && (
@@ -115,7 +136,20 @@ export default async function EventDetailPage({ params }: Props) {
           <span>مدت کل: {totalDuration} دقیقه</span>
           <span>{isMultiSession ? `${event.sessions.length} جلسه` : "تک‌جلسه‌ای"}</span>
         </div>
-        <FavoriteButton eventId={event.id} />
+        <div className="flex items-center gap-2">
+          <EventActionIcons
+            title={event.title}
+            description={event.description.replace(/<[^>]+>/g, "").slice(0, 500) || event.title}
+            location={
+              event.format === "online"
+                ? (event.online_platform_name ?? "آنلاین")
+                : (event.venue_address ?? "")
+            }
+            startsAtIso={firstSession?.starts_at ?? null}
+            durationMinutes={firstSession?.duration_minutes ?? 60}
+          />
+          <FavoriteButton eventId={event.id} />
+        </div>
       </div>
 
       {event.organizer_name && (
