@@ -147,3 +147,31 @@ def test_request_otp_via_email_channel_uses_email_provider(otp_service, email_pr
     assert challenge.channel.value == "email"
     assert len(email_provider.sent_messages) == 1
     assert email_provider.sent_messages[0]["to"] == "user@example.com"
+
+
+def test_verify_otp_with_nonexistent_challenge_id_raises(otp_service):
+    with pytest.raises(OTPVerificationFailed):
+        otp_service.verify_otp(999999, "123456")
+
+
+def test_resend_otp_with_nonexistent_challenge_id_raises(otp_service):
+    with pytest.raises(OTPVerificationFailed):
+        otp_service.resend_otp(999999)
+
+
+def test_verify_otp_defensive_lock_when_attempt_count_already_at_max(otp_service, db_session):
+    """مسیر دفاع در عمق: در جریان عادی، status همون لحظه‌ای که attempt_count
+    به max_attempts می‌رسه LOCKED می‌شه (پس در تماس بعدی از شاخه‌ی «status !=
+    PENDING» رد می‌شه، نه این شاخه). این تست مستقیم یک challenge با
+    attempt_count از قبل >= max_attempts ولی status هنوز PENDING می‌سازه —
+    حالتی که نباید از مسیر عادی سرویس اتفاق بیفته، ولی کد باید در برابرش هم
+    مقاوم باشه (خط ۱۵۱-۱۵۵ otp_service.py)."""
+    challenge = otp_service.request_otp(destination="09121234567", channel="sms", purpose="login")
+    challenge.attempt_count = challenge.max_attempts
+    db_session.commit()
+
+    with pytest.raises(OTPVerificationFailed):
+        otp_service.verify_otp(challenge.id, "000000")
+
+    refreshed = otp_service.db.get(OTPChallenge, challenge.id)
+    assert refreshed.status == OTPStatus.LOCKED

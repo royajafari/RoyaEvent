@@ -24,7 +24,7 @@ jobs:
       - name: Lint
         run: ruff check .
       - name: Test
-        run: pytest --cov=app --cov-report=term-missing
+        run: pytest --cov=app --cov-report=term-missing --cov-fail-under=85
 
   frontend:
     runs-on: ubuntu-latest
