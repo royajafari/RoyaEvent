@@ -4,6 +4,7 @@ import { InstantRegisterButton } from "@/components/InstantRegisterButton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatJalaliShort } from "@/lib/date";
+import { toPersianDigits } from "@/lib/digits";
 import type { EventListItem } from "@/lib/events-api";
 
 const FORMAT_LABELS: Record<EventListItem["format"], string> = {
@@ -64,7 +65,7 @@ export function EventCard({ event }: { event: EventListItem }) {
           <Badge variant="outline">{FORMAT_LABELS[event.format]}</Badge>
           {event.rating_count > 0 && (
             <span className="text-sm">
-              ⭐ {event.rating_avg.toFixed(1)} ({event.rating_count})
+              ⭐ {toPersianDigits(event.rating_avg.toFixed(1))} ({toPersianDigits(event.rating_count)})
             </span>
           )}
           {event.is_instant_registration && !isPast && event.status === "published" && (

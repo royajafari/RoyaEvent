@@ -18,6 +18,7 @@ import { TicketCheckout } from "@/components/TicketCheckout";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { formatJalaliDateTime, isSessionLive } from "@/lib/date";
+import { toPersianDigits } from "@/lib/digits";
 import { eventsServer } from "@/lib/events-server";
 
 const FORMAT_LABELS = { online: "آنلاین", in_person: "حضوری", hybrid: "ترکیبی" } as const;
@@ -126,7 +127,7 @@ export default async function EventDetailPage({ params }: Props) {
         <div className="flex items-center gap-2">
           <StarRating value={event.rating_avg} readOnly size={18} />
           <span className="text-muted-foreground text-sm">
-            {event.rating_avg.toFixed(1)} ({event.rating_count.toLocaleString("fa-IR")} نظر)
+            {toPersianDigits(event.rating_avg.toFixed(1))} ({event.rating_count.toLocaleString("fa-IR")} نظر)
           </span>
         </div>
       )}
@@ -245,7 +246,7 @@ export default async function EventDetailPage({ params }: Props) {
           {event.sessions.map((session, index) => (
             <li key={session.id} className="rounded-md border p-3 text-sm">
               <div className="flex items-center gap-2 font-medium">
-                {isMultiSession ? `جلسه ${index + 1}` : "زمان برگزاری"}
+                {isMultiSession ? `جلسه ${toPersianDigits(index + 1)}` : "زمان برگزاری"}
                 {isSessionLive(session.starts_at, session.duration_minutes) && (
                   <Badge variant="destructive">در حال ارائه</Badge>
                 )}

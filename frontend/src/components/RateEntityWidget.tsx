@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { StarRating } from "@/components/StarRating";
+import { toPersianDigits } from "@/lib/digits";
 import { instructorsApi } from "@/lib/instructors-api";
 import { organizersApi } from "@/lib/organizers-api";
 import { ratingsApi } from "@/lib/ratings-api";
@@ -66,7 +67,7 @@ export function RateEntityWidget({
       <div className="flex items-center gap-2">
         <StarRating value={ratingAvg} readOnly size={18} />
         <span className="text-muted-foreground text-sm">
-          {ratingAvg.toFixed(1)} ({ratingCount.toLocaleString("fa-IR")})
+          {toPersianDigits(ratingAvg.toFixed(1))} ({ratingCount.toLocaleString("fa-IR")})
         </span>
       </div>
       {accessToken && (

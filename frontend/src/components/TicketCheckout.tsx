@@ -10,6 +10,7 @@ import { CompleteProfilePrompt } from "@/components/CompleteProfilePrompt";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatJalaliDateTime } from "@/lib/date";
+import { toPersianDigits } from "@/lib/digits";
 import { ApiError, isIncompleteProfileError } from "@/lib/api-client";
 import type { EventDetail, EventSessionOut } from "@/lib/events-api";
 import type { MyTicket } from "@/lib/orders-api";
@@ -218,7 +219,7 @@ export function TicketCheckout({ event }: { event: EventDetail }) {
                     selectedSessionId === session.id ? "border-primary bg-primary/5" : "border-border"
                   }`}
                 >
-                  جلسه {index + 1} — {formatJalaliDateTime(session.starts_at)}
+                  جلسه {toPersianDigits(index + 1)} — {formatJalaliDateTime(session.starts_at)}
                 </button>
               ))}
             </div>
@@ -254,7 +255,7 @@ export function TicketCheckout({ event }: { event: EventDetail }) {
             <p className="text-primary text-sm">
               کد تخفیف معتبر است —{" "}
               {discountResult.discount_type === "percent"
-                ? `${discountResult.value}٪ تخفیف`
+                ? `${toPersianDigits(discountResult.value)}٪ تخفیف`
                 : `${discountResult.value.toLocaleString("fa-IR")} تومان تخفیف`}
             </p>
           )}

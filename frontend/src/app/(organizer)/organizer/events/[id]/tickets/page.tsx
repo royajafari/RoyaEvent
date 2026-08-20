@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ApiError } from "@/lib/api-client";
+import { toPersianDigits } from "@/lib/digits";
 import type { EventDetail } from "@/lib/events-api";
 import { eventsApi } from "@/lib/events-api";
 import type { TicketType } from "@/lib/tickets-api";
@@ -117,7 +118,7 @@ export default function EventTicketsPage({ params }: { params: Promise<{ id: str
                   <span className="font-medium">{t.name}</span>
                   <span className="text-muted-foreground text-xs">
                     {t.pricing_model === "paid" ? `${t.price.toLocaleString("fa-IR")} تومان` : "رایگان"}
-                    {t.quantity_total ? ` — ظرفیت ${t.quantity_total}` : ""}
+                    {t.quantity_total ? ` — ظرفیت ${toPersianDigits(t.quantity_total)}` : ""}
                   </span>
                 </div>
                 <Badge variant="outline">{PRICING_LABELS[t.pricing_model]}</Badge>

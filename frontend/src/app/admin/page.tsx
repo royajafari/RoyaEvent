@@ -23,6 +23,7 @@ import { adminApi } from "@/lib/admin-api";
 import { ApiError } from "@/lib/api-client";
 import type { CategoryOut } from "@/lib/events-api";
 import { formatJalaliDate, formatJalaliDateTime } from "@/lib/date";
+import { toPersianDigits } from "@/lib/digits";
 import { useAuthStore } from "@/store/auth-store";
 
 const EVENT_STATUS_LABELS: Record<AdminEvent["status"], string> = {
@@ -585,7 +586,7 @@ export default function AdminPage() {
               <tbody>
                 {visibleEvents.map((event, index) => (
                   <tr key={event.id} className="border-t border-zinc-400">
-                    <td className="px-3 py-2 text-zinc-700">{index + 1}</td>
+                    <td className="px-3 py-2 text-zinc-700">{toPersianDigits(index + 1)}</td>
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-1.5">
                         <span className="text-zinc-900">{event.title}</span>
@@ -679,7 +680,7 @@ export default function AdminPage() {
               <tbody>
                 {visibleUsers.map((u, index) => (
                   <tr key={u.id} className="border-t border-zinc-400">
-                    <td className="px-3 py-2 text-zinc-700">{index + 1}</td>
+                    <td className="px-3 py-2 text-zinc-700">{toPersianDigits(index + 1)}</td>
                     <td className="px-3 py-2 text-zinc-900">{u.full_name ?? "بدون نام"}</td>
                     <td className="px-3 py-2 text-zinc-700 whitespace-nowrap">
                       {u.phone ?? u.email ?? "بدون شماره/ایمیل"}
@@ -782,7 +783,7 @@ export default function AdminPage() {
               <tbody>
                 {visibleCategories.map((c, index) => (
                   <tr key={c.id} className="border-t border-zinc-400">
-                    <td className="px-3 py-2 text-zinc-700">{index + 1}</td>
+                    <td className="px-3 py-2 text-zinc-700">{toPersianDigits(index + 1)}</td>
                     <td className="px-3 py-2 text-zinc-900">{c.name}</td>
                     <td className="px-3 py-2 text-zinc-700">
                       {categoryParentName(c.parent_id) ?? "—"}
@@ -844,7 +845,7 @@ export default function AdminPage() {
                 <tbody>
                   {visibleAuditLog.map((entry, index) => (
                     <tr key={entry.id} className="border-t border-zinc-400">
-                      <td className="px-3 py-2 text-zinc-700">{index + 1}</td>
+                      <td className="px-3 py-2 text-zinc-700">{toPersianDigits(index + 1)}</td>
                       <td className="px-3 py-2 text-zinc-900">
                         {entry.admin_name ?? `ادمین #${entry.admin_user_id}`}
                       </td>
@@ -905,7 +906,7 @@ export default function AdminPage() {
                 <tbody>
                   {visibleNotifications.map((n, index) => (
                     <tr key={n.id} className="border-t border-zinc-400">
-                      <td className="px-3 py-2 text-zinc-700">{index + 1}</td>
+                      <td className="px-3 py-2 text-zinc-700">{toPersianDigits(index + 1)}</td>
                       <td className="px-3 py-2 text-zinc-900">
                         {NOTIFICATION_CHANNEL_LABELS[n.channel]}
                       </td>
@@ -982,11 +983,11 @@ export default function AdminPage() {
                 <tbody>
                   {visibleReviews.map((r, index) => (
                     <tr key={r.id} className="border-t border-zinc-400">
-                      <td className="px-3 py-2 text-zinc-700">{index + 1}</td>
+                      <td className="px-3 py-2 text-zinc-700">{toPersianDigits(index + 1)}</td>
                       <td className="px-3 py-2 text-zinc-900">{r.event_title}</td>
                       <td className="px-3 py-2 text-zinc-700">{r.user_name ?? `کاربر #${r.user_id}`}</td>
                       <td className="px-3 py-2 text-zinc-700" dir="ltr">
-                        {r.overall_computed.toFixed(1)} / ۵
+                        {toPersianDigits(r.overall_computed.toFixed(1))} / ۵
                       </td>
                       <td className="max-w-xs px-3 py-2 text-zinc-700">
                         <span className="line-clamp-2">{r.comment_text ?? "—"}</span>
@@ -1097,7 +1098,7 @@ export default function AdminPage() {
                 <tbody>
                   {visibleKpis.map((k, index) => (
                     <tr key={`${k.date}-${k.metric_name}-${index}`} className="border-t border-zinc-400">
-                      <td className="px-3 py-2 text-zinc-700">{index + 1}</td>
+                      <td className="px-3 py-2 text-zinc-700">{toPersianDigits(index + 1)}</td>
                       <td className="px-3 py-2 text-zinc-700 whitespace-nowrap">
                         {kpiGranularity === "daily" ? formatJalaliDate(k.date) : k.date}
                       </td>
