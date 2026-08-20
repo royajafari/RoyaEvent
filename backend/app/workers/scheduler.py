@@ -162,7 +162,7 @@ def rollup_kpis(db: Session | None = None, target_date: date | None = None) -> N
 
 
 def run() -> None:
-    setup_json_logging(level=logging.INFO)
+    setup_json_logging(level=logging.INFO, file_path=settings.log_file_path)
     scheduler = BlockingScheduler(timezone="UTC")
     scheduler.add_job(
         lambda: _with_lock(_DISPATCH_LOCK_KEY, 60, dispatch_outbox),

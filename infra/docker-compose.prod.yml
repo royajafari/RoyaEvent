@@ -41,8 +41,37 @@ services:
     restart: unless-stopped
     env_file:
       - ../backend/.env
+    environment:
+      LOG_FILE_PATH: /var/log/royaevent/backend.log
     volumes:
       - backend_data:/app/data
+      - ./logs:/var/log/royaevent
+    depends_on:
+      - redis
+      - mongo
+
+  # پردازه‌ی جدا (بخش ۱ پلن معماری) — بدون این سرویس، صف اعلان/یادآوری
+  # ۱ساعته/رول‌آپ شبانه‌ی KPI در production هیچ‌وقت واقعاً اجرا نمی‌شن (فقط
+  # enqueue می‌شن، dispatch نه) چون backend اصلی فقط request-time کار می‌کنه.
+  # همون ایمیج backend رو reuse می‌کنه، فقط command فرق داره.
+  worker:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    # alembic upgrade head دوباره اینجا هم لازمه (idempotent، بی‌ضرر اگه
+    # backend زودتر/دیرتر همین رو زده باشه) چون command کلاً CMD ایمیج
+    # (که alembic رو قبل از gunicorn می‌زنه) رو override می‌کنه، نه اضافه —
+    # بدون این خط، اگه worker زودتر از backend بالا بیاد، به یه DB
+    # migrate-نشده وصل می‌شه.
+    command: sh -c "alembic upgrade head && python -m app.workers.scheduler"
+    env_file:
+      - ../backend/.env
+    environment:
+      LOG_FILE_PATH: /var/log/royaevent/worker.log
+    volumes:
+      - backend_data:/app/data
+      - ./logs:/var/log/royaevent
     depends_on:
       - redis
       - mongo
@@ -90,6 +119,64 @@ services:
       - certbot_conf:/etc/letsencrypt
       - certbot_www:/var/www/certbot
 
+  # --- استک مانیتورینگ (فاز ۹/۱۱) ---
+  # عمداً هیچ‌کدوم از این سه سرویس پورت عمومی ندارن (نه از طریق nginx، نه
+  # مستقیم) — Grafana/Prometheus نباید بدون احراز هویت اضافه رو اینترنت باز
+  # باشن؛ دسترسی ادمین از طریق SSH tunnel روی هاست انجام می‌شه:
+  #   ssh -L 3300:localhost:3300 user@vps-ip
+  # و بعد http://localhost:3300 رو لوکال باز کن. اگه بعداً خواستی Grafana رو
+  # عمومی/از طریق nginx در دسترس بذاری، حتماً پشتش auth (basic-auth nginx یا
+  # OAuth خود Grafana) اضافه کن، همین‌جوری expose نکن.
+  loki:
+    image: grafana/loki:3.3.2
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - loki_data:/loki
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./prometheus/prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3300:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?لطفاً GRAFANA_ADMIN_PASSWORD را در infra/.env production ست کنید}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - loki
+      - prometheus
+
+  # بک‌اند/worker در production خودشون کانتینرن (برخلاف dev که روی هاست
+  # اجرا می‌شن)، ولی همچنان از همون static file scrape (نه docker service
+  # discovery/docker.sock) استفاده می‌کنیم — عمداً، چون این پروژه از قبل
+  # (نگاه کن به توضیح سرویس certbot بالا) از گرفتن دسترسی docker socket به
+  # کانتینرهای جانبی پرهیز می‌کنه؛ بک‌اند/worker هر دو ./logs مشترک رو mount
+  # کردن (بالا)، پس همون promtail-config.yml دقیقاً بدون تغییر کار می‌کنه.
+  promtail:
+    image: grafana/promtail:3.3.2
+    restart: unless-stopped
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - ./logs:/var/log/royaevent:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
 volumes:
   redis_data:
   mongo_data:
@@ -97,3 +184,6 @@ volumes:
   backend_data:
   certbot_conf:
   certbot_www:
+  loki_data:
+  prometheus_data:
+  grafana_data:

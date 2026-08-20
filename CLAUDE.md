@@ -23,7 +23,7 @@
 | ۸ | آنالیتیکس/KPI (بیکن ردیابی + رول‌آپ شبانه + گزارش ادمین) | ✅ [`specs/spec8.md`](specs/spec8.md) |
 | ۹ | استک مانیتورینگ (Prometheus/Loki/Grafana) | ✅ [`specs/spec9.md`](specs/spec9.md) |
 | ۱۰ | تقویت تست (rate-limit/OTP/auth) + Vitest فرانت + مقاومت آفلاین + ErrorBoundary + ممیزی RTL | ✅ [`specs/spec10.md`](specs/spec10.md) |
-| ۱۱ | آماده‌سازی دیپلوی VPS (TLS/HTTPS اجباری — نگاه کن به بخش تصمیمات) | ⏳ باقی فاز نشده؛ بخش TLS/Nginx/Docker زودتر و مستقل انجام شد، نگاه کن به `docs/deployment_tls.md` و `specs/spec3.md`؛ اضافه‌کردن استک مانیتورینگ به `docker-compose.prod.yml` هم به این فاز موکول شده |
+| ۱۱ | آماده‌سازی دیپلوی VPS (TLS/HTTPS اجباری — نگاه کن به بخش تصمیمات) | ⏳ در جریان [`specs/spec11.md`](specs/spec11.md)؛ TLS/Nginx/Docker + سرویس `worker` + استک مانیتورینگ (Loki/Prometheus/Grafana، فقط `127.0.0.1`) همه تو `docker-compose.prod.yml` آماده و با self-signed محلی تست شدن؛ منتظر VPS واقعی کاربر + provider ایمیل/پیامک ایرانی (نجوا/Kavenegar، چون Brevo کاربر ایرانی رو صریحاً منع کرده) |
 
 بک‌اند در مجموع الان **۳۲۹ تست** دارد (unit+integration، پوشش ۹۱٪ با `--cov-fail-under=85` در CI)، همه پاس، `ruff check .` تمیز. فرانت `npm run build`، `npx eslint src --max-warnings=0`، و از فاز ۱۰ **`npm test`** (Vitest، ۲۶ تست) هر سه تمیز.
 
@@ -39,8 +39,8 @@
 | فایل/بنر/ویدیو | S3-compatible Object Storage — **ArvanCloud Object Storage** فعال (production/dev اشتراکی، کلید در `.env`، هرگز commit نمی‌شه)؛ **MinIO خودمیزبان** (`infra/docker-compose.yml`) به‌عنوان سناریوی جایگزین همیشه در دسترس می‌مونه — کد (`app/core/storage.py`) با `minio-py` صحبت می‌کنه که با هر دو کار می‌کنه، سوییچ فقط تغییر ۴-۵ متغیر در `.env` است، بدون تغییر کد |
 | جستجوی محتوایی | ChromaDB embedded (`backend/app/search/`) + `sentence-transformers` (مدل `paraphrase-multilingual-MiniLM-L12-v2`، چندزبانه) — فعال از فاز ۴. **موقع نصب local/Docker از این پس، حتماً اول `pip install torch --index-url https://download.pytorch.org/whl/cpu` رو جدا بزن**، بعد `pip install -r requirements.txt` — وگرنه نصب `sentence-transformers` سراغ wheel غول‌پیکر CUDA torch می‌ره |
 | احراز هویت | OTP-only (بدون پسورد) + JWT (access کوتاه + refresh چرخشی) |
-| SMS | IPPanel (اصلی) / Kavenegar (جایگزین) |
-| Email | Brevo (اصلی) / Resend (جایگزین) |
+| SMS | IPPanel (اصلی) / Kavenegar (جایگزین) — **Kavenegar در حال فعال‌سازی واقعی** (فاز ۱۱، ۵۰,۰۰۰ ریال اعتبار رایگان تست) |
+| Email | Brevo (اصلی، کدش آماده‌ست) / Resend (جایگزین) — **⚠️ هر دو کاربر مستقر در ایران رو (Brevo صریحاً تو ToS، Resend به‌خاطر تابعیت از قانون OFAC حتی بدون ذکر صریح) رد می‌کنن؛ در حال جایگزینی با یک provider ایمیل تراکنشی ایرانی (نجوا — najva.com، هنوز provider جدیدی در کد نوشته نشده، منتظر مستندات API واقعی از پشتیبانی‌شونیم)** |
 | مانیتورینگ | Loki + Prometheus + Grafana (فعال از فاز ۹؛ `/metrics` بک‌اند با یک middleware ساده‌ی خودمون روی `prometheus_client` — نه `prometheus-fastapi-instrumentator`، با Starlette این پروژه ناسازگاره، `specs/spec9.md`) |
 | فونت | Kalameh (محلی، `frontend/src/fonts/kalameh/*.woff2`، فایل تجاری — نکته‌ی لایسنس در `specs/spec0.md`) |
 | رنگ برند | سبز `#2E9E4F` (primary)، قرمز `#DA1A32` (destructive)، navy تیره `#161826` — دقیقاً از `logo/royaevent-logo.svg`، تبدیل‌شده به oklch در `globals.css` (`--brand-green/red/dark`). **کل سایت به‌صورت دائمی تم تیره (navy) داره** (کلاس `dark` روی `<html>` در `layout.tsx`) تا با پس‌زمینه‌ی لوگو یکی باشه — به درخواست کاربر، نه یک toggle قابل‌تغییر. |
@@ -56,7 +56,7 @@ RoyaEvent/
     core/               # config, security (JWT+OTP hash), rate_limit (OTP), rate_limit_middleware (عمومی/slowapi)
                         # redis_client, mongo_client (فاز ۸، get_mongo_db)، storage (MinIO), slug, validators, calendar (لینک گوگل‌کلندر)
                         # permissions (require_event_owner, require_complete_profile)، persian_date (UTC→جلالی تهران، برای متن پیامک/ایمیل)
-                        # metrics.py (فاز ۹، متریک‌های Prometheus)، logging_config.py (فاز ۹، JsonFormatter)
+                        # metrics.py (فاز ۹، متریک‌های Prometheus)، logging_config.py (فاز ۹، JsonFormatter؛ فاز ۱۱: file_path اختیاری برای production)
     db/                 # session.py (engine/Base/get_db)، migrations/ (Alembic)، seed_categories.py
     models/             # User, OTPChallenge, RefreshToken, Category, Tag, Instructor, Event, EventSession,
                         # TicketType, DiscountCode, PlatformDiscountCode, Order, OrderItem, Payment, Registration,
@@ -148,10 +148,10 @@ RoyaEvent/
   frontend/vitest.config.ts, vitest.setup.ts   # فاز ۱۰ — Vitest (pool:"threads"، نه پیش‌فرض forks که تو این محیط timeout می‌ده) + matcherهای jest-dom؛ تست‌ها کنار فایل اصلی (`*.test.ts(x)`)
   backend/Dockerfile, frontend/Dockerfile   # production images (نگاه کن به docs/deployment_tls.md)
   infra/docker-compose.yml        # dev: redis, mongo, minio, loki, prometheus, grafana, promtail (فاز ۹)
-  infra/docker-compose.prod.yml   # production: + nginx (TLS)، certbot، backend، frontend (بدون مانیتورینگ، نگاه کن به فاز ۱۱)
+  infra/docker-compose.prod.yml   # production: + nginx (TLS)، certbot، backend، worker (فاز ۱۱، صف اعلان/رول‌آپ KPI — قبلاً اصلاً نبود)، frontend، + استک مانیتورینگ (فقط 127.0.0.1، پشت SSH tunnel)
   infra/nginx/conf.d/royaevent.conf, infra/renew-certs.sh   # پیکربندی TLS + اسکریپت تمدید گواهی (کرون هاست)
-  infra/promtail/promtail-config.yml   # فاز ۹، static file scrape از infra/logs/ (نه docker service discovery — بک‌اند dev روی هاست اجرا می‌شه)
-  infra/prometheus/prometheus.yml      # فاز ۰، scrape target بک‌اند (/metrics)
+  infra/promtail/promtail-config.yml   # فاز ۹، static file scrape از infra/logs/ (نه docker service discovery/docker.sock — هم برای dev هم prod، نگاه کن به specs/spec11.md)
+  infra/prometheus/prometheus.yml, prometheus.prod.yml      # فاز ۰/۱۱، scrape target بک‌اند (/metrics) — dev: host.docker.internal، prod: backend:8000
   infra/grafana/provisioning/dashboards/royaevent-overview.json   # فاز ۹، داشبورد سلامت API/قیف OTP/حجم سفارش/backlog اعلان
   data/eseminar.tv/, data/evand.com/   # تحلیل رقبا
   docs/architecture.md        # پلن کامل معماری (مرجع اصلی طراحی)

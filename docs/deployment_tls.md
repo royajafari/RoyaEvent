@@ -26,6 +26,7 @@ sed -i 's/royaevent.example.com/دامنه‌ی-واقعی-شما/g' infra/nginx
 DOMAIN_NAME=دامنه‌ی-واقعی-شما
 MINIO_ROOT_USER=royaevent
 MINIO_ROOT_PASSWORD=یک-پسورد-تصادفی-امن
+GRAFANA_ADMIN_PASSWORD=یک-پسورد-تصادفی-امن-دیگر
 ```
 
 ## قدم ۳ — صدور اولیه‌ی گواهی (قبل از بالا آوردن nginx)
@@ -70,4 +71,8 @@ crontab -e
 - `frontend`/`backend` هیچ‌کدوم مستقیم پورت به بیرون expose نمی‌کنن — فقط nginx پشت TLS در دسترس عمومیه (`ports: 80/443` فقط روی سرویس nginx).
 - `client_max_body_size 35M` در nginx برای عبور آپلود کلیپ تبلیغاتی (سقف ۳۰ مگابایت در بک‌اند) تنظیم شده — اگه سقف بک‌اند تغییر کرد، این‌جا هم باید هماهنگ بشه.
 - برای SQLite/Chroma persistent بمونن، `SQLITE_PATH`/`CHROMA_PERSIST_DIR` در `backend/.env` باید به مسیر داخل volume mount شده اشاره کنن، مثلاً `SQLITE_PATH=/app/data/roya_event.db` (چون `backend_data` روی `/app/data` mount شده در `docker-compose.prod.yml`).
-- استک monitoring (Loki/Prometheus/Grafana، فاز ۹) عمداً در این compose نیست — وقتی فاز ۹ شروع بشه جدا اضافه می‌شه.
+- استک مانیتورینگ (Loki/Prometheus/Grafana + `worker` برای صف اعلان/رول‌آپ KPI، فاز ۱۱) از قبل تو همین compose هست. Grafana/Prometheus/Loki هیچ‌کدوم پورت عمومی ندارن (نه حتی از nginx) — فقط روی `127.0.0.1` سرورن، پس برای دیدن داشبورد باید از هاست یه SSH tunnel بزنی:
+  ```bash
+  ssh -L 3300:localhost:3300 user@vps-ip
+  ```
+  و بعد `http://localhost:3300` رو لوکال باز کنی (یوزر/پس: `admin` / همون `GRAFANA_ADMIN_PASSWORD` که تو `infra/.env` گذاشتی).

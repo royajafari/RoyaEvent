@@ -33,7 +33,7 @@ settings = get_settings()
 # می‌ده) به‌خاطر سطح پیش‌فرض WARNING روی root logger، اصلاً چاپ نمی‌شن.
 # از فاز ۹، خروجی JSON ساختاریافته‌ست (نه متن‌ساده) تا Promtail/Loki بتونن
 # فیلدها (سطح/logger/پیام) رو جدا پارس کنن.
-setup_json_logging(level=logging.INFO)
+setup_json_logging(level=logging.INFO, file_path=settings.log_file_path)
 
 
 @asynccontextmanager

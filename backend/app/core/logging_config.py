@@ -22,9 +22,17 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(payload, ensure_ascii=False)
 
 
-def setup_json_logging(level: int = logging.INFO) -> None:
-    handler = logging.StreamHandler()
-    handler.setFormatter(JsonFormatter())
+def setup_json_logging(level: int = logging.INFO, file_path: str | None = None) -> None:
+    handlers: list[logging.Handler] = [logging.StreamHandler()]
+    if file_path:
+        # فقط در production ست می‌شه (فاز ۱۱) — بک‌اند/worker اونجا هر دو تو
+        # کانتینر جدا اجرا می‌شن، پس دایرکتوری infra/logs/ مشترک رو mount
+        # می‌کنن تا Promtail (که docker socket نداره، طبق تصمیم امنیتی این
+        # پروژه) بتونه فایل رو با static scrape بخونه — دقیقاً همون الگوی
+        # dev (نگاه کن به infra/promtail/promtail-config.yml).
+        handlers.append(logging.FileHandler(file_path, encoding="utf-8"))
+    for handler in handlers:
+        handler.setFormatter(JsonFormatter())
     root = logging.getLogger()
-    root.handlers = [handler]
+    root.handlers = handlers
     root.setLevel(level)

@@ -72,6 +72,10 @@ class Settings(BaseSettings):
 
     # مانیتورینگ
     prometheus_enabled: bool = True
+    # فقط در production ست می‌شه (docker-compose.prod.yml، فاز ۱۱) — نگاه کن
+    # به core/logging_config.py برای این‌که چرا لازمه (Promtail بدون docker
+    # socket، فایل مشترک infra/logs/ رو می‌خونه)
+    log_file_path: str | None = None
 
 
 @lru_cache

@@ -1,0 +1,11 @@
+# نسخه‌ی production — تنها فرقش با prometheus.yml (dev) آدرس target است:
+# اونجا بک‌اند روی هاست اجرا می‌شه (host.docker.internal)، اینجا بک‌اند
+# خودش یه سرویس تو همون شبکه‌ی docker-compose.prod.yml است (backend:8000).
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: royaevent-backend
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["backend:8000"]
