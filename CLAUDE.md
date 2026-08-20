@@ -21,11 +21,11 @@
 | ۶ | اعلان‌ها + زمان‌بند + لینک تقویم | ✅ [`specs/spec6.md`](specs/spec6.md) |
 | ۷ | امتیاز/نظر ۴محوره رویداد + امتیاز ساده مدرس/برگزارکننده/سایت | ✅ [`specs/spec7.md`](specs/spec7.md) |
 | ۸ | آنالیتیکس/KPI (بیکن ردیابی + رول‌آپ شبانه + گزارش ادمین) | ✅ [`specs/spec8.md`](specs/spec8.md) |
-| ۹ | استک مانیتورینگ | ⏳ شروع نشده |
+| ۹ | استک مانیتورینگ (Prometheus/Loki/Grafana) | ✅ [`specs/spec9.md`](specs/spec9.md) |
 | ۱۰ | تقویت تست + مقاومت آفلاین/RTL | ⏳ شروع نشده |
-| ۱۱ | آماده‌سازی دیپلوی VPS (TLS/HTTPS اجباری — نگاه کن به بخش تصمیمات) | ⏳ باقی فاز نشده؛ بخش TLS/Nginx/Docker زودتر و مستقل انجام شد، نگاه کن به `docs/deployment_tls.md` و `specs/spec3.md` |
+| ۱۱ | آماده‌سازی دیپلوی VPS (TLS/HTTPS اجباری — نگاه کن به بخش تصمیمات) | ⏳ باقی فاز نشده؛ بخش TLS/Nginx/Docker زودتر و مستقل انجام شد، نگاه کن به `docs/deployment_tls.md` و `specs/spec3.md`؛ اضافه‌کردن استک مانیتورینگ به `docker-compose.prod.yml` هم به این فاز موکول شده |
 
-بک‌اند در مجموع الان **۳۰۸ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
+بک‌اند در مجموع الان **۳۱۲ تست** دارد (unit+integration)، همه پاس، `ruff check .` تمیز. فرانت `npm run build` و `npx eslint src --max-warnings=0` هر دو تمیز.
 
 ## استک فنی (تصمیم قطعی، تغییر نده مگر کاربر بخواد)
 
@@ -41,7 +41,7 @@
 | احراز هویت | OTP-only (بدون پسورد) + JWT (access کوتاه + refresh چرخشی) |
 | SMS | IPPanel (اصلی) / Kavenegar (جایگزین) |
 | Email | Brevo (اصلی) / Resend (جایگزین) |
-| مانیتورینگ | Loki + Prometheus + Grafana (فاز ۹، فقط docker-compose آماده‌ست) |
+| مانیتورینگ | Loki + Prometheus + Grafana (فعال از فاز ۹؛ `/metrics` بک‌اند با یک middleware ساده‌ی خودمون روی `prometheus_client` — نه `prometheus-fastapi-instrumentator`، با Starlette این پروژه ناسازگاره، `specs/spec9.md`) |
 | فونت | Kalameh (محلی، `frontend/src/fonts/kalameh/*.woff2`، فایل تجاری — نکته‌ی لایسنس در `specs/spec0.md`) |
 | رنگ برند | سبز `#2E9E4F` (primary)، قرمز `#DA1A32` (destructive)، navy تیره `#161826` — دقیقاً از `logo/royaevent-logo.svg`، تبدیل‌شده به oklch در `globals.css` (`--brand-green/red/dark`). **کل سایت به‌صورت دائمی تم تیره (navy) داره** (کلاس `dark` روی `<html>` در `layout.tsx`) تا با پس‌زمینه‌ی لوگو یکی باشه — به درخواست کاربر، نه یک toggle قابل‌تغییر. |
 
@@ -56,6 +56,7 @@ RoyaEvent/
     core/               # config, security (JWT+OTP hash), rate_limit (OTP), rate_limit_middleware (عمومی/slowapi)
                         # redis_client, mongo_client (فاز ۸، get_mongo_db)، storage (MinIO), slug, validators, calendar (لینک گوگل‌کلندر)
                         # permissions (require_event_owner, require_complete_profile)، persian_date (UTC→جلالی تهران، برای متن پیامک/ایمیل)
+                        # metrics.py (فاز ۹، متریک‌های Prometheus)، logging_config.py (فاز ۹، JsonFormatter)
     db/                 # session.py (engine/Base/get_db)، migrations/ (Alembic)، seed_categories.py
     models/             # User, OTPChallenge, RefreshToken, Category, Tag, Instructor, Event, EventSession,
                         # TicketType, DiscountCode, PlatformDiscountCode, Order, OrderItem, Payment, Registration,
@@ -141,9 +142,12 @@ RoyaEvent/
     store/auth-store.ts  # Zustand، accessToken فقط در حافظه + user (UserOut، برای نمایش‌های سبک مثل آواتار هدر)
     fonts/kalameh.ts
   backend/Dockerfile, frontend/Dockerfile   # production images (نگاه کن به docs/deployment_tls.md)
-  infra/docker-compose.yml        # dev: redis, mongo, minio, loki, prometheus, grafana
-  infra/docker-compose.prod.yml   # production: + nginx (TLS)، certbot، backend، frontend
+  infra/docker-compose.yml        # dev: redis, mongo, minio, loki, prometheus, grafana, promtail (فاز ۹)
+  infra/docker-compose.prod.yml   # production: + nginx (TLS)، certbot، backend، frontend (بدون مانیتورینگ، نگاه کن به فاز ۱۱)
   infra/nginx/conf.d/royaevent.conf, infra/renew-certs.sh   # پیکربندی TLS + اسکریپت تمدید گواهی (کرون هاست)
+  infra/promtail/promtail-config.yml   # فاز ۹، static file scrape از infra/logs/ (نه docker service discovery — بک‌اند dev روی هاست اجرا می‌شه)
+  infra/prometheus/prometheus.yml      # فاز ۰، scrape target بک‌اند (/metrics)
+  infra/grafana/provisioning/dashboards/royaevent-overview.json   # فاز ۹، داشبورد سلامت API/قیف OTP/حجم سفارش/backlog اعلان
   data/eseminar.tv/, data/evand.com/   # تحلیل رقبا
   docs/architecture.md        # پلن کامل معماری (مرجع اصلی طراحی)
   docs/event_otp_email_sms_plan_fa.md  # سند اولیه‌ی OTP (کاربر داده، مرجع دقیق مکانیزم OTP)
@@ -248,6 +252,8 @@ npm run dev   # http://localhost:3000
 19. **`react-hooks/set-state-in-effect` هر تابع محلی (تو همون کامپوننت تعریف‌شده) که مستقیم/غیرمستقیم setState صدا می‌زنه رو، اگه از دل یک effect صداش بزنی، فلگ می‌کنه — حتی اگه اون تابع `async` باشه و setState فقط بعد از `await` بیاد** (مثلاً `await Promise.resolve()` اول تابع، کاری نمی‌کنه؛ لینتر static-analysis می‌کنه نه runtime). این با `useEffect(() => { refreshAccessToken(); }, [])` تو `SessionBootstrap.tsx` فرق داره چون اونجا `refreshAccessToken` از یه ماژول **دیگه** import شده (`api-client.ts`)، نه تو خود کامپوننت تعریف نشده. راه‌حل واقعی، نه دور زدن قانون: کار رو از دل یک event handler واقعی صدا بزن (کلیک دکمه، بعد از تأیید OTP)، نه effect. برای «شروع خودکار وقتی از قبل یه پیش‌شرط برقراره» (مثلاً کاربر لاگین‌کرده)، به‌جای effect + reset، از یه initial state متفاوت (lazy `useState(() => ...)`) و یه قدم تأیید دستی کاربر استفاده کن — نمونه در `InstantRegisterModal.tsx` (مرحله‌ی «تأیید» قبل از ثبت‌نام خودکار). نکته‌ی مرتبط: اگه اون تابع فقط `setLoading(true)` می‌زنه و state پیش‌فرض `loading` از قبل `true`ه، ساده‌ترین فیکس حذف همون یک خط `setLoading(true)`ه، نه بازطراحی کل effect — نمونه در `app/admin/page.tsx: loadAll()`.
 20. **اضافه‌کردن یک مدل SQLAlchemy جدید (فایل تازه در `app/models/`) کافی نیست تا Alembic autogenerate ببینتش** — باید صریح به `app/models/__init__.py` (هم import هم `__all__`) اضافه بشه، وگرنه `alembic revision --autogenerate` بی‌صدا یه migration خالی (`pass`/`pass`) تولید می‌کنه، بدون هیچ خطا یا هشداری. علامت تشخیص: بعد از autogenerate، اگه پیام `Detected added table/column` تو خروجی نبود، migration خالیه — قبل از commit کردنش پاکش کن، مدل رو به `__init__.py` اضافه کن، و autogenerate رو دوباره بزن.
 21. **«try/except دور یه فراخوانی» کافی نیست تا یه side-effect جانبی (مثل ایندکس جستجو) کاربر رو معطل نکنه** — اگه اون فراخوانی هیچ‌وقت واقعاً exception نده (نه fail کنه نه موفق بشه)، فقط خیلی کند باشه، try/except هیچ کمکی نمی‌کنه چون اصلاً چیزی گیر نمی‌ندازه. دقیقاً این اتفاق افتاد: دانلود اولیه‌ی مدل embedding (فاز ۴) روی شبکه‌ی این محیط داده رو خیلی کند trickle می‌کرد بدون قطعی کامل، پس نه `HF_HUB_DOWNLOAD_TIMEOUT` کمک کرد نه try/except، و `PATCH /events/{id}` چند دقیقه معطل می‌موند. راه‌حل واقعی: خود عملیات رو تو یه `ThreadPoolExecutor` جدا اجرا کن و رو `future.result(timeout=N)` صبر کن — اگه ظرف N ثانیه تموم نشد، درخواست اصلی بدون اثر منفی ادامه بده (نمونه‌ی کامل: `event_service._safe_sync_event_index`). این الگو رو برای هر «بهبود جانبی که نباید بخش اصلی تراکنش رو بلاک کنه» به کار ببر، نه فقط جستجو.
+22. **`import app.pkg.module` داخل هر فایلی که خودش متغیر سطح‌ماژول به اسم `app` داره (مثل `main.py: app = FastAPI(...)`) اون متغیر رو بی‌صدا جایگزین می‌کنه** — یه dotted import همیشه اسم *ریشه*ی مسیر رو در namespace جاری bind می‌کنه، نه فقط زیرماژول نهایی؛ پس `import app.core.metrics` باعث می‌شه `app` از اون به بعد به ماژول بسته‌ی `app` اشاره کنه، نه نمونه‌ی FastAPI، و خطای گیج‌کننده‌ای می‌ده که ظاهراً ربطی به چیزی که تازه import کردی نداره (مثلاً `'module' object has no attribute 'add_middleware'`). همیشه `from app.core import metrics` بنویس، نه `import app.core.metrics`، وقتی داخل فایلی هستی که یه متغیر محلی به اسم `app` داره.
+23. **قبل از قفل‌کردن نسخه‌ی یک کتابخونه‌ی instrumentation/middleware شخص ثالث، اول با نسخه‌ی واقعی FastAPI/Starlette این پروژه (که همیشه خیلی جلوعه، نه یک نسخه‌ی «پایدار» چند ماه عقب‌تر) امتحانش کن، نه فقط با pin شدنِ pypi.** `prometheus-fastapi-instrumentator==7.1.0` (فاز ۹) دقیقاً به همین دلیل fail کرد — برای ساختار داخلی قدیمی‌تر `Router` استارلت نوشته شده بود و با `starlette==0.52.1` این پروژه (`_IncludedRouter`) ناسازگار بود؛ خطا فقط موقع اولین درخواست واقعی ظاهر شد، نه موقع import/startup. جایگزین: یه middleware دستی روی `prometheus_client` مستقیم (نگاه کن به `app/core/metrics.py` + `app/main.py`).
 
 ## تصمیمات کلیدی کاربر (خلاصه‌ی فشرده — کامل در architecture.md)
 

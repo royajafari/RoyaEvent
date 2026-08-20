@@ -24,6 +24,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.logging_config import setup_json_logging
 from app.core.mongo_client import get_mongo_db
 from app.core.redis_client import get_redis
 from app.db.session import SessionLocal
@@ -161,7 +162,7 @@ def rollup_kpis(db: Session | None = None, target_date: date | None = None) -> N
 
 
 def run() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
+    setup_json_logging(level=logging.INFO)
     scheduler = BlockingScheduler(timezone="UTC")
     scheduler.add_job(
         lambda: _with_lock(_DISPATCH_LOCK_KEY, 60, dispatch_outbox),

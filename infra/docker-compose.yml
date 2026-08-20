@@ -73,6 +73,18 @@ services:
       - loki
       - prometheus
 
+  # بک‌اند در dev مستقیم روی هاست اجرا می‌شه، نه در Docker — پس promtail
+  # به‌جای docker service discovery، فایل‌های JSON زیر ./logs رو می‌خونه
+  # (نگاه کن به promtail/promtail-config.yml برای جزئیات این تصمیم).
+  promtail:
+    image: grafana/promtail:3.3.2
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - ./logs:/var/log/royaevent:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
 volumes:
   redis_data:
   mongo_data:

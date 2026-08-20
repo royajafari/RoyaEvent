@@ -1,8 +1,10 @@
 import logging
+import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -21,6 +23,7 @@ from app.api.v1.routers.social import router as social_router
 from app.api.v1.routers.tickets import router as tickets_router
 from app.api.v1.routers.track import router as track_router
 from app.core.config import get_settings
+from app.core.logging_config import setup_json_logging
 from app.core.rate_limit_middleware import limiter
 from app.db.session import Base, engine
 
@@ -28,7 +31,9 @@ settings = get_settings()
 
 # بدون این، لاگرهای خودمون (مثل ConsoleSmsProvider که OTP توسعه رو نشون
 # می‌ده) به‌خاطر سطح پیش‌فرض WARNING روی root logger، اصلاً چاپ نمی‌شن.
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
+# از فاز ۹، خروجی JSON ساختاریافته‌ست (نه متن‌ساده) تا Promtail/Loki بتونن
+# فیلدها (سطح/logger/پیام) رو جدا پارس کنن.
+setup_json_logging(level=logging.INFO)
 
 
 @asynccontextmanager
@@ -68,6 +73,32 @@ app.include_router(home_router, prefix=settings.api_v1_prefix)
 app.include_router(admin_router, prefix=settings.api_v1_prefix)
 app.include_router(ratings_router, prefix=settings.api_v1_prefix)
 app.include_router(track_router, prefix=settings.api_v1_prefix)
+
+if settings.prometheus_enabled:
+    from app.core import metrics as _metrics
+
+    @app.middleware("http")
+    async def _prometheus_http_metrics(request: Request, call_next):
+        start = time.perf_counter()
+        response = await call_next(request)
+        duration = time.perf_counter() - start
+        # بعد از call_next، روتینگ استارلت انجام شده و scope["route"] ست
+        # می‌شه — از path template (مثل /events/{slug}) استفاده می‌کنیم نه
+        # request.url.path خام، وگرنه هر مقدار متفاوت پارامتر یک سری کاردینالیتی
+        # جدا در Prometheus می‌سازه (مثلاً یک سری به‌ازای هر slug رویداد).
+        route = request.scope.get("route")
+        path = route.path if route is not None else request.url.path
+        _metrics.http_requests_total.labels(
+            method=request.method, path=path, status=response.status_code
+        ).inc()
+        _metrics.http_request_duration_seconds.labels(method=request.method, path=path).observe(
+            duration
+        )
+        return response
+
+    @app.get("/metrics", include_in_schema=False)
+    def metrics_endpoint():
+        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/health")

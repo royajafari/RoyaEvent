@@ -1,0 +1,132 @@
+{
+  "title": "RoyaEvent — نمای کلی",
+  "uid": "royaevent-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "timezone": "utc",
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "نرخ درخواست HTTP (بر ثانیه)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "royaevent-prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "royaevent-prometheus" },
+          "expr": "sum by (handler) (rate(royaevent_http_requests_total[5m]))",
+          "legendFormat": "{{handler}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "تأخیر p95 درخواست‌ها (ثانیه)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "royaevent-prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "royaevent-prometheus" },
+          "expr": "histogram_quantile(0.95, sum by (le, handler) (rate(royaevent_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "{{handler}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "نرخ خطای HTTP ۵xx",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "royaevent-prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "royaevent-prometheus" },
+          "expr": "sum(rate(royaevent_http_requests_total{status=~\"5..\"}[5m]))",
+          "legendFormat": "5xx/s"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "backlog صف اعلان (notification_outbox)",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "royaevent-prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "royaevent-prometheus" },
+          "expr": "royaevent_notification_outbox_pending",
+          "legendFormat": "در انتظار ارسال"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "red", "value": 200 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "title": "قیف OTP (درخواست/تأیید/شکست بر ساعت)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "royaevent-prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "royaevent-prometheus" },
+          "expr": "sum(rate(royaevent_otp_requested_total[1h])) * 3600",
+          "legendFormat": "درخواست‌شده"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "royaevent-prometheus" },
+          "expr": "sum(rate(royaevent_otp_verified_total[1h])) * 3600",
+          "legendFormat": "تأییدشده"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "royaevent-prometheus" },
+          "expr": "sum(rate(royaevent_otp_failed_total[1h])) * 3600",
+          "legendFormat": "شکست‌خورده"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "حجم سفارش تکمیل‌شده (بر ساعت)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "royaevent-prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "royaevent-prometheus" },
+          "expr": "rate(royaevent_orders_completed_total[1h]) * 3600",
+          "legendFormat": "سفارش تکمیل‌شده"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "لاگ‌های خطا (Loki)",
+      "type": "logs",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
+      "datasource": { "type": "loki", "uid": "royaevent-loki" },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "royaevent-loki" },
+          "expr": "{job=\"royaevent-backend\"} | json | level=~\"ERROR|WARNING\""
+        }
+      ]
+    }
+  ]
+}

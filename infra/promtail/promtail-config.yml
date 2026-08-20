@@ -1,0 +1,22 @@
+# نکته: بک‌اند در dev مستقیم روی هاست اجرا می‌شه (uvicorn/scheduler)، نه در
+# یک کانتینر Docker — پس روش معمول Promtail (docker service discovery روی
+# لاگ کانتینرها) اینجا لاگ اپلیکیشن رو اصلاً نمی‌بینه. به‌جاش یک دایرکتوری
+# مشترک (infra/logs/) رو هم هاست (dev) هم کانتینرهای production می‌تونن
+# بهش لاگ JSON بنویسن، و Promtail همون مسیر رو با static file scrape می‌خونه.
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: royaevent-backend
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: royaevent-backend
+          __path__: /var/log/royaevent/*.log

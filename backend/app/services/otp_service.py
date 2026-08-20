@@ -12,6 +12,7 @@ from redis import Redis
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
+from app.core.metrics import otp_failed_total, otp_requested_total, otp_verified_total
 from app.core.rate_limit import RateLimitExceeded, enforce_cooldown, enforce_otp_request_limits
 from app.core.security import generate_otp, hash_otp, verify_otp_hash
 from app.core.validators import normalize_destination
@@ -109,6 +110,7 @@ class OTPService:
         self.db.refresh(challenge)
 
         self._send_otp(channel, normalized_destination, otp, challenge)
+        otp_requested_total.labels(channel=channel).inc()
 
         return challenge
 
@@ -137,16 +139,19 @@ class OTPService:
         now = utcnow()
 
         if challenge.status != OTPStatus.PENDING:
+            otp_failed_total.labels(channel=challenge.channel.value).inc()
             raise OTPVerificationFailed()
 
         if now > challenge.expires_at:
             challenge.status = OTPStatus.EXPIRED
             self.db.commit()
+            otp_failed_total.labels(channel=challenge.channel.value).inc()
             raise OTPVerificationFailed()
 
         if challenge.attempt_count >= challenge.max_attempts:
             challenge.status = OTPStatus.LOCKED
             self.db.commit()
+            otp_failed_total.labels(channel=challenge.channel.value).inc()
             raise OTPVerificationFailed()
 
         if not verify_otp_hash(otp, str(challenge.id), challenge.otp_hash):
@@ -154,12 +159,14 @@ class OTPService:
             if challenge.attempt_count >= challenge.max_attempts:
                 challenge.status = OTPStatus.LOCKED
             self.db.commit()
+            otp_failed_total.labels(channel=challenge.channel.value).inc()
             raise OTPVerificationFailed()
 
         challenge.status = OTPStatus.VERIFIED
         challenge.used_at = now
         self.db.commit()
         self.db.refresh(challenge)
+        otp_verified_total.labels(channel=challenge.channel.value).inc()
         return challenge
 
     def resend_otp(self, challenge_id: int) -> OTPChallenge:

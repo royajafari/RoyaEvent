@@ -4,6 +4,7 @@ import logging
 
 from sqlalchemy.orm import Session
 
+from app.core.metrics import orders_completed_total
 from app.core.slug import generate_alnum_code
 from app.models.base import utcnow
 from app.models.event import Event, EventSession, EventStatus
@@ -147,6 +148,7 @@ def complete_order(db: Session, order: Order) -> Order:
     except Exception:
         logger.warning("enqueue registration notification failed for order %s", order.id, exc_info=True)
 
+    orders_completed_total.inc()
     return order
 
 
